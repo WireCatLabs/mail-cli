@@ -1,0 +1,28 @@
+name: Monthly validation
+
+on:
+  schedule:
+    - cron: "2 3 1 * *"
+  workflow_dispatch:
+
+concurrency:
+  group: monthly-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  validation:
+    uses: ./.github/workflows/ci.yml
+    with:
+      platforms: true
+  security:
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    uses: WireCatLabs/cli-base/.github/workflows/release-checks.yml@08d954b245268c7552a2d33a9ed4c78743784e5a # v0.61.2
+    with:
+      dependencies: true
+      languages: '["actions","javascript-typescript"]'

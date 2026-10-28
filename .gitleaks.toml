@@ -1,0 +1,23 @@
+[extend]
+useDefault = true
+
+[allowlist]
+paths = ['''pnpm-lock\.yaml''']
+
+# gitleaks' own rules know Google API keys (AIza…) only. Google calls its OAuth tokens opaque, so these prefixes are
+# the observed format, not a promised one: ya29. in Apigee's sample access token, 1// in the sample refresh token of
+# the web-server OAuth guide.
+[[rules]]
+id = "google-oauth-access-token"
+description = "Google OAuth 2.0 access token"
+regex = '''\b(ya29\.[A-Za-z0-9._-]{20,})'''
+secretGroup = 1
+keywords = ["ya29."]
+
+[[rules]]
+id = "google-oauth-refresh-token"
+description = "Google OAuth 2.0 refresh token"
+regex = '''(?:^|[^A-Za-z0-9/])(1//[A-Za-z0-9_-]{30,})'''
+secretGroup = 1
+entropy = 3.5
+keywords = ["1//"]

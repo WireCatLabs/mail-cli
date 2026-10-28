@@ -1,0 +1,1 @@
+{ "extends": ["./tsconfig.json", "@wirecat/cli-base/tsconfig.scripts.json"] }

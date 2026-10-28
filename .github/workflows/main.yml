@@ -1,0 +1,18 @@
+name: Main validation
+
+# Nothing here publishes or tags: release.yml alone does that.
+on:
+  push:
+    branches: [main]
+
+# Each merge keeps its own validation: cancelling it would leave that commit unchecked (WC-CI-7).
+concurrency:
+  group: main-validation-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  validation:
+    uses: ./.github/workflows/ci.yml

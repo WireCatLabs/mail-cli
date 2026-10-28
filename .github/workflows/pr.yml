@@ -1,0 +1,19 @@
+name: PR validation
+
+# The whole Linux validation main.yml runs, on every pull request, so a change that breaks the coverage floor or a
+# check fails here and never reaches main (WC-CI-5).
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: pr-validation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  validation:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci.yml

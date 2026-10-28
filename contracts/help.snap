@@ -1,0 +1,16 @@
+mail — a new WireCat CLI, started from cli-template
+
+Usage: mail <profile> <command> [options]
+Account commands start with your profile, a name you choose; none is ever assumed.
+
+Works with:
+  tg                      Telegram in the same local store: search, review and tasks offline
+  max                     MAX in the same local store: search, review and tasks offline
+  wa                      WhatsApp in the same local store: search, review and tasks offline
+  zm                      Zoom meetings: transcripts and summaries, searchable with your other WireCat data
+  drive                   Google Drive and Docs as local text, searchable with your other WireCat data
+  memo context <person>   one person across messengers, mail, notes and meetings
+
+Next:         mail commands      every command, by section
+              mail help options  output, offline, timeouts, dry run
+For agents:   mail skill show    rules and the discovery loop

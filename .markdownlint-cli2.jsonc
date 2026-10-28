@@ -1,0 +1,16 @@
+{
+  "globs": [
+    "README.md",
+    "SECURITY.md",
+    "CHANGELOG.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "docs/*.md",
+    "docs/dev/**/*.md",
+    "skills/**/*.md"
+  ],
+  "ignores": ["node_modules", "dist", ".worktrees", "config/wirecat", "docs/commands.md", "docs/dev/test-matrix.md"],
+  "config": {
+    "extends": "./config/wirecat/markdownlint.json"
+  }
+}

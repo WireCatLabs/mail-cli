@@ -1,0 +1,18 @@
+{
+  "title": "mail",
+  "pages": [
+    "---Start---",
+    "index",
+    "installation",
+    "---Guides---",
+    "usage",
+    "---Reference---",
+    "commands",
+    "configuration",
+    "---When something goes wrong---",
+    "troubleshooting",
+    "security",
+    "---Project---",
+    "changelog"
+  ]
+}

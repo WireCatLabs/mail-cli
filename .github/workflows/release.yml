@@ -1,0 +1,191 @@
+name: Release
+
+# Started by bin/release. npm trusts this file by name (trusted publishing), so there is no npm
+# token anywhere in this repository and renaming the file breaks publishing until npm is told.
+#
+# Full validation builds, checks and packs once; `build` verifies the immutable tarball.
+# The job able to publish runs no code from our dependencies; `publish` holds the OIDC permission and only
+# runs `npm publish` on that file; `tag` is the only one that may write to the repository.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build and pack, run npm publish --dry-run, do not tag"
+        type: boolean
+        default: false
+      commit:
+        description: "The commit bin/release checked; the run refuses any other"
+        type: string
+        default: ""
+
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  # Every job builds github.sha, the tip of main when the run started — which a merge can move past the commit
+  # bin/release checked.
+  checked-commit:
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - env:
+          COMMIT: ${{ inputs.commit }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          [ "$COMMIT" = "$GITHUB_SHA" ] && exit 0
+          [ "$DRY_RUN" = "true" ] && [ -z "$COMMIT" ] && exit 0
+          echo "::error::this run is at $GITHUB_SHA, but bin/release checked '${COMMIT}' — nothing is published"
+          exit 1
+
+  validation:
+    needs: checked-commit
+    if: github.ref == 'refs/heads/main' || inputs.dry_run
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci.yml
+    with:
+      pack: true
+
+  checks:
+    needs: checked-commit
+    if: github.ref == 'refs/heads/main' || inputs.dry_run
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    uses: WireCatLabs/cli-base/.github/workflows/release-checks.yml@08d954b245268c7552a2d33a9ed4c78743784e5a # v0.61.2
+
+  build:
+    needs: [checks, validation]
+    if: github.ref == 'refs/heads/main' || inputs.dry_run
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      name: ${{ steps.version.outputs.name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: validated-package
+          path: validated
+      - name: Verify validated package integrity
+        env:
+          EXPECTED_SHA256: ${{ needs.validation.outputs.package-sha256 }}
+        run: |
+          set -- ./validated/*.tgz
+          [ "$#" -eq 1 ] && [ -f "$1" ] || { echo "Expected exactly one package tarball"; exit 1; }
+          [ -n "$EXPECTED_SHA256" ] || { echo "Missing validation digest"; exit 1; }
+          printf '%s  %s\n' "$EXPECTED_SHA256" "$1" | sha256sum --check -
+
+      # A 404 for a package npm has never seen means "not published yet", the same as a missing version.
+      - name: version not yet on npm
+        id: version
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          version=$(node -p 'require("./package.json").version')
+          name=$(node -p 'require("./package.json").name')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          if [ "$DRY_RUN" != "true" ] && npm view "$name@$version" version --prefer-online >/dev/null 2>&1; then
+            echo "::error::$version is already on npm — raise the version first"
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: package
+          path: validated/*.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  package-dry-run:
+    needs: build
+    if: inputs.dry_run
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: package
+      # Permit checking an already published version; this job has no publishing permissions.
+      - run: npm publish ./*.tgz --access public --dry-run --force
+
+  publish:
+    needs: build
+    if: ${{ !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      id-token: write
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+      NAME: ${{ needs.build.outputs.name }}
+    steps:
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: package
+
+      # npm, not pnpm: npm's trusted publishing is the documented path. A tarball runs no
+      # lifecycle scripts, and nothing is installed here. A tarball path needs its ./.
+      - run: |
+          set -- ./*.tgz
+          npm publish "$1" --access public
+
+      - name: wait for npm to show the version
+        run: |
+          # The version's own document, not `npm view`: on 2026-10-01 the document answered while the
+          # version list `npm view` reads was still stale for minutes.
+          encoded=$(node -p 'encodeURIComponent(process.argv[1]).replace("%40", "@")' "$NAME")
+          for _ in $(seq 90); do
+            curl -sfo /dev/null "https://registry.npmjs.org/$encoded/$VERSION" && exit 0
+            sleep 10
+          done
+          echo "::error::npm does not show $VERSION after fifteen minutes — not tagging; tag v$VERSION by hand once it does"
+          exit 1
+
+  tag:
+    needs: [build, publish]
+    if: ${{ !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$VERSION" -m "$VERSION"
+          git push origin "v$VERSION"
+
+      - name: GitHub release from the changelog
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          awk -v v="$VERSION" '$0 ~ "^## "v" " {on=1; next} /^## / && on {exit} on' CHANGELOG.md |
+            gh release create "v$VERSION" --title "$VERSION" --notes-file -

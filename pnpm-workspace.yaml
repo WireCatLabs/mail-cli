@@ -1,0 +1,9 @@
+# pnpm blocks dependencies' install scripts by default; esbuild needs its platform binary for vitest.
+allowBuilds:
+  esbuild: true
+  lefthook: true
+minimumReleaseAgeExclude:
+  - "@wirecat/*"
+# markdownlint-cli2 is pinned to community's version, whose markdownlint ranges katex ^0.16 with advisories.
+overrides:
+  katex: ^0.18.2

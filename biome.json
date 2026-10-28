@@ -1,0 +1,28 @@
+{
+  "files": {
+    "includes": ["**", "!**/node_modules", "!**/dist", "!.worktrees", "!pnpm-lock.yaml", "!config/wirecat"]
+  },
+  "extends": ["./config/wirecat/biome.base.json"],
+  "overrides": [
+    {
+      "includes": ["src/**", "!src/mcp.ts", "!**/*.test.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@modelcontextprotocol/**"],
+                    "message": "only src/mcp.ts serves MCP; commands and services do not know the protocol"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
