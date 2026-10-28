@@ -4,10 +4,14 @@ Settings live in one file, `config.json`, in the folder `mail doctor` shows. Eac
 and `defaults` apply to every profile. This page lists how to see and change them.
 
 ```sh
-mail personal config show
-mail personal config set limit 50
-mail personal config unset limit
+mail ya config show
+mail ya config set limit 50
+mail ya config unset limit
 ```
+
+A profile made by `mail setup` also holds the mailbox: `address`, `login` (when it is not the address), `imap_host`,
+`imap_port`, `imap_security` (`tls` or `starttls`) and `folders` (the folders `sync` reads). The app password is not
+a setting: it lives in the keyring, or in `MAIL_PASSWORD` for a run that has no keyring.
 
 `config show` lists each setting and where it came from: the file, a variable or the default.
 

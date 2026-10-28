@@ -7,11 +7,32 @@ This page explains how a command is built, and how an agent uses the tool. Read 
 A profile is a name you choose for one account. It is the first word of every command that uses an account:
 
 ```sh
-mail personal config show
+mail ya folders list
 ```
 
-`MAIL_PROFILE=personal` does the same for one shell session. No profile is ever assumed, not even the only one: a
+`MAIL_PROFILE=ya` does the same for one shell session. No profile is ever assumed, not even the only one: a
 command without one stops with exit code 2 and lists the profiles on this computer.
+
+## Connect a mailbox
+
+```sh
+mail setup ya@burobiz.ru             # shows the server; asks before it saves a profile (--yes skips the question)
+mail ya session start                # asks for the app password, checks it on the server, keeps it in the keyring
+mail ya account check                # logs in and lists what the server supports
+mail ya folders list                 # folders with role and counts
+mail ya sync --since-time 2026-10-01 # reads new mail into the shared store; stored mail is skipped
+```
+
+`setup` looks the address up in a built-in table (Yandex, Gmail, iCloud, Mail.ru, Fastmail, Outlook), then the MX
+record, then Thunderbird's ISPDB and the domain's own autoconfig file. Give `--host`, `--port` and `--security` to set
+a server by hand. Outlook accepts only OAuth for IMAP, so `setup` refuses to save it for now.
+
+`session start` takes the password from the terminal, never from an option or a URL. It is stored only after the
+server accepted it. When the keyring has none, `mail` reads the entry Himalaya left (`secret-tool` service
+`himalaya`, account the profile name), so an existing setup needs no new password.
+
+`sync` reads INBOX and the Sent folder unless `--folder` or the profile's `folders` says otherwise, newest first,
+and takes `--limit` per run, and `--rescan` to list the whole window again. It saves text and headers only: attachments are not stored.
 
 ## Output for scripts
 

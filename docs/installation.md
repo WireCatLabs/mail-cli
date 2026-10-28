@@ -7,11 +7,21 @@ npm install -g @wirecat/mail-cli
 mail --version
 ```
 
-Check the installation, then pick a profile name for your account, such as `personal`:
+Check the installation:
 
 ```sh
 mail doctor
 ```
 
 `doctor` needs no network and opens no keyring. It shows the version, where settings live, the profiles that
-exist, and whether other users of the computer can read the settings. Next: [use it](usage.md).
+exist, and whether other users of the computer can read the settings.
+
+Then connect a mailbox. The profile name is the part before the `@` unless you pass `--name`:
+
+```sh
+mail setup ya@burobiz.ru
+mail ya session start
+mail ya account check
+```
+
+Next: [use it](usage.md).

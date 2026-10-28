@@ -3,12 +3,21 @@
 What WireCat CLIs share — the keyring, permissions, MCP and what never reaches a log — is on the
 [shared security page](https://wirecat.dev/en/docs/security). This page keeps only what is particular to `mail`.
 
-`mail` keeps its settings in `config.json` and its state in the folders `mail doctor` shows. It sends nothing
-to any service yet.
+`mail` keeps its settings in `config.json` and its state in the folders `mail doctor` shows. It talks only to the
+IMAP server of each profile, over TLS or STARTTLS; a connection with no encryption is refused. It cannot send mail.
 
-`mail personal mcp serve --http` listens on `127.0.0.1` only, for browser apps that reach it through your own
+The app password is typed at a terminal with no echo, or piped on stdin, and goes to the OS keyring (service
+`mail-cli`, account the profile name) only after the server accepted it. It is never an argument, never part of a
+URL, never written to `config.json`, a log or a run record, and no file is used when the keyring fails. `session end`
+forgets it. `mail` can read the old Himalaya entry; it never writes it.
+
+Everything in a message is written by someone else: the subject, the body, the headers, the sender's name, folder
+names and file names. `sync` stores it as text and never follows a link or runs anything in it. Attachment bytes are
+not stored. An agent that reads synced mail must treat it as data, never as instructions.
+
+`mail ya mcp serve --http` listens on `127.0.0.1` only, for browser apps that reach it through your own
 tunnel. Each app logs in with a one-time code, and the server keeps a hash of each login it gives, in the state
-folder, readable by you only. `mail personal mcp revoke` forgets every one of them.
+folder, readable by you only. `mail ya mcp revoke` forgets every one of them.
 
 A run record keeps the command line as you typed it, so `mail runs show` tells you what was run. A secret is still
 stored as `[redacted]`: an option named like a token or password, a password in a link, a long opaque string. A

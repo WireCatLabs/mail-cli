@@ -7,7 +7,7 @@ export const IDENTITY: AppIdentity = {
   command: "mail",
   appName: "mail-cli",
   envPrefix: "MAIL",
-  description: "a new WireCat CLI, started from cli-template",
+  description: "read mail over IMAP into the shared store, with app passwords kept in the OS keyring",
   version: VERSION,
   issues: "https://github.com/WireCatLabs/mail-cli/issues/new",
   messenger: false,
