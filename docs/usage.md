@@ -32,7 +32,7 @@ server accepted it. When the keyring has none, `mail` reads the entry Himalaya l
 `himalaya`, account the profile name), so an existing setup needs no new password.
 
 `sync` reads INBOX and the Sent folder unless `--folder` or the profile's `folders` says otherwise, newest first,
-and takes `--limit` per folder. It saves text and headers only: attachments are not stored.
+and takes `--limit` per run, and `--rescan` to list the whole window again. It saves text and headers only: attachments are not stored.
 
 ## Output for scripts
 
