@@ -1,1 +1,30 @@
-[]
+[
+  {
+    "rule": "option-role",
+    "target": "setup --host",
+    "reason": "Names the IMAP server of a mailbox that discovery cannot find; no vocabulary role names a mail server setting yet. Review when cli-base's vocabulary names one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
+    "rule": "option-role",
+    "target": "setup --login",
+    "reason": "Names the login when it is not the full address, which some servers want; no vocabulary role names a mail server setting yet. Review when cli-base's vocabulary names one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
+    "rule": "option-role",
+    "target": "setup --security",
+    "reason": "Chooses tls or starttls for the IMAP connection; no vocabulary role names a mail server setting yet. Review when cli-base's vocabulary names one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
+    "rule": "list-without-query",
+    "target": "folders list",
+    "reason": "Lists the server's short fixed set of folders, which has nothing to filter; the query arrives with `messages list`. Review when messages list ships.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  }
+]

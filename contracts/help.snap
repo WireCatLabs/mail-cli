@@ -1,4 +1,4 @@
-mail — a new WireCat CLI, started from cli-template
+mail — read mail over IMAP into the shared store, with app passwords kept in the OS keyring
 
 Usage: mail <profile> <command> [options]
 Account commands start with your profile, a name you choose; none is ever assumed.
@@ -11,6 +11,7 @@ Works with:
   drive                   Google Drive and Docs as local text, searchable with your other WireCat data
   memo context <person>   one person across messengers, mail, notes and meetings
 
-Next:         mail commands      every command, by section
-              mail help options  output, offline, timeouts, dry run
-For agents:   mail skill show    rules and the discovery loop
+Start here:   mail personal setup  (any profile name works)
+Next:         mail commands        every command, by section
+              mail help options    output, offline, timeouts, dry run
+For agents:   mail skill show      rules and the discovery loop

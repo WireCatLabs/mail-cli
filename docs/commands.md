@@ -52,6 +52,134 @@ mail commands info [path]
 
 **Example:** `mail commands info commands`
 
+## `mail setup`
+
+find the IMAP server for an address (built-in providers, the MX record, ISPDB, the domain's autoconfig), show it, and save a profile when you confirm; no password is asked here
+
+**Changes something on this computer only.**
+
+```sh
+mail setup <address> [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `address` | required | the full mail address, also the login for most providers. |
+
+| Option | What it does |
+|---|---|
+| `--name <name>` | the profile name (default: the part before the @). |
+| `--host <host>` | skip discovery and use this IMAP host. |
+| `--port <port>` | IMAP port (default 993). |
+| `--security <mode>` | tls or starttls (default tls). |
+| `--login <login>` | the login name, when it is not the full address. |
+| `--folder <folder>` | sync only this folder; repeat it for more. |
+| `--replace` | overwrite a profile of the same name. |
+
+**Returns:** find a mailbox's server and save it as a profile
+
+**Example:** `mail setup ya@burobiz.ru`, `mail setup ya@burobiz.ru --name ya --yes`, `mail setup me@example.com --host imap.example.com --security tls --yes`
+
+## `mail session`
+
+keep this profile's app password in the OS keyring
+
+### `mail session start`
+
+type the app password once, check it against the server, and keep it in the OS keyring
+
+**Changes something on this computer only.**
+
+```sh
+mail session start
+```
+
+**Returns:** type the app password once and keep it in the keyring
+
+**Example:** `mail ya session start`
+
+### `mail session status`
+
+show where this profile's app password comes from; the password is never printed
+
+```sh
+mail session status [options]
+```
+
+| Option | What it does |
+|---|---|
+| `--check` | log in to the server to prove the password still works. |
+
+**Returns:** show where this profile's app password comes from; the password is never printed
+
+**Example:** `mail ya session status`, `mail ya session status --check --json`
+
+### `mail session end`
+
+forget this profile's app password on this computer; synced mail stays
+
+**Changes something on this computer only.**
+
+```sh
+mail session end
+```
+
+**Returns:** forget this profile's app password on this computer; synced mail stays
+
+**Example:** `mail ya session end`
+
+## `mail account`
+
+the mailbox behind this profile
+
+### `mail account check`
+
+log in to the server and list what it supports (IDLE, CONDSTORE, MOVE, Gmail extensions)
+
+```sh
+mail account check
+```
+
+**Returns:** log in and list what the server supports
+
+**Example:** `mail ya account check`, `mail ya account check --json`
+
+## `mail folders`
+
+the folders of this profile's mailbox
+
+### `mail folders list`
+
+the folders of the mailbox with their role (inbox, sent, trash, ...) and message counts
+
+```sh
+mail folders list
+```
+
+**Returns:** the folders with their role and message counts
+
+**Example:** `mail ya folders list`, `mail ya folders list --json`
+
+## `mail sync`
+
+read mail from the server into the shared store; mail already stored is skipped
+
+**Changes something on this computer only.**
+
+```sh
+mail sync [options]
+```
+
+| Option | What it does |
+|---|---|
+| `--since-time <time>` | only mail received since this ISO date or timestamp (default: 30 days). |
+| `--limit <n>` | save at most this many new emails per folder, newest first. |
+| `--folder <folder>` | a folder to read; repeat it for more (default: the profile's folders, else INBOX and Sent). |
+
+**Returns:** read mail from the server into the shared store; mail already stored is skipped
+
+**Example:** `mail ya sync`, `mail ya sync --since-time 2026-10-01T00:00:00Z --limit 200`, `mail ya sync --folder INBOX`
+
 ## `mail doctor`
 
 check this installation: version, paths, config, profiles; no keyring or network
@@ -255,7 +383,7 @@ mail config set <setting> <value> [options]
 
 | Argument | | What it is |
 |---|---|---|
-| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, permissions, sends_per_hour, requests_per_minute, transcribe_with, speech_model, search_catch_up, picture_search, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, read_other_bots, update_check, skill_hint, search_stemmers.cyrillic, search_stemmers.latin, phone_countries, task_categories.<name>, task_agent_close, task_agent_close_min, task_first_pass_per_chat, account_groups.<name>. |
+| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, permissions, sends_per_hour, requests_per_minute, transcribe_with, speech_model, search_catch_up, picture_search, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, folders, read_other_bots, update_check, skill_hint, search_stemmers.cyrillic, search_stemmers.latin, phone_countries, task_categories.<name>, task_agent_close, task_agent_close_min, task_first_pass_per_chat, account_groups.<name>. |
 | `value` | required | a number, true or false; for a group tg:work,max:Alice,email:me@x. |
 
 | Option | What it does |
@@ -280,7 +408,7 @@ mail config unset <setting> [options]
 
 | Argument | | What it is |
 |---|---|---|
-| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, permissions, sends_per_hour, requests_per_minute, transcribe_with, speech_model, search_catch_up, picture_search, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, read_other_bots, update_check, skill_hint, search_stemmers.cyrillic, search_stemmers.latin, phone_countries, task_categories.<name>, task_agent_close, task_agent_close_min, task_first_pass_per_chat, account_groups.<name>. |
+| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, permissions, sends_per_hour, requests_per_minute, transcribe_with, speech_model, search_catch_up, picture_search, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, folders, read_other_bots, update_check, skill_hint, search_stemmers.cyrillic, search_stemmers.latin, phone_countries, task_categories.<name>, task_agent_close, task_agent_close_min, task_first_pass_per_chat, account_groups.<name>. |
 
 | Option | What it does |
 |---|---|

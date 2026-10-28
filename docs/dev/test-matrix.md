@@ -7,12 +7,30 @@ ran it · ⛔ not tested offline, with the reason and where it is checked instea
 Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 [TESTING.md](TESTING.md) for how, and for the states and failures that cut across commands.
 
-**50 ✅ · 6 ⛔ · 0 ❌** — 19 commands, 37 options.
+**68 ✅ · 6 ⛔ · 0 ❌** — 26 commands, 48 options.
 
 | Command | Option | | Note |
 |---|---|---|---|
 | `commands` |  | ✅ |  |
 | `commands info` |  | ✅ |  |
+| `setup` |  | ✅ |  |
+| `setup` | `--name` | ✅ |  |
+| `setup` | `--host` | ✅ |  |
+| `setup` | `--port` | ✅ |  |
+| `setup` | `--security` | ✅ |  |
+| `setup` | `--login` | ✅ |  |
+| `setup` | `--folder` | ✅ |  |
+| `setup` | `--replace` | ✅ |  |
+| `session start` |  | ✅ |  |
+| `session status` |  | ✅ |  |
+| `session status` | `--check` | ✅ |  |
+| `session end` |  | ✅ |  |
+| `account check` |  | ✅ |  |
+| `folders list` |  | ✅ |  |
+| `sync` |  | ✅ |  |
+| `sync` | `--since-time` | ✅ |  |
+| `sync` | `--limit` | ✅ |  |
+| `sync` | `--folder` | ✅ |  |
 | `doctor` |  | ✅ |  |
 | `skill show` |  | ✅ |  |
 | `skill show` | `--for` | ✅ |  |
