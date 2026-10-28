@@ -18,17 +18,14 @@ importers:
         specifier: 0.63.0
         version: 0.63.0(commander@15.0.0)(typescript@7.0.2)(vitest@5.0.5)
       '@wirecat/cli-core':
-        specifier: 0.463.0
-        version: 0.463.0(@wirecat/cli-base@0.63.0(commander@15.0.0)(typescript@7.0.2)(vitest@5.0.5))(commander@15.0.0)(typescript@7.0.2)(zod@4.6.7)
+        specifier: 0.472.0
+        version: 0.472.0(@wirecat/cli-base@0.63.0(commander@15.0.0)(typescript@7.0.2)(vitest@5.0.5))(commander@15.0.0)(typescript@7.0.2)(zod@4.6.7)
       commander:
         specifier: 15.0.0
         version: 15.0.0
       imapflow:
         specifier: 2.9.1
         version: 2.9.1
-      postal-mime:
-        specifier: 4.1.4
-        version: 4.1.4
       valibot:
         specifier: 1.5.0
         version: 1.5.0(typescript@7.0.2)
@@ -1046,13 +1043,13 @@ packages:
   '@wirecat/cli-core-sqlite@1.1.0':
     resolution: {integrity: sha512-GpGlh/dAIX/nblBYCdT6DfWSLFxav9mxxeELQAfEuw+QZdT9unKxbi5xa02s/s4JS1P7n0PQx2sCABj4FlMRNw==}
 
-  '@wirecat/cli-core@0.463.0':
-    resolution: {integrity: sha512-q8vOvnId05TjoeCTvj9mqdgPfF9LDEz2teq5AM+eJmrHTK67qD9TY9+sGCMLntflpQrLihVBDE0XzP84QhuB7g==}
+  '@wirecat/cli-core@0.472.0':
+    resolution: {integrity: sha512-samiuChyvACUhs+kR6yI9HhS2VZY34WfVpNRBUK0UPaJdmXcwzmB1nV8DhOr7VujGoe1f8I4makVJBNxn++3/w==}
     engines: {node: ^22.16.0 || >=24}
     hasBin: true
     peerDependencies:
       '@napi-rs/canvas': '>=0.1.69 <2'
-      '@wirecat/cli-base': '>=0.63.0 <0.64.0'
+      '@wirecat/cli-base': '>=0.65.0 <0.66.0'
       commander: '>=15'
     peerDependenciesMeta:
       '@napi-rs/canvas':
@@ -1331,6 +1328,9 @@ packages:
 
   dingbat-to-unicode@1.0.2:
     resolution: {integrity: sha512-R0bRerYzy/EZP6QzD3Hkl6JjUDA1Mnn+pd928w0nWjPzihnbAR6dcjGJGiRyznj5E4S1duEKzWrTqw02DPcdzg==}
+
+  disposable-email-domains-js@1.26.0:
+    resolution: {integrity: sha512-pSqALZAiuw6HDC1HqhhtvShRnniUNObQ6kzwa5N280XbyxxCPBZnQQ7fO6Uk/CNTi4cAaKE1UZl3Mc30Zfj4UA==}
 
   dom-serializer@2.0.0:
     resolution: {integrity: sha512-wIkAryiqt/nV5EQKqQpo3SToSOV9J0DnbJqwK7Wv/Trc92zIAYZ4FlMu+JPFW1DfGFt81ZTCGgDEabffXeLyJg==}
@@ -2395,6 +2395,13 @@ packages:
     resolution: {integrity: sha512-LgO3D9yZJjApUiuUfl9iFAwrtaX4+lok3wJIqttGoKCHlWUqHqbQpnxCf82L8FjgKsh4iGo78hqJwgL8F6To2A==}
     engines: {node: '>=14.0.0'}
 
+  tldts-core@7.4.19:
+    resolution: {integrity: sha512-goNXV6Ho9TIOfpJZanTd6CKG5DyYgYAL+k+22T0SLh8l6+KHIfBUPFuePuSZv05UttIaaLmI9tb7TmGIdK5AkQ==}
+
+  tldts@7.4.19:
+    resolution: {integrity: sha512-48dH6aSpQnpbzDUc4vIQZ1VjB8tkK+e8c1yx05/SZK+rkssgjEOlxDd/yU8/a4vGYQ9vRgJr9dwMq9TJ0b3X2Q==}
+    hasBin: true
+
   to-regex-range@5.0.1:
     resolution: {integrity: sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==}
     engines: {node: '>=8.0'}
@@ -3336,7 +3343,7 @@ snapshots:
 
   '@wirecat/cli-core-sqlite@1.1.0': {}
 
-  '@wirecat/cli-core@0.463.0(@wirecat/cli-base@0.63.0(commander@15.0.0)(typescript@7.0.2)(vitest@5.0.5))(commander@15.0.0)(typescript@7.0.2)(zod@4.6.7)':
+  '@wirecat/cli-core@0.472.0(@wirecat/cli-base@0.63.0(commander@15.0.0)(typescript@7.0.2)(vitest@5.0.5))(commander@15.0.0)(typescript@7.0.2)(zod@4.6.7)':
     dependencies:
       '@anthropic-ai/sdk': 1.3.0(zod@4.6.7)
       '@bomb.sh/tab': 0.0.22(commander@15.0.0)
@@ -3354,6 +3361,7 @@ snapshots:
       dictionary-en: 4.0.0
       dictionary-es: 4.0.0
       dictionary-ru: 3.0.0
+      disposable-email-domains-js: 1.26.0
       echarts: 6.1.0
       fflate: 0.8.3
       iconv-lite: 0.7.3
@@ -3366,10 +3374,12 @@ snapshots:
       mdast-util-gfm: 3.1.0
       micromark-extension-gfm: 3.0.0
       ogg-opus-decoder: 1.7.5
+      postal-mime: 4.1.4
       psl: 1.15.0
       qrcode-generator: 2.0.4
       sherpa-onnx: 2.0.0
       string-width: 8.3.0
+      tldts: 7.4.19
       unpdf: 1.9.1
       valibot: 1.5.0(typescript@7.0.2)
       word-extractor: 1.0.4
@@ -3676,6 +3686,8 @@ snapshots:
   dictionary-ru@3.0.0: {}
 
   dingbat-to-unicode@1.0.2: {}
+
+  disposable-email-domains-js@1.26.0: {}
 
   dom-serializer@2.0.0:
     dependencies:
@@ -4936,6 +4948,12 @@ snapshots:
       picomatch: 4.0.7
 
   tinyrainbow@3.2.0: {}
+
+  tldts-core@7.4.19: {}
+
+  tldts@7.4.19:
+    dependencies:
+      tldts-core: 7.4.19
 
   to-regex-range@5.0.1:
     dependencies:

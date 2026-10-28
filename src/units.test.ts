@@ -2,7 +2,6 @@ import { CliError } from "@wirecat/cli-base"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { discover, domainOf, parseAutoconfig } from "./discovery.js"
 import { mapImapError } from "./mail/imap.js"
-import { parseMail } from "./mail/parse.js"
 import { proposedName } from "./profile.js"
 import { secretToolLookup } from "./secret.js"
 
@@ -31,27 +30,6 @@ describe("mapImapError", () => {
     expect(
       mapImapError({ responseStatus: "NO", responseText: "mailbox 'Secret client' not found" }).message,
     ).not.toContain("Secret")
-  })
-})
-
-describe("parseMail", () => {
-  it("reads HTML-only mail as text without scripts, comments or tags", async () => {
-    const raw =
-      "From: Ann <ann@example.com>\r\nTo: undisclosed:;, Bob <bob@example.com>\r\nSubject: =?UTF-8?B?0J/RgNC40LLQtdGC?=\r\n" +
-      "Content-Type: text/html; charset=utf-8\r\nIn-Reply-To: <a@x>\r\nReferences: <a@x> <b@x>\r\n\r\n" +
-      "<p>Hi&nbsp;&amp; bye</p><!-- hidden --><script>steal()</script><style>p{}</style>"
-    const mail = await parseMail(Buffer.from(raw))
-    expect(mail.subject).toBe("Привет")
-    expect(mail.text).toContain("Hi & bye")
-    expect(mail.text).not.toMatch(/steal|hidden|<p>/)
-    expect(mail).toMatchObject({
-      inReplyTo: "<a@x>",
-      references: ["<a@x>", "<b@x>"],
-      to: [{ address: "bob@example.com" }],
-    })
-  })
-  it("survives mail with no body and no date", async () => {
-    expect(await parseMail(Buffer.from("Subject: x\r\n\r\n"))).toMatchObject({ text: "", sentAt: null, from: null })
   })
 })
 

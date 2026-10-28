@@ -1,11 +1,11 @@
 import { CliError } from "@wirecat/cli-base"
 import { annotate } from "@wirecat/cli-base/commands"
 import { baseContext, FETCH, itemOf, outputFor, renderAnswer } from "@wirecat/cli-core/cli"
+import { syncMail } from "@wirecat/cli-core/mail"
 import { Command } from "commander"
 import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
 import { openMailStore } from "../store.js"
-import { syncMail } from "../sync.js"
 import { collect, contextOf, openSource, refuseOffline } from "./context.js"
 
 const DAY_MS = 86_400_000
@@ -15,6 +15,7 @@ interface SyncFlags {
   sinceTime?: string
   limit?: number
   folder?: string[]
+  rescan?: boolean
 }
 
 const sinceOf = (value: string | undefined, now: number): Date => {
@@ -61,12 +62,13 @@ export const syncCommand = (): Command =>
   })
     .description("read mail from the server into the shared store; mail already stored is skipped")
     .option("--since-time <time>", "only mail received since this ISO date or timestamp (default: 30 days)")
-    .option("--limit <n>", "save at most this many new emails per folder, newest first", wholeNumber)
+    .option("--limit <n>", "save at most this many new emails in this run, newest first", wholeNumber)
     .option(
       "--folder <folder>",
       "a folder to read; repeat it for more (default: the profile's folders, else INBOX and Sent)",
       collect,
     )
+    .option("--rescan", "list every message in the window again, not only those an earlier run left")
     .action(async function (this: Command, args: SyncFlags) {
       const context = contextOf(this)
       refuseOffline(context.flags)
@@ -81,17 +83,32 @@ export const syncCommand = (): Command =>
           const store = await openMailStore(context.env)
           try {
             return await syncMail(source, store, {
-              address,
-              folders,
+              account: { address, mode: "imap", folders },
               since,
-              limit,
+              ...(limit === undefined ? {} : { max: limit }),
+              ...(args.rescan ? { rescan: true } : {}),
               ...(context.environment.signal ? { signal: context.environment.signal } : {}),
             })
           } finally {
             await store.close()
           }
         })
-        renderAnswer(this, outputFor(this), itemOf(report))
+        renderAnswer(
+          this,
+          outputFor(this),
+          itemOf({
+            address: report.account,
+            since: report.since,
+            folders: report.coverage?.folders ?? [],
+            listed: report.listed,
+            saved: report.saved,
+            already_stored: report.alreadyStored,
+            deleted: report.deleted,
+            complete: report.complete,
+            unreadable: report.unreadable?.length ?? 0,
+            ...(report.deletionsSkipped ? { deletions_skipped: report.deletionsSkipped } : {}),
+          }),
+        )
       } finally {
         await source.close()
       }

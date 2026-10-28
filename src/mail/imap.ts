@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { CliError } from "@wirecat/cli-base"
+import type { Listed, MailHeaders, MailSource, Searched } from "@wirecat/cli-core/mail"
 import { type FetchMessageObject, ImapFlow, type ListResponse } from "imapflow"
-import type { Listed, MailHeaders, MailSource, Searched } from "./port.js"
 
 export interface ImapEndpoint {
   host: string
@@ -176,8 +176,39 @@ export const imapSource = (endpoint: ImapEndpoint, password: string): ImapMailSo
       return { ...(validity ? { validity } : {}), uids: (uids || []).map(String) }
     })
 
+  const folderList = async (): Promise<FolderInfo[]> => {
+    const open = await connected()
+    try {
+      const entries = await open.list({ statusQuery: { messages: true, unseen: true } })
+      return entries
+        .filter((entry) => !entry.flags.has("\\Noselect") && !entry.flags.has("\\NonExistent"))
+        .map((entry) => ({
+          path: entry.path,
+          name: entry.name,
+          role: roleOf(entry),
+          messages: entry.status?.messages ?? null,
+          unseen: entry.status?.unseen ?? null,
+        }))
+    } catch (error) {
+      throw mapImapError(error)
+    }
+  }
+
   return {
     search,
+
+    present: (uids, folder) =>
+      inFolder(folder, async (open) => {
+        if (uids.length === 0) return []
+        const held = new Set((await open.search({ uid: uids.join(",") }, { uid: true })) || [])
+        return uids.filter((uid) => held.has(Number(uid)))
+      }),
+
+    folders: async () => {
+      const entries = await folderList()
+      const role = (...names: string[]) => entries.find((entry) => entry.role && names.includes(entry.role))?.path
+      return { all: role("all", "archive") ?? "INBOX", trash: role("trash") ?? "Trash" }
+    },
 
     list: async (since, folder, options) => {
       const searched = options?.searched ?? (await search(since, folder))
@@ -241,23 +272,7 @@ export const imapSource = (endpoint: ImapEndpoint, password: string): ImapMailSo
       return items.map((item) => read.get(item) as Uint8Array | Error)
     },
 
-    folderList: async () => {
-      const open = await connected()
-      try {
-        const entries = await open.list({ statusQuery: { messages: true, unseen: true } })
-        return entries
-          .filter((entry) => !entry.flags.has("\\Noselect") && !entry.flags.has("\\NonExistent"))
-          .map((entry) => ({
-            path: entry.path,
-            name: entry.name,
-            role: roleOf(entry),
-            messages: entry.status?.messages ?? null,
-            unseen: entry.status?.unseen ?? null,
-          }))
-      } catch (error) {
-        throw mapImapError(error)
-      }
-    },
+    folderList,
 
     check: async () => {
       const open = await connected()

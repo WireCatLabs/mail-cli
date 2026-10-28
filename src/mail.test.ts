@@ -304,11 +304,11 @@ describe("account check, folders and sync", () => {
     const first = await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])
     expect(first.code).toBe(0)
     expect(item(first.out)).toMatchObject({ address: ADDRESS, saved: 2, unreadable: 0 })
-    expect(item(first.out).folders.map((one: { folder: string }) => one.folder)).toEqual(["INBOX", "Sent"])
+    expect(item(first.out).folders).toEqual(["INBOX", "Sent"])
 
     const second = await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])
     expect(item(second.out)).toMatchObject({ saved: 0 })
-    expect(item(second.out).folders[0]).toMatchObject({ listed: 2, already_stored: 2, saved: 0 })
+    expect(item(second.out)).toMatchObject({ listed: 2, already_stored: 2, saved: 0 })
 
     const store = await openStore({ path: storePath(env), env, command: "mail" })
     try {
@@ -324,6 +324,13 @@ describe("account check, folders and sync", () => {
       await store.close()
     }
     expect(everything([first, second])).not.toContain(PASSWORD)
+  })
+
+  it("lists the whole window again with --rescan and deletes nothing that is still on the server", async () => {
+    const { mail } = await ready()
+    await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])
+    const again = await mail(["ya", "sync", "--since-time", "2026-10-01", "--rescan", "--json"])
+    expect(item(again.out)).toMatchObject({ listed: 2, saved: 0, deleted: 0, complete: true })
   })
 
   it("honours --limit, newest first", async () => {
@@ -362,7 +369,7 @@ describe("account check, folders and sync", () => {
     const { mail } = await ready()
     expect((await mail(["setup", ADDRESS, "--folder", "Sent", "--yes", "--replace", "--json"])).code).toBe(0)
     const synced = await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])
-    expect(item(synced.out).folders.map((one: { folder: string }) => one.folder)).toEqual(["Sent"])
+    expect(item(synced.out).folders).toEqual(["Sent"])
     expect((await mail(["ya", "sync", "--offline", "--json"])).code).not.toBe(0)
   })
 

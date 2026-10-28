@@ -5,6 +5,9 @@ export interface FakeMessage {
   raw: string
   flags?: string[]
   date?: string
+  /** RFC 8474 object ids, sent when the client asks for EMAILID or THREADID. */
+  emailId?: string
+  threadId?: string
 }
 
 export interface FakeFolder {
@@ -78,6 +81,7 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
     "MOVE",
     "SPECIAL-USE",
     "IDLE",
+    ...(options.folders.some(({ messages }) => messages.some(({ emailId }) => emailId)) ? ["OBJECTID"] : []),
     ...(options.capabilities ?? []),
   ]
   const sockets = new Set<Socket>()
@@ -146,7 +150,10 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
         case "UID": {
           const [sub = "", ...more] = rest
           if (sub.toUpperCase() === "SEARCH") {
-            send(`* SEARCH ${(selected?.messages ?? []).map((message) => message.uid).join(" ")}`.trimEnd())
+            const all = (selected?.messages ?? []).map((message) => message.uid)
+            const wanted = /^UID (\S+)$/i.exec(more.join(" "))?.[1]
+            const found = wanted ? uidsIn(wanted, all) : all
+            send(`* SEARCH ${found.join(" ")}`.trimEnd())
             return send(`${tag} OK done`)
           }
           if (sub.toUpperCase() === "FETCH") {
@@ -165,6 +172,8 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
               if (/FLAGS/i.test(items)) parts.push(`FLAGS (${(message.flags ?? []).join(" ")})`)
               if (/INTERNALDATE/i.test(items))
                 parts.push(`INTERNALDATE "${message.date ?? "28-Oct-2026 10:00:00 +0000"}"`)
+              if (message.emailId && /EMAILID/i.test(items)) parts.push(`EMAILID (${message.emailId})`)
+              if (message.threadId && /THREADID/i.test(items)) parts.push(`THREADID (${message.threadId})`)
               if (/RFC822\.SIZE/i.test(items)) parts.push(`RFC822.SIZE ${Buffer.byteLength(message.raw)}`)
               if (/ENVELOPE/i.test(items)) parts.push(`ENVELOPE ${envelope(message.raw)}`)
               const fields = /BODY(?:\.PEEK)?\[HEADER\.FIELDS \(([^)]*)\)\]/i.exec(items)
