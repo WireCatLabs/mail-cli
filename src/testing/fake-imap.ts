@@ -24,6 +24,8 @@ export interface FakeOptions {
   capabilities?: string[]
   /** Answers every UID FETCH of message bodies with `NO [THROTTLED]`, as Gmail does under load. */
   throttleBodies?: boolean
+  /** Drops the connection instead of answering this many UID SEARCH commands, as a flaky network does. */
+  dropSearches?: number
 }
 
 export interface FakeImap {
@@ -85,6 +87,7 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
     ...(options.capabilities ?? []),
   ]
   const sockets = new Set<Socket>()
+  let dropsLeft = options.dropSearches ?? 0
 
   const serve = (socket: Socket) => {
     sockets.add(socket)
@@ -150,6 +153,10 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
         case "UID": {
           const [sub = "", ...more] = rest
           if (sub.toUpperCase() === "SEARCH") {
+            if (dropsLeft > 0) {
+              dropsLeft -= 1
+              return socket.destroy()
+            }
             const all = (selected?.messages ?? []).map((message) => message.uid)
             const wanted = /^UID (\S+)$/i.exec(more.join(" "))?.[1]
             const found = wanted ? uidsIn(wanted, all) : all

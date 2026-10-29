@@ -41,6 +41,9 @@ const FETCH_BATCH = 25
 
 const digest = (id: string) => `imap:${createHash("sha256").update(id).digest("hex")}`
 
+/** The raw error code (ECONNRESET, ETIMEDOUT) so a failed run can be diagnosed; never the server's text. */
+const causeOf = (code: string | undefined) => (code && /^[A-Za-z0-9_.-]{1,40}$/.test(code) ? { cause_code: code } : {})
+
 /** The server's error text can quote mail or names, so only its codes reach the caller. */
 export const mapImapError = (error: unknown): CliError => {
   if (error instanceof CliError) return error
@@ -70,9 +73,9 @@ export const mapImapError = (error: unknown): CliError => {
       ...(typeof e.throttleReset === "number" ? { retry_after_ms: e.throttleReset } : {}),
     })
   if (e.code === "ETIMEDOUT" || e.code === "ETIMEOUT" || e.code === "ConnectionTimeout" || e.code === "GreetingTimeout")
-    return new CliError("timeout", "the mail server did not answer in time", { retryable: true })
+    return new CliError("timeout", "the mail server did not answer in time", { retryable: true, ...causeOf(e.code) })
   if (e.code && /^(ECONN|ENOTFOUND|EAI_|ENETUNREACH|EHOSTUNREACH|NoConnection|EPIPE)/.test(e.code))
-    return new CliError("network_error", "cannot reach the mail server", { retryable: true })
+    return new CliError("network_error", "cannot reach the mail server", { retryable: true, ...causeOf(e.code) })
   return new CliError(
     "provider_error",
     `the mail server refused the request${e.responseStatus ? ` (${e.responseStatus})` : ""}`,
@@ -155,7 +158,7 @@ export const imapSource = (endpoint: ImapEndpoint, password: string): ImapMailSo
     return next
   }
 
-  const inFolder = async <T>(folder: string, work: (open: ImapFlow, validity: string) => Promise<T>): Promise<T> => {
+  const once = async <T>(folder: string, work: (open: ImapFlow, validity: string) => Promise<T>): Promise<T> => {
     const open = await connected()
     try {
       const lock = await open.getMailboxLock(folder, { readOnly: true })
@@ -167,6 +170,18 @@ export const imapSource = (endpoint: ImapEndpoint, password: string): ImapMailSo
       }
     } catch (error) {
       throw mapImapError(error)
+    }
+  }
+
+  // Every call here only reads, so one more try on a fresh connection after a dropped one is safe.
+  const inFolder = async <T>(folder: string, work: (open: ImapFlow, validity: string) => Promise<T>): Promise<T> => {
+    try {
+      return await once(folder, work)
+    } catch (error) {
+      if (!(error instanceof CliError) || error.code !== "network_error") throw error
+      client?.close()
+      client = undefined
+      return once(folder, work)
     }
   }
 

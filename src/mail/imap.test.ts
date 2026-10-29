@@ -11,11 +11,12 @@ afterEach(async () => {
   fake = undefined
 })
 
-const serve = (throttleBodies = false) =>
+const serve = (throttleBodies = false, dropSearches = 0) =>
   startFakeImap({
     login: "ya@burobiz.ru",
     password: "app-secret-1",
     throttleBodies,
+    dropSearches,
     folders: [
       {
         name: "INBOX",
@@ -111,4 +112,24 @@ it("surfaces a Gmail style NO [THROTTLED] as rate_limited", async () => {
   )
   await source.close()
   expect(failure).toMatchObject({ code: "rate_limited" })
+})
+
+it("reconnects once when the connection drops during a read", async () => {
+  fake = await serve(false, 1)
+  const source = sourceOf(fake.port)
+  const found = await source.search?.(new Date("2026-01-01"), "INBOX")
+  await source.close()
+  expect(found?.uids).toEqual(["4", "7"])
+})
+
+it("fails with the raw error code kept when the connection drops twice", async () => {
+  fake = await serve(false, 2)
+  const source = sourceOf(fake.port)
+  const failure = await source.search?.(new Date("2026-01-01"), "INBOX").then(
+    () => undefined,
+    (error: { code: string; details: { cause_code?: string } }) => error,
+  )
+  await source.close()
+  expect(failure?.code).toBe("network_error")
+  expect(failure?.details.cause_code).toMatch(/^[A-Za-z]+/)
 })
