@@ -54,7 +54,7 @@ mail commands info [path]
 
 ## `mail setup`
 
-find the IMAP server for an address (built-in providers, the MX record, ISPDB, the domain's autoconfig), show it, and save a profile when you confirm; no password is asked here
+find the IMAP server for an address (built-in providers, the MX record, ISPDB, the domain's autoconfig), show it with the steps to prepare the mailbox (turn on IMAP, make an app password; all providers: https://github.com/WireCatLabs/mail-cli/blob/main/docs/providers.md), and save a profile when you confirm, then ask for the app password and keep it in the keyring (at a terminal; with --yes or --json nothing is asked and the next command is printed)
 
 **Changes something on this computer only.**
 
@@ -69,6 +69,7 @@ mail setup <address> [options]
 | Option | What it does |
 |---|---|
 | `--name <name>` | the profile name (default: the part before the @). |
+| `--provider <provider>` | skip discovery and use a built-in provider: Yandex, Gmail, iCloud, Mail.ru, Fastmail, Outlook. |
 | `--host <host>` | skip discovery and use this IMAP host. |
 | `--port <port>` | IMAP port (default 993). |
 | `--security <mode>` | tls or starttls (default tls). |

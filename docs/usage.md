@@ -15,9 +15,12 @@ command without one stops with exit code 2 and lists the profiles on this comput
 
 ## Connect a mailbox
 
+First prepare the mailbox: turn on IMAP and make an app password. [Prepare the mailbox](providers.md) has the steps
+for every provider, and `setup` and `session start` print them too.
+
 ```sh
-mail setup ya@burobiz.ru             # shows the server; asks before it saves a profile (--yes skips the question)
-mail ya session start                # asks for the app password, checks it on the server, keeps it in the keyring
+mail setup ya@burobiz.ru             # shows the server and the steps, saves a profile, asks for the app password
+mail ya session start                # asks for the app password again later (it is checked and kept in the keyring)
 mail ya account check                # logs in and lists what the server supports
 mail ya folders list                 # folders with role and counts
 mail ya sync --since-time 2026-10-01 # reads new mail into the shared store; stored mail is skipped
@@ -25,7 +28,10 @@ mail ya sync --since-time 2026-10-01 # reads new mail into the shared store; sto
 
 `setup` looks the address up in a built-in table (Yandex, Gmail, iCloud, Mail.ru, Fastmail, Outlook), then the MX
 record, then Thunderbird's ISPDB and the domain's own autoconfig file. Give `--host`, `--port` and `--security` to set
-a server by hand. Outlook accepts only OAuth for IMAP, so `setup` refuses to save it for now.
+a server by hand, or `--provider yandex` (any name in the table) when discovery finds nothing; at a terminal `setup`
+asks which provider instead. At a terminal `setup` also asks for the app password, checks the login and keeps it in
+the keyring, so one command is enough. With `--yes`, `--json` or no terminal it asks nothing, saves the profile and
+prints `next_command`: `mail ya session start`. Outlook accepts only OAuth for IMAP, so `setup` refuses to save it for now.
 
 `session start` takes the password from the terminal, never from an option or a URL. It is stored only after the
 server accepted it. When the keyring has none, `mail` reads the entry Himalaya left (`secret-tool` service

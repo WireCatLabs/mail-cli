@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events"
 import { mkdtempSync, readFileSync, statSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -23,6 +24,26 @@ afterEach(async () => {
   await fake?.close()
   fake = undefined
 })
+
+/** A pipe is read to its end by one prompt, so this one ends after each answer: every prompt of a run gets the next. */
+const answering = (answers: string[]) => {
+  const queue = [...answers]
+  const stream = new EventEmitter() as EventEmitter & { isTTY: boolean; pause: () => void; resume: () => void }
+  stream.isTTY = false
+  stream.pause = () => {}
+  stream.resume = () => {}
+  const on = stream.on.bind(stream)
+  stream.on = (event: string, listener: (...args: unknown[]) => void) => {
+    on(event, listener)
+    if (event === "end")
+      queueMicrotask(() => {
+        stream.emit("data", Buffer.from(`${queue.shift() ?? ""}\n`))
+        stream.emit("end")
+      })
+    return stream
+  }
+  return stream as unknown as NodeJS.ReadableStream
+}
 
 const harness = async (options: { throttle?: boolean } = {}) => {
   fake = await startFakeImap({
@@ -59,10 +80,11 @@ const harness = async (options: { throttle?: boolean } = {}) => {
     MAIL_STATE_DIR: mkdtempSync(join(tmpdir(), "state-")),
     MESSAGING_STORE: join(mkdtempSync(join(tmpdir(), "store-")), "wirecat.db"),
   }
-  const mail = async (argv: string[], extra: Partial<MailEnvironment> = {}) => {
+  const mail = async (argv: string[], given: Partial<MailEnvironment> & { answers?: string[] } = {}) => {
+    const { answers, ...extra } = given
     const out: string[] = []
     const err: string[] = []
-    const code = await run(argv, {
+    const options: MailEnvironment & Record<string, unknown> = {
       streams: { data: (text) => out.push(text), diagnostic: (text) => err.push(text) },
       tty: false,
       env,
@@ -72,7 +94,9 @@ const harness = async (options: { throttle?: boolean } = {}) => {
       connect: (endpoint: ImapEndpoint, password: string) =>
         imapSource({ ...endpoint, host: "127.0.0.1", port, security: "plain" }, password),
       ...extra,
-    })
+    }
+    if (answers) options.stdin = answering(answers)
+    const code = await run(argv, options)
     return { code, out: out.join("\n"), err: err.join("\n") }
   }
   const everything = (results: { out: string; err: string }[]) => results.map(({ out, err }) => out + err).join("\n")
@@ -207,6 +231,95 @@ describe("setup choices", () => {
     const { mail, env } = await harness()
     env.MAIL_READ_ONLY = "1"
     expect((await mail(["setup", ADDRESS, "--yes", "--json"])).code).not.toBe(0)
+  })
+})
+
+describe("preparing the mailbox", () => {
+  const lines = (...answers: string[]) => ({ answers })
+  const NOWHERE = { mx: async () => [], fetch: (async () => new Response("", { status: 404 })) as typeof fetch }
+
+  it("puts the provider's steps and sources in the json of setup", async () => {
+    const { mail } = await harness()
+    const shown = item((await mail(["setup", ADDRESS, "--json"])).out)
+    expect(shown.prepare.steps.join("\n")).toContain("«Пароли приложений и OAuth токены»")
+    expect(shown.prepare.sources).toContain("https://yandex.ru/support/id/ru/authorization/app-passwords")
+  })
+
+  it("prints the steps at a terminal, before asking anything, and never the item twice", async () => {
+    const { mail } = await harness()
+    const shown = await mail(["setup", ADDRESS], { tty: true, ...lines("n") })
+    expect(shown.err).toContain("Prepare the Yandex mailbox first:")
+    expect(shown.err).toContain("«Создать пароль приложения»")
+    expect(shown.out).not.toContain("«Создать пароль приложения»")
+  })
+
+  it("says one generic line for a provider it does not know", async () => {
+    const { mail } = await harness()
+    const set = item((await mail(["setup", "me@own.test", "--host", "mail.own.test", "--json"])).out)
+    expect(set.prepare.steps).toEqual([])
+    expect(set.prepare.notes).toHaveLength(1)
+  })
+
+  it("takes a built-in provider by name when discovery finds nothing", async () => {
+    const { mail } = await harness()
+    const failed = await mail(["setup", "me@own.test", "--json"], { discovery: NOWHERE })
+    expect(failed.code).not.toBe(0)
+    expect(failed.err).toContain("--provider")
+    const named = await mail(["setup", "me@own.test", "--provider", "Mail.ru", "--json"], { discovery: NOWHERE })
+    expect(item(named.out)).toMatchObject({ provider: "Mail.ru", imap: { host: "imap.mail.ru" } })
+    const bad = await mail(["setup", "me@own.test", "--provider", "nope", "--json"], { discovery: NOWHERE })
+    expect(bad.err).toContain("choose one of")
+  })
+
+  it("lets a person pick the provider at a terminal", async () => {
+    const { mail } = await harness()
+    const picked = await mail(["setup", "me@own.test"], { tty: true, discovery: NOWHERE, ...lines("fastmail", "n") })
+    expect(picked.err).toContain("Prepare the Fastmail mailbox first:")
+  })
+
+  it("saves the profile and the password in one command at a terminal", async () => {
+    const { mail, keyring, everything } = await harness()
+    const done = await mail(["setup", ADDRESS], { tty: true, ...lines("y", PASSWORD) })
+    expect(done.code).toBe(0)
+    expect(done.out).toContain("signed_in")
+    expect(keyring.entries.size).toBe(1)
+    const status = await mail(["ya", "session", "status", "--check", "--json"])
+    expect(item(status.out)).toMatchObject({ state: "saved", verified: true })
+    expect(everything([done, status])).not.toContain(PASSWORD)
+  })
+
+  it("keeps the profile but stores nothing when the typed password is refused", async () => {
+    const { mail, keyring, env } = await harness()
+    const done = await mail(["setup", ADDRESS], { tty: true, ...lines("y", "wrong-password") })
+    expect(done.code).not.toBe(0)
+    expect(done.err).toContain("session start")
+    expect(keyring.entries.size).toBe(0)
+    expect(readFileSync(join(env.MAIL_CONFIG_DIR ?? "", "config.json"), "utf8")).toContain(ADDRESS)
+  })
+
+  it("does not prompt without a terminal and prints the next command", async () => {
+    const { mail, keyring } = await harness()
+    const saved = await mail(["setup", ADDRESS, "--yes", "--json"])
+    expect(item(saved.out)).toMatchObject({ saved: true, signed_in: false, next_command: "mail ya session start" })
+    expect(keyring.entries.size).toBe(0)
+  })
+
+  it("shows the steps before the hidden prompt of session start", async () => {
+    const { mail } = await harness()
+    await profileSet(mail)
+    const started = await mail(["ya", "session", "start", "--json"], typed(PASSWORD))
+    expect(started.err).toContain("Prepare the Yandex mailbox first:")
+  })
+
+  it("names the likely cause when the server refuses the login", async () => {
+    const { mail, keyring, everything } = await harness()
+    await profileSet(mail)
+    const refused = await mail(["ya", "session", "start", "--json"], typed("wrong-password"))
+    expect(refused.code).not.toBe(0)
+    expect(refused.err).toContain("Likely cause")
+    expect(refused.err).toContain("2 to 3 hours")
+    expect(keyring.entries.size).toBe(0)
+    expect(everything([refused])).not.toContain("wrong-password")
   })
 })
 
