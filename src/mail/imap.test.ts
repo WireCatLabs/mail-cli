@@ -236,3 +236,34 @@ it("treats a connection the server closes right after it opened as a dropped lin
       details: { cause_code: code, retryable: true },
     })
 })
+
+it("keeps the code of every failure it maps, and retries the ones that are momentary", () => {
+  expect(mapImapError({ code: "LockTimeout" })).toMatchObject({
+    code: "timeout",
+    details: { cause_code: "LockTimeout" },
+  })
+  expect(mapImapError({ code: "InvalidResponse" })).toMatchObject({
+    code: "network_error",
+    details: { cause_code: "InvalidResponse" },
+  })
+  expect(mapImapError({ responseStatus: "NO", serverResponseCode: "UNAVAILABLE" })).toMatchObject({
+    code: "provider_unavailable",
+    details: { retryable: true, cause_code: "UNAVAILABLE" },
+  })
+  expect(
+    mapImapError({ responseStatus: "NO", responseText: "Mailbox quota exceeded for Ann <ann@example.com>" }),
+  ).toMatchObject({
+    code: "provider_error",
+    details: { cause_code: "NO" },
+  })
+})
+
+it("retries a command the server refused with a tagged NO [UNAVAILABLE]", async () => {
+  fake = await serve(false, 0, { refuseFetches: 2 })
+  const waits: number[] = []
+  const source = sourceOf(fake.port, undefined, { sleep: async (ms) => void waits.push(ms) })
+  const listed = await source.list(SINCE, "INBOX")
+  await source.close()
+  expect(listed.map(({ uid }) => uid)).toEqual(["4", "7"])
+  expect(waits).toHaveLength(2)
+})

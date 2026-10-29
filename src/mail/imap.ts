@@ -126,17 +126,29 @@ export const mapImapError = (error: unknown): CliError => {
     e.code === "ETIMEOUT" ||
     e.code === "ConnectionTimeout" ||
     e.code === "GreetingTimeout" ||
-    e.code === "RequestTimeout"
+    e.code === "RequestTimeout" ||
+    e.code === "CONNECT_TIMEOUT" ||
+    e.code === "GREETING_TIMEOUT" ||
+    e.code === "UPGRADE_TIMEOUT" ||
+    e.code === "LockTimeout"
   )
     return new CliError("timeout", "the mail server did not answer in time", { retryable: true, ...causeOf(e.code) })
   if (
     e.code &&
-    /^(ECONN|ENOTFOUND|EAI_|ENETUNREACH|EHOSTUNREACH|NoConnection|EPIPE|Closed|EConnectionClosed)/.test(e.code)
+    /^(ECONN|ENOTFOUND|EAI_|ENETUNREACH|EHOSTUNREACH|NoConnection|EPIPE|Closed|EConnectionClosed|UnexpectedTag|MissingTag|InvalidResponse|ResponseProcessingFailed|ParserError|PollFailed|TooManyResponses)/.test(
+      e.code,
+    )
   )
     return new CliError("network_error", "cannot reach the mail server", { retryable: true, ...causeOf(e.code) })
+  if (responseCode === "UNAVAILABLE")
+    return new CliError("provider_unavailable", "the mail server cannot answer this request now", {
+      retryable: true,
+      ...causeOf(responseCode),
+    })
   return new CliError(
     "provider_error",
     `the mail server refused the request${e.responseStatus ? ` (${e.responseStatus})` : ""}`,
+    causeOf(e.code ?? (responseCode || e.responseStatus)),
   )
 }
 
@@ -279,7 +291,8 @@ export const imapSource = (endpoint: ImapEndpoint, password: string, tuning: Ima
         return await command()
       } catch (raw) {
         const error = mapImapError(raw)
-        const transient = error.code === "network_error" || error.code === "timeout"
+        const transient =
+          error.code === "network_error" || error.code === "timeout" || error.code === "provider_unavailable"
         if (transient) drop(slot)
         if (!transient || attempt >= maxAttempts || signal?.aborted) throw error
         const base = backoffMs[Math.min(attempt, backoffMs.length) - 1] ?? 10_000
