@@ -1,8 +1,10 @@
 import { CliError } from "@wirecat/cli-base"
+import { metaOf } from "@wirecat/cli-base/commands"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { discover, domainOf, parseAutoconfig } from "./discovery.js"
 import { mapImapError } from "./mail/imap.js"
 import { proposedName } from "./profile.js"
+import { createProgram } from "./program.js"
 import { secretToolLookup } from "./secret.js"
 
 afterEach(() => vi.unstubAllEnvs())
@@ -76,5 +78,12 @@ describe("secretToolLookup", () => {
   it("answers nothing when secret-tool is not installed", async () => {
     vi.stubEnv("PATH", "/nonexistent")
     expect(await secretToolLookup("anything")).toBeUndefined()
+  })
+})
+
+describe("sync", () => {
+  it("is cooperative, so the 30 s command default does not cut a long sync", () => {
+    const sync = createProgram().commands.find((command) => command.name() === "sync")
+    expect(sync && metaOf(sync).cooperative).toBe(true)
   })
 })

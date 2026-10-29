@@ -18,9 +18,12 @@ import {
 } from "@wirecat/cli-core/cli"
 import { Command } from "commander"
 import { configuration } from "../config.js"
+import { prepareFor } from "../discovery.js"
 import { IDENTITY } from "../identity.js"
-import { type ImapMailSource, imapSource } from "../mail/imap.js"
+import { imapSource } from "../mail/imap.js"
+import { prepareText } from "../providers.js"
 import { contextOf, endpointOf, passwordsOf, refuseOffline } from "./context.js"
+import { checkLogin } from "./login.js"
 
 const answer = (command: Command, item: unknown) => renderAnswer(command, outputFor(command), itemOf(item))
 
@@ -42,18 +45,15 @@ const startCommand = () =>
       refuseUnderReadOnly(this, "session start")
       const endpoint = endpointOf(context.settings)
       const { readSecret } = await import("@wirecat/cli-core")
+      const address = context.settings.mailbox.address ?? endpoint.login
+      const { provider, prepare } = prepareFor(address, endpoint.host)
+      outputFor(this).renderer.note(prepareText(provider, prepare))
       const typed = await readSecret(`App password for ${endpoint.login} (hidden): `, secretInputOf(this))
       if (!typed) throw new CliError("validation_error", "no password was given; nothing was stored")
       const connect = context.environment.connect ?? imapSource
-      const result = await baseContext(this, configuration.resolveSettings).run(async () => {
-        let source: ImapMailSource | undefined
-        try {
-          source = connect(endpoint, typed)
-          return await source.check()
-        } finally {
-          await source?.close()
-        }
-      })
+      const result = await baseContext(this, configuration.resolveSettings).run(() =>
+        checkLogin(connect, endpoint, typed, address, prepare),
+      )
       // Stored only after the server accepted it (WC-SECR-5).
       passwordsOf(context).write(typed)
       answer(this, {

@@ -6,4 +6,5 @@ scripts and for AI agents. It signs in with an app password kept in the OS keyri
 Commands: `setup` (find the server, save a profile), `session` (start, status, end: the app password),
 `account check`, `folders list` and `sync`, plus the commands every WireCat CLI shares: `doctor`, `commands`,
 `config`, `skill`, `mcp`, `runs` and `upgrade`.
-Start with [installation](installation.md), then [usage](usage.md).
+Start with [installation](installation.md), then [usage](usage.md). Before the first login, prepare the mailbox:
+[the steps for each provider](providers.md).

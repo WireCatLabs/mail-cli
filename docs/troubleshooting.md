@@ -11,7 +11,7 @@ support request.
 | The settings file does not read | `doctor` lists every problem in the file under `config.issues`. Run the `config unset` each one gives, or fix the file by hand. |
 | `doctor` lists `files.problems` | Other users of the computer can read `config.json` or enter its folder. Run each `chmod` that `doctor` prints after "to make it private:". `doctor` never changes a file mode itself. |
 | "no app password for profile" | Run `mail <profile> session start`, or set `MAIL_PASSWORD` for one run. |
-| "the mail server refused the login" | The app password is wrong, or IMAP and app passwords are off. Yandex: turn on IMAP and make a password of type Mail. Gmail: 2-step verification, then an app password. Then `session start` again. |
+| "the mail server refused the login" | The app password is wrong, or IMAP and app passwords are off. The steps for every provider are in [prepare the mailbox](providers.md). Yandex also needs 2 to 3 hours after a new app password. Then `session start` again. |
 | `rate_limited` | The server is limiting this account. Wait, then run `sync` again; mail already stored is skipped. |
 | "the OS keyring is not available" | The keyring is locked or no secret service runs. Unlock it and try again; the password is never stored in a file. |
 | A write is refused | The profile's permissions or `MAIL_READ_ONLY` stop it; see [settings](configuration.md#permissions). |

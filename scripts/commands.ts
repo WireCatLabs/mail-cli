@@ -4,6 +4,7 @@ import { COMMANDS_PAGE_LABELS, commandsPage, describeOptions, describeProgram } 
 import { commandHelpMarkdown } from "@wirecat/cli-core/cli"
 import { IDENTITY } from "../dist/identity.js"
 import { createProgram } from "../dist/program.js"
+import { providersPage } from "./providers-page.ts"
 
 const root = resolve(import.meta.dirname, "..")
 const program = createProgram()
@@ -32,8 +33,14 @@ lists the profiles on this computer.`,
   },
 })
 const check = process.argv.includes("--check")
-const stale = writeArtifacts([{ path: "docs/commands.md", content: page.replace(/\n{3,}/g, "\n\n") }], { root, check })
+const stale = writeArtifacts(
+  [
+    { path: "docs/commands.md", content: page.replace(/\n{3,}/g, "\n\n") },
+    { path: "docs/providers.md", content: providersPage() },
+  ],
+  { root, check },
+)
 if (check && stale.length) {
-  process.stderr.write("docs/commands.md is stale; run pnpm generate\n")
+  process.stderr.write(`${stale.join(", ")} is stale; run pnpm generate\n`)
   process.exitCode = 1
 }
