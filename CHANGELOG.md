@@ -26,3 +26,5 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   rerun resumes (`--timeout` sets another limit).
 - A dropped IMAP connection is retried once on a fresh connection, and the raw error code (`cause_code`, never the
   server's text) is kept on `network_error` and `timeout` failures.
+- Listing reads 50 messages per request and gives a slow server 10 minutes per request instead of 2; a dropped batch is
+  retried on its own, and the run stops if UIDVALIDITY changed meanwhile.
