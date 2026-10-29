@@ -6,4 +6,6 @@ minimumReleaseAgeExclude:
   - "@wirecat/*"
 # markdownlint-cli2 is pinned to community's version, whose markdownlint ranges katex ^0.16 with advisories.
 overrides:
+  # markdownlint 0.42.0 (its latest) pins re2js 2.8.6 exactly (GHSA-gg6h-894w-4m9c).
+  markdownlint>re2js: 2.8.7
   katex: ^0.18.2
