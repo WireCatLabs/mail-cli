@@ -54,7 +54,7 @@ export const PROVIDER_PREPARE = {
       "Copy the password when it appears; Apple's page does not say whether it can be shown again.",
     ],
     notes: [
-      "`mail` logs in with the full address. Apple says the name before @icloud.com is the usual login; if the full address is refused, run `mail setup <address> --login <name> --replace`.",
+      "`mail` logs in with the full address. Apple says the name before @icloud.com is the usual login; if the full address is refused, sign in with a new profile name: `mail <profile> session start --address <address> --login <name>`.",
     ],
     refused:
       "the password may be the Apple Account password instead of an app specific password, or the login may need the name before @icloud.com (--login).",

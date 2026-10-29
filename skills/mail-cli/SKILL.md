@@ -23,3 +23,5 @@ Find your way with the tool itself, not this file:
 - Never ask the owner for a mailbox password and never run `session start` yourself: it needs the owner at a terminal.
   If a command says there is no app password, tell the owner to run `mail <profile> session start`.
 - `mail ya sync` reads new mail into the store (`--since-time`, `--limit`, `--folder`); search the store with memo.
+  A big mailbox does not fit one run: when the answer says `state: "partial"`, run the command in `next` again (it is
+  safe) until it says `complete`; `mail ya status` says how far it is. Stop when a run moves nothing on, and tell the owner.

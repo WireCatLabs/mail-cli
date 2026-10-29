@@ -2,15 +2,14 @@ import { EventEmitter } from "node:events"
 import { mkdtempSync, readFileSync, statSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { Readable } from "node:stream"
 import { brokenKeyring, memoryKeyring } from "@wirecat/cli-base"
 import { openStore, storePath } from "@wirecat/cli-core/store"
 import { afterEach, describe, expect, it } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
 import { discover } from "./discovery.js"
-import { type ImapEndpoint, imapSource } from "./mail/imap.js"
+import { type ImapEndpoint, type ImapTuning, imapSource } from "./mail/imap.js"
 import { run } from "./program.js"
-import { type FakeImap, startFakeImap } from "./testing/fake-imap.js"
+import { type FakeImap, type FakeOptions, startFakeImap } from "./testing/fake-imap.js"
 
 const PASSWORD = "fixture-app-password-4Rt9"
 const ADDRESS = "ya@burobiz.ru"
@@ -45,12 +44,13 @@ const answering = (answers: string[]) => {
   return stream as unknown as NodeJS.ReadableStream
 }
 
-const harness = async (options: { throttle?: boolean } = {}) => {
+const harness = async (options: { throttle?: boolean; fake?: Partial<FakeOptions>; tuning?: ImapTuning } = {}) => {
   fake = await startFakeImap({
     login: ADDRESS,
     password: PASSWORD,
     throttleBodies: options.throttle === true,
     capabilities: ["CONDSTORE"],
+    ...options.fake,
     folders: [
       {
         name: "INBOX",
@@ -80,19 +80,29 @@ const harness = async (options: { throttle?: boolean } = {}) => {
     MAIL_STATE_DIR: mkdtempSync(join(tmpdir(), "state-")),
     MESSAGING_STORE: join(mkdtempSync(join(tmpdir(), "store-")), "wirecat.db"),
   }
-  const mail = async (argv: string[], given: Partial<MailEnvironment> & { answers?: string[] } = {}) => {
-    const { answers, ...extra } = given
+  // A prompt is refused in CI, and these tests answer prompts.
+  delete env.CI
+  const fixedTuning = options.tuning
+  const mail = async (
+    argv: string[],
+    given: Partial<MailEnvironment> & { answers?: string[]; password?: string } = {},
+  ) => {
+    const { answers, password, ...extra } = given
     const out: string[] = []
     const err: string[] = []
     const options: MailEnvironment & Record<string, unknown> = {
       streams: { data: (text) => out.push(text), diagnostic: (text) => err.push(text) },
       tty: false,
-      env,
+      env: password === undefined ? env : { ...env, MAIL_PASSWORD: password },
       keyring,
       himalaya: async () => undefined,
       discovery: { mx: async () => ["mx.yandex.net"], fetch: async () => new Response("", { status: 404 }) },
-      connect: (endpoint: ImapEndpoint, password: string) =>
-        imapSource({ ...endpoint, host: "127.0.0.1", port, security: "plain" }, password),
+      connect: (endpoint: ImapEndpoint, password: string, tuning: ImapTuning = {}) =>
+        imapSource({ ...endpoint, host: "127.0.0.1", port, security: "plain" }, password, {
+          sleep: async () => {},
+          ...tuning,
+          ...fixedTuning,
+        }),
       ...extra,
     }
     if (answers) options.stdin = answering(answers)
@@ -104,11 +114,12 @@ const harness = async (options: { throttle?: boolean } = {}) => {
 }
 
 const item = (text: string) => JSON.parse(text).item
-const typed = (text: string) => ({ stdin: Readable.from([`${text}\n`]) })
+const typed = (password: string) => ({ password })
 
 const profileSet = async (mail: Awaited<ReturnType<typeof harness>>["mail"]) => {
-  const saved = await mail(["setup", ADDRESS, "--yes", "--json"])
+  const saved = await mail(["ya", "session", "start", "--address", ADDRESS, "--json"], typed(PASSWORD))
   expect(saved.code).toBe(0)
+  expect((await mail(["ya", "session", "end", "--json"])).code).toBe(0)
 }
 
 describe("discovery", () => {
@@ -139,148 +150,65 @@ describe("discovery", () => {
   })
 })
 
-describe("setup", () => {
-  it("shows the result without saving until it is confirmed", async () => {
-    const { mail, env } = await harness()
-    const shown = await mail(["setup", ADDRESS, "--json"])
-    expect(item(shown.out)).toMatchObject({ profile: "ya", provider: "Yandex", saved: false })
-    const doctor = await mail(["doctor", "--json"])
-    expect(item(doctor.out).profiles).toEqual([])
-    expect(env.MAIL_CONFIG_DIR).toBeDefined()
-  })
+describe("session start of a new profile", () => {
+  const lines = (...answers: string[]) => ({ answers })
+  const NOWHERE = { mx: async () => [], fetch: (async () => new Response("", { status: 404 })) as typeof fetch }
+  const config = (env: NodeJS.ProcessEnv) => join(env.MAIL_CONFIG_DIR ?? "", "config.json")
+  const profilesIn = (env: NodeJS.ProcessEnv) => {
+    try {
+      return Object.keys(JSON.parse(readFileSync(config(env), "utf8")).profiles ?? {})
+    } catch {
+      return []
+    }
+  }
 
-  it("writes a private profile on --yes and refuses to overwrite it", async () => {
-    const { mail, env } = await harness()
-    expect((await mail(["setup", ADDRESS, "--yes", "--json"])).code).toBe(0)
-    const file = join(env.MAIL_CONFIG_DIR ?? "", "config.json")
-    expect(JSON.parse(readFileSync(file, "utf8")).profiles.ya).toEqual({
+  it("saves a private profile and the keyring entry only after the server accepted the password", async () => {
+    const { mail, env, keyring, everything } = await harness()
+    const wrong = await mail(["ya", "session", "start", "--address", ADDRESS, "--json"], typed("wrong-password-1"))
+    expect(wrong.code).not.toBe(0)
+    expect(keyring.entries.size).toBe(0)
+    expect(profilesIn(env)).toEqual([])
+
+    const started = await mail(["ya", "session", "start", "--address", ADDRESS, "--json"], typed(PASSWORD))
+    expect(started.code).toBe(0)
+    expect(item(started.out)).toMatchObject({ profile: "ya", signed_in: true, created: true, stored_in: "keyring" })
+    expect(JSON.parse(readFileSync(config(env), "utf8")).profiles.ya).toEqual({
       address: ADDRESS,
       imap_host: "imap.yandex.com",
       imap_port: 993,
       imap_security: "tls",
     })
-    expect(statSync(file).mode & 0o777).toBe(0o600)
-    const again = await mail(["setup", ADDRESS, "--yes", "--json"])
-    expect(again.code).not.toBe(0)
-    expect((await mail(["setup", ADDRESS, "--yes", "--replace", "--json"])).code).toBe(0)
-  })
-})
-
-describe("setup choices", () => {
-  it("asks at a terminal and saves only on yes", async () => {
-    const { mail, env } = await harness()
-    const no = await mail(["setup", ADDRESS, "--json"], { tty: true, ...typed("n") })
-    expect(item(no.out)).toMatchObject({ saved: false })
-    const yes = await mail(["setup", ADDRESS, "--json"], { tty: true, ...typed("y") })
-    expect(item(yes.out)).toMatchObject({ saved: true })
-    expect(readFileSync(join(env.MAIL_CONFIG_DIR ?? "", "config.json"), "utf8")).toContain(ADDRESS)
+    expect(statSync(config(env)).mode & 0o777).toBe(0o600)
+    expect(keyring.entries.size).toBe(1)
+    expect(everything([wrong, started])).not.toContain(PASSWORD)
+    expect(everything([wrong, started])).not.toContain("wrong-password-1")
   })
 
-  it("takes a server by hand, and checks the port and the security", async () => {
-    const { mail, env } = await harness()
-    const set = await mail([
-      "setup",
-      "me@own.test",
-      "--host",
-      "mail.own.test",
-      "--port",
-      "143",
-      "--security",
-      "starttls",
-      "--login",
-      "me",
-      "--name",
-      "own",
-      "--folder",
-      "INBOX",
-      "--yes",
-      "--json",
-    ])
-    expect(set.code).toBe(0)
-    expect(JSON.parse(readFileSync(join(env.MAIL_CONFIG_DIR ?? "", "config.json"), "utf8")).profiles.own).toEqual({
-      address: "me@own.test",
-      login: "me",
-      imap_host: "mail.own.test",
-      imap_port: 143,
-      imap_security: "starttls",
-      folders: ["INBOX"],
-    })
-    expect(
-      (await mail(["setup", "me@own.test", "--host", "mail.own.test", "--port", "99999", "--json"])).code,
-    ).not.toBe(0)
-    expect(
-      (await mail(["setup", "me@own.test", "--host", "mail.own.test", "--security", "plain", "--json"])).code,
-    ).not.toBe(0)
-  })
-
-  it("lets discovery results be adjusted by flags", async () => {
+  it("puts the provider's steps on stderr before the password is used", async () => {
     const { mail } = await harness()
-    const shown = await mail(["setup", ADDRESS, "--port", "1993", "--login", "ya", "--security", "starttls", "--json"])
-    expect(item(shown.out)).toMatchObject({ login: "ya", imap: { port: 1993, security: "starttls" } })
+    const started = await mail(["ya", "session", "start", "--address", ADDRESS, "--json"], typed(PASSWORD))
+    expect(started.err).toContain("Prepare the Yandex mailbox first:")
+    expect(started.err).toContain("«Создать пароль приложения»")
+    expect(started.out).not.toContain("«Создать пароль приложения»")
   })
 
-  it("will not save a provider that allows only OAuth", async () => {
-    const { mail, env } = await harness()
-    const refused = await mail(["setup", "me@outlook.com", "--yes", "--json"], { discovery: { mx: async () => [] } })
-    expect(refused.code).not.toBe(0)
-    expect(refused.err).toContain("OAuth")
-    expect(() => readFileSync(join(env.MAIL_CONFIG_DIR ?? "", "config.json"))).toThrow()
+  it("never prompts without a terminal: a missing address or password is a validation error naming it", async () => {
+    const { mail, env, keyring } = await harness()
+    const noAddress = await mail(["ya", "session", "start", "--json"])
+    expect(noAddress.code).not.toBe(0)
+    expect(noAddress.err).toContain("--address")
+    const noPassword = await mail(["ya", "session", "start", "--address", ADDRESS, "--json"])
+    expect(noPassword.code).not.toBe(0)
+    expect(noPassword.err).toContain("MAIL_PASSWORD")
+    expect(keyring.entries.size).toBe(0)
+    expect(profilesIn(env)).toEqual([])
   })
 
-  it("is refused under the read-only lock", async () => {
-    const { mail, env } = await harness()
-    env.MAIL_READ_ONLY = "1"
-    expect((await mail(["setup", ADDRESS, "--yes", "--json"])).code).not.toBe(0)
-  })
-})
-
-describe("preparing the mailbox", () => {
-  const lines = (...answers: string[]) => ({ answers })
-  const NOWHERE = { mx: async () => [], fetch: (async () => new Response("", { status: 404 })) as typeof fetch }
-
-  it("puts the provider's steps and sources in the json of setup", async () => {
-    const { mail } = await harness()
-    const shown = item((await mail(["setup", ADDRESS, "--json"])).out)
-    expect(shown.prepare.steps.join("\n")).toContain("«Пароли приложений и OAuth токены»")
-    expect(shown.prepare.sources).toContain("https://yandex.ru/support/id/ru/authorization/app-passwords")
-  })
-
-  it("prints the steps at a terminal, before asking anything, and never the item twice", async () => {
-    const { mail } = await harness()
-    const shown = await mail(["setup", ADDRESS], { tty: true, ...lines("n") })
-    expect(shown.err).toContain("Prepare the Yandex mailbox first:")
-    expect(shown.err).toContain("«Создать пароль приложения»")
-    expect(shown.out).not.toContain("«Создать пароль приложения»")
-  })
-
-  it("says one generic line for a provider it does not know", async () => {
-    const { mail } = await harness()
-    const set = item((await mail(["setup", "me@own.test", "--host", "mail.own.test", "--json"])).out)
-    expect(set.prepare.steps).toEqual([])
-    expect(set.prepare.notes).toHaveLength(1)
-  })
-
-  it("takes a built-in provider by name when discovery finds nothing", async () => {
-    const { mail } = await harness()
-    const failed = await mail(["setup", "me@own.test", "--json"], { discovery: NOWHERE })
-    expect(failed.code).not.toBe(0)
-    expect(failed.err).toContain("--provider")
-    const named = await mail(["setup", "me@own.test", "--provider", "Mail.ru", "--json"], { discovery: NOWHERE })
-    expect(item(named.out)).toMatchObject({ provider: "Mail.ru", imap: { host: "imap.mail.ru" } })
-    const bad = await mail(["setup", "me@own.test", "--provider", "nope", "--json"], { discovery: NOWHERE })
-    expect(bad.err).toContain("choose one of")
-  })
-
-  it("lets a person pick the provider at a terminal", async () => {
-    const { mail } = await harness()
-    const picked = await mail(["setup", "me@own.test"], { tty: true, discovery: NOWHERE, ...lines("fastmail", "n") })
-    expect(picked.err).toContain("Prepare the Fastmail mailbox first:")
-  })
-
-  it("saves the profile and the password in one command at a terminal", async () => {
+  it("asks at a terminal for the address, then the password, and shows the steps in between", async () => {
     const { mail, keyring, everything } = await harness()
-    const done = await mail(["setup", ADDRESS], { tty: true, ...lines("y", PASSWORD) })
+    const done = await mail(["ya", "session", "start"], { tty: true, ...lines(ADDRESS, PASSWORD) })
     expect(done.code).toBe(0)
+    expect(done.err).toContain("Prepare the Yandex mailbox first:")
     expect(done.out).toContain("signed_in")
     expect(keyring.entries.size).toBe(1)
     const status = await mail(["ya", "session", "status", "--check", "--json"])
@@ -288,27 +216,104 @@ describe("preparing the mailbox", () => {
     expect(everything([done, status])).not.toContain(PASSWORD)
   })
 
-  it("keeps the profile but stores nothing when the typed password is refused", async () => {
-    const { mail, keyring, env } = await harness()
-    const done = await mail(["setup", ADDRESS], { tty: true, ...lines("y", "wrong-password") })
-    expect(done.code).not.toBe(0)
-    expect(done.err).toContain("session start")
-    expect(keyring.entries.size).toBe(0)
-    expect(readFileSync(join(env.MAIL_CONFIG_DIR ?? "", "config.json"), "utf8")).toContain(ADDRESS)
-  })
-
-  it("does not prompt without a terminal and prints the next command", async () => {
-    const { mail, keyring } = await harness()
-    const saved = await mail(["setup", ADDRESS, "--yes", "--json"])
-    expect(item(saved.out)).toMatchObject({ saved: true, signed_in: false, next_command: "mail ya session start" })
-    expect(keyring.entries.size).toBe(0)
-  })
-
-  it("shows the steps before the hidden prompt of session start", async () => {
+  it("lets a person pick the provider at a terminal when discovery finds nothing", async () => {
     const { mail } = await harness()
+    const picked = await mail(["own", "session", "start", "--address", "me@own.test"], {
+      tty: true,
+      discovery: NOWHERE,
+      ...lines("fastmail", PASSWORD),
+    })
+    expect(picked.err).toContain("Prepare the Fastmail mailbox first:")
+  })
+
+  it("takes a built-in provider by name, and says so when discovery finds nothing and none is named", async () => {
+    const { mail } = await harness()
+    const failed = await mail(["own", "session", "start", "--address", "me@own.test", "--json"], {
+      discovery: NOWHERE,
+      ...typed(PASSWORD),
+    })
+    expect(failed.code).not.toBe(0)
+    expect(failed.err).toContain("--provider")
+    const bad = await mail(["own", "session", "start", "--address", "me@own.test", "--provider", "nope", "--json"], {
+      discovery: NOWHERE,
+      ...typed(PASSWORD),
+    })
+    expect(bad.err).toContain("choose one of")
+    const named = await mail(
+      ["own", "session", "start", "--address", "me@own.test", "--provider", "Mail.ru", "--json"],
+      {
+        discovery: NOWHERE,
+        ...typed(PASSWORD),
+      },
+    )
+    expect(named.err).toContain("Prepare the Mail.ru mailbox first:")
+  })
+
+  it("takes a server by hand, checks the port and the security, and keeps the folders", async () => {
+    const { mail, env } = await harness()
+    const set = await mail(
+      [
+        "own",
+        "session",
+        "start",
+        "--address",
+        ADDRESS,
+        "--host",
+        "mail.own.test",
+        "--port",
+        "143",
+        "--security",
+        "starttls",
+        "--login",
+        ADDRESS,
+        "--folder",
+        "INBOX",
+        "--json",
+      ],
+      typed(PASSWORD),
+    )
+    expect(set.code).toBe(0)
+    expect(JSON.parse(readFileSync(config(env), "utf8")).profiles.own).toEqual({
+      address: ADDRESS,
+      imap_host: "mail.own.test",
+      imap_port: 143,
+      imap_security: "starttls",
+      folders: ["INBOX"],
+    })
+    const base = ["x", "session", "start", "--address", ADDRESS, "--host", "mail.own.test", "--json"]
+    expect((await mail([...base, "--port", "99999"], typed(PASSWORD))).code).not.toBe(0)
+    expect((await mail([...base, "--security", "plain"], typed(PASSWORD))).code).not.toBe(0)
+  })
+
+  it("will not create a profile for a provider that allows only OAuth", async () => {
+    const { mail, env } = await harness()
+    const refused = await mail(["me", "session", "start", "--address", "me@outlook.com", "--json"], {
+      discovery: { mx: async () => [] },
+      ...typed(PASSWORD),
+    })
+    expect(refused.code).not.toBe(0)
+    expect(refused.err).toContain("OAuth")
+    expect(profilesIn(env)).toEqual([])
+  })
+
+  it("refuses to change a profile that exists, and only asks its password again", async () => {
+    const { mail, keyring } = await harness()
     await profileSet(mail)
-    const started = await mail(["ya", "session", "start", "--json"], typed(PASSWORD))
-    expect(started.err).toContain("Prepare the Yandex mailbox first:")
+    const changed = await mail(["ya", "session", "start", "--host", "other.test", "--json"], typed(PASSWORD))
+    expect(changed.code).not.toBe(0)
+    expect(changed.err).toContain("already exists")
+    const other = await mail(["ya", "session", "start", "--address", "someone@else.test", "--json"], typed(PASSWORD))
+    expect(other.code).not.toBe(0)
+    const again = await mail(["ya", "session", "start", "--address", ADDRESS, "--json"], typed(PASSWORD))
+    expect(item(again.out)).toMatchObject({ signed_in: true })
+    expect(item(again.out).created).toBeUndefined()
+    expect(keyring.entries.size).toBe(1)
+  })
+
+  it("is refused under the read-only lock", async () => {
+    const { mail, env } = await harness()
+    env.MAIL_READ_ONLY = "1"
+    expect((await mail(["ya", "session", "start", "--address", ADDRESS, "--json"], typed(PASSWORD))).code).not.toBe(0)
   })
 
   it("names the likely cause when the server refuses the login", async () => {
@@ -381,7 +386,7 @@ describe("session", () => {
 })
 
 describe("account check, folders and sync", () => {
-  const ready = async (options: { throttle?: boolean } = {}) => {
+  const ready = async (options: Parameters<typeof harness>[0] = {}) => {
     const h = await harness(options)
     await profileSet(h.mail)
     expect((await h.mail(["ya", "session", "start", "--json"], typed(PASSWORD))).code).toBe(0)
@@ -480,10 +485,77 @@ describe("account check, folders and sync", () => {
 
   it("reads the folders the profile names, and nothing is fetched with --offline", async () => {
     const { mail } = await ready()
-    expect((await mail(["setup", ADDRESS, "--folder", "Sent", "--yes", "--replace", "--json"])).code).toBe(0)
-    const synced = await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])
+    expect(
+      (await mail(["sent", "session", "start", "--address", ADDRESS, "--folder", "Sent", "--json"], typed(PASSWORD)))
+        .code,
+    ).toBe(0)
+    const synced = await mail(["sent", "sync", "--since-time", "2026-10-01", "--json"])
     expect(item(synced.out).folders).toEqual(["Sent"])
-    expect((await mail(["ya", "sync", "--offline", "--json"])).code).not.toBe(0)
+    expect((await mail(["sent", "sync", "--offline", "--json"])).code).not.toBe(0)
+  })
+
+  it("stops at its request budget, keeps what it read and offers the same command to go on", async () => {
+    const { mail, env } = await ready({ tuning: { listSize: 1, fetchSize: 1, connections: 1 } })
+    const first = await mail([
+      "ya",
+      "sync",
+      "--since-time",
+      "2026-10-01",
+      "--folder",
+      "INBOX",
+      "--max-pages",
+      "3",
+      "--json",
+    ])
+    expect(first.code).toBe(0)
+    expect(item(first.out)).toMatchObject({
+      state: "partial",
+      stopped: "requests",
+      saved: 1,
+      remaining: 1,
+      complete: false,
+    })
+    const body = JSON.parse(first.out)
+    expect(body.meta.complete).toBe(false)
+    expect(body.next[0]).toMatchObject({
+      step: "mail.sync",
+      command: "sync",
+      args: { since_time: "2026-10-01", max_pages: 3, folder: ["INBOX"] },
+      safe_to_auto_execute: true,
+    })
+
+    const second = await mail(["ya", "sync", "--since-time", "2026-10-01", "--folder", "INBOX", "--json"])
+    expect(item(second.out)).toMatchObject({ state: "complete", saved: 1, complete: true })
+    const store = await openStore({ path: storePath(env), env, command: "mail" })
+    try {
+      const accountId = await store.accounts.saveAccount({ provider: "email", account: ADDRESS }, { name: ADDRESS })
+      expect(await store.mail.emails({ accountId })).toHaveLength(2)
+    } finally {
+      await store.close()
+    }
+  })
+
+  it("says how far the sync is, from the saved resume points and without asking the server", async () => {
+    const { mail } = await ready({ tuning: { listSize: 1, fetchSize: 1, connections: 1 } })
+    expect(item((await mail(["ya", "status", "--json"])).out)).toMatchObject({ state: "partial", done: 0, total: null })
+    await mail(["ya", "sync", "--since-time", "2026-10-01", "--folder", "INBOX", "--max-pages", "3", "--json"])
+    const half = item((await mail(["ya", "status", "--json"])).out)
+    expect(half).toMatchObject({ state: "partial", done: 1, total: 2, remaining: 1 })
+    expect(half.folders).toMatchObject([{ folder: "INBOX", done: 1, total: 2 }])
+    await mail(["ya", "sync", "--since-time", "2026-10-01", "--folder", "INBOX", "--json"])
+    expect(item((await mail(["ya", "status", "--json"])).out)).toMatchObject({ state: "complete", done: 2, total: 2 })
+  })
+
+  it("asks again in the same run for a message the server failed on", async () => {
+    const { mail } = await ready({ fake: { unavailableOnce: [1, 2] } })
+    const synced = await mail(["ya", "sync", "--since-time", "2026-10-01", "--folder", "INBOX", "--json"])
+    expect(item(synced.out)).toMatchObject({ saved: 2, unreadable: 0, state: "complete" })
+  })
+
+  it("reconnects when the server closes the connection in the middle of a read, and finishes", async () => {
+    const { mail } = await ready({ fake: { dropFetches: 2 } })
+    const synced = await mail(["ya", "sync", "--since-time", "2026-10-01", "--folder", "INBOX", "--json"])
+    expect(item(synced.out)).toMatchObject({ saved: 2, state: "complete" })
   })
 
   it("refuses a --since-time in the future", async () => {

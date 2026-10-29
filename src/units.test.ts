@@ -3,7 +3,6 @@ import { metaOf } from "@wirecat/cli-base/commands"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { discover, domainOf, parseAutoconfig } from "./discovery.js"
 import { mapImapError } from "./mail/imap.js"
-import { proposedName } from "./profile.js"
 import { createProgram } from "./program.js"
 import { secretToolLookup } from "./secret.js"
 
@@ -64,13 +63,6 @@ describe("discovery edges", () => {
     })
     expect(found).toMatchObject({ found_by: "autoconfig", login: "x@own.test", imap: { host: "imap.own.test" } })
     expect(urls[0]).toContain("autoconfig.thunderbird.net")
-  })
-})
-
-describe("profile names", () => {
-  it("proposes the part before the @, cleaned", () => {
-    expect(proposedName("Ya@burobiz.ru")).toBe("ya")
-    expect(proposedName("+++@x.ru")).toBe("mail")
   })
 })
 

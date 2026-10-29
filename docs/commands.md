@@ -52,52 +52,33 @@ mail commands info [path]
 
 **Example:** `mail commands info commands`
 
-## `mail setup`
-
-find the IMAP server for an address (built-in providers, the MX record, ISPDB, the domain's autoconfig), show it with the steps to prepare the mailbox (turn on IMAP, make an app password; all providers: https://github.com/WireCatLabs/mail-cli/blob/main/docs/providers.md), and save a profile when you confirm, then ask for the app password and keep it in the keyring (at a terminal; with --yes or --json nothing is asked and the next command is printed)
-
-**Changes something on this computer only.**
-
-```sh
-mail setup <address> [options]
-```
-
-| Argument | | What it is |
-|---|---|---|
-| `address` | required | the full mail address, also the login for most providers. |
-
-| Option | What it does |
-|---|---|
-| `--name <name>` | the profile name (default: the part before the @). |
-| `--provider <provider>` | skip discovery and use a built-in provider: Yandex, Gmail, iCloud, Mail.ru, Fastmail, Outlook. |
-| `--host <host>` | skip discovery and use this IMAP host. |
-| `--port <port>` | IMAP port (default 993). |
-| `--security <mode>` | tls or starttls (default tls). |
-| `--login <login>` | the login name, when it is not the full address. |
-| `--folder <folder>` | sync only this folder; repeat it for more. |
-| `--replace` | overwrite a profile of the same name. |
-
-**Returns:** find a mailbox's server and save it as a profile
-
-**Example:** `mail setup ya@burobiz.ru`, `mail setup ya@burobiz.ru --name ya --yes`, `mail setup me@example.com --host imap.example.com --security tls --yes`
-
 ## `mail session`
 
 keep this profile's app password in the OS keyring
 
 ### `mail session start`
 
-type the app password once, check it against the server, and keep it in the OS keyring
+sign this profile in. A new profile needs its mailbox: --address, or it is asked at a terminal; the server is found (built-in providers, the MX record, ISPDB, the domain's autoconfig; all providers: https://github.com/WireCatLabs/mail-cli/blob/main/docs/providers.md), the steps to prepare the mailbox are shown, the app password is asked (hidden) or read from MAIL_PASSWORD, checked against the server, and only then the profile and the keyring entry are saved. An existing profile only asks for the password again. Without a terminal nothing is asked: a missing --address or password is a validation error
 
 **Changes something on this computer only.**
 
 ```sh
-mail session start
+mail session start [options]
 ```
 
-**Returns:** type the app password once and keep it in the keyring
+| Option | What it does |
+|---|---|
+| `--address <email>` | the full mail address of a new profile, also the login for most providers. |
+| `--provider <provider>` | skip discovery and use a built-in provider: Yandex, Gmail, iCloud, Mail.ru, Fastmail, Outlook. |
+| `--host <host>` | skip discovery and use this IMAP host. |
+| `--port <port>` | IMAP port (default 993). |
+| `--security <mode>` | tls or starttls (default tls). |
+| `--login <login>` | the login name, when it is not the full address. |
+| `--folder <folder>` | sync only this folder; repeat it for more. |
 
-**Example:** `mail ya session start`
+**Returns:** sign in; a new profile is created first
+
+**Example:** `mail ya session start --address ya@burobiz.ru`, `mail ya session start`, `mail me session start --address me@example.com --host imap.example.com --security tls`
 
 ### `mail session status`
 
@@ -175,12 +156,25 @@ mail sync [options]
 |---|---|
 | `--since-time <time>` | only mail received since this ISO date or timestamp (default: 30 days). |
 | `--limit <n>` | save at most this many new emails in this run, newest first. |
+| `--max-pages <pages>` | at most this many requests to the mail server in this run; as many as fit the deadline if not given. |
 | `--folder <folder>` | a folder to read; repeat it for more (default: the profile's folders, else INBOX and Sent). |
 | `--rescan` | list every message in the window again, not only those an earlier run left. |
 
 **Returns:** read mail from the server into the shared store; mail already stored is skipped
 
 **Example:** `mail ya sync`, `mail ya sync --since-time 2026-10-01T00:00:00Z --limit 200`, `mail ya sync --folder INBOX`
+
+## `mail status`
+
+how many messages of the synced window are read and how many are left, per folder; it asks no server, so it answers while a sync runs
+
+```sh
+mail status
+```
+
+**Returns:** how far the sync is, from what the runs saved
+
+**Example:** `mail ya status`, `mail ya status --json`
 
 ## `mail doctor`
 

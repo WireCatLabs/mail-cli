@@ -1,21 +1,28 @@
 [
   {
     "rule": "option-role",
-    "target": "setup --host",
+    "target": "session start --address",
+    "reason": "Names the mailbox of a new profile, which discovery turns into a server; no vocabulary role names a mail address yet. Review when cli-base's vocabulary names one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
+    "rule": "option-role",
+    "target": "session start --host",
     "reason": "Names the IMAP server of a mailbox that discovery cannot find; no vocabulary role names a mail server setting yet. Review when cli-base's vocabulary names one.",
     "owner": "@WireCatLabs",
     "review_after": "2027-01-28"
   },
   {
     "rule": "option-role",
-    "target": "setup --login",
+    "target": "session start --login",
     "reason": "Names the login when it is not the full address, which some servers want; no vocabulary role names a mail server setting yet. Review when cli-base's vocabulary names one.",
     "owner": "@WireCatLabs",
     "review_after": "2027-01-28"
   },
   {
     "rule": "option-role",
-    "target": "setup --security",
+    "target": "session start --security",
     "reason": "Chooses tls or starttls for the IMAP connection; no vocabulary role names a mail server setting yet. Review when cli-base's vocabulary names one.",
     "owner": "@WireCatLabs",
     "review_after": "2027-01-28"

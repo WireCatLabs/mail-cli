@@ -9,7 +9,7 @@ mail ya config set limit 50
 mail ya config unset limit
 ```
 
-A profile made by `mail setup` also holds the mailbox: `address`, `login` (when it is not the address), `imap_host`,
+A profile made by `session start` also holds the mailbox: `address`, `login` (when it is not the address), `imap_host`,
 `imap_port`, `imap_security` (`tls` or `starttls`) and `folders` (the folders `sync` reads). The app password is not
 a setting: it lives in the keyring, or in `MAIL_PASSWORD` for a run that has no keyring.
 
