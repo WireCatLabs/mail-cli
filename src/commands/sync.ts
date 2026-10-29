@@ -54,6 +54,8 @@ const foldersFor = async (
 export const syncCommand = (): Command =>
   annotate(new Command("sync"), {
     effects: FETCH,
+    // Without this a big mailbox is cut at the 30 s default; stored mail is kept and a rerun resumes.
+    cooperative: true,
     examples: [
       `${IDENTITY.command} ya sync`,
       `${IDENTITY.command} ya sync --since-time 2026-10-01T00:00:00Z --limit 200`,
