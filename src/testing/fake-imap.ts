@@ -30,6 +30,8 @@ export interface FakeOptions {
   unavailableOnce?: number[]
   /** Closes the connection on this many UID FETCH commands, after answering the first of their messages. */
   dropFetches?: number
+  /** Answers this many UID FETCH commands with a tagged `NO [UNAVAILABLE]`, as a busy backend does. */
+  refuseFetches?: number
   /** Sleeps this long before answering a UID FETCH, to make a request time out. */
   fetchDelayMs?: number
   /** Changes the folder's UIDVALIDITY after this many connections have been dropped by `dropFetches`. */
@@ -97,6 +99,7 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
   const sockets = new Set<Socket>()
   let dropsLeft = options.dropSearches ?? 0
   let fetchDropsLeft = options.dropFetches ?? 0
+  let refusalsLeft = options.refuseFetches ?? 0
   const unavailable = new Set(options.unavailableOnce ?? [])
   let validityShift = 0
 
@@ -178,6 +181,10 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
             const set = more[0] ?? ""
             const items = more.slice(1).join(" ")
             const wantsBody = /BODY(\.PEEK)?\[\]/i.test(items)
+            if (refusalsLeft > 0) {
+              refusalsLeft -= 1
+              return send(`${tag} NO [UNAVAILABLE] backend error`)
+            }
             if (wantsBody && options.throttleBodies) return send(`${tag} NO [THROTTLED] Too many commands`)
             const messages = selected?.messages ?? []
             const reply = () => {
