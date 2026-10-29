@@ -2,10 +2,10 @@
 
 <!-- Generated from src/providers.ts by pnpm generate. Do not edit. -->
 
-Use this page before `mail setup`, which asks for the app password. Each provider needs IMAP on and, for most, an app password:
+Use this page before `mail <profile> session start`, which asks for the app password. Each provider needs IMAP on and, for most, an app password:
 a password made only for this program. At the end you have an app password ready to type at the prompt.
 
-`mail setup <address>` and `mail <profile> session start` print these same steps, and `session start` repeats the
+`mail <profile> session start` prints these same steps and repeats the
 likely cause when the server refuses the login. The steps below were read from each provider's official help page,
 named under every provider. Labels are quoted in the language of the provider's interface. A provider can change
 its screens; the help page is the source of truth.
@@ -43,7 +43,7 @@ Read from: <https://support.google.com/mail/answer/7126229>, <https://support.go
 4. Select "Generate an app specific password" and follow the on-screen steps.
 5. Copy the password when it appears; Apple's page does not say whether it can be shown again.
 
-- `mail` logs in with the full address. Apple says the name before @icloud.com is the usual login; if the full address is refused, run `mail setup <address> --login <name> --replace`.
+- `mail` logs in with the full address. Apple says the name before @icloud.com is the usual login; if the full address is refused, sign in with a new profile name: `mail <profile> session start --address <address> --login <name>`.
 
 Read from: <https://support.apple.com/en-us/102654>, <https://support.apple.com/en-us/102525>
 
@@ -84,5 +84,5 @@ Read from: <https://support.microsoft.com/en-us/office/pop-imap-and-smtp-setting
 
 Make sure IMAP is on for the mailbox and, if the provider offers app passwords, make one: a normal password is often refused.
 
-`setup` finds the server through the MX record, Thunderbird's ISPDB and the domain's autoconfig file. If it finds
+`session start` finds the server of a new profile through the MX record, Thunderbird's ISPDB and the domain's autoconfig file. If it finds
 none, pass `--host`, `--port` and `--security` yourself. See [use it](usage.md).

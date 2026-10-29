@@ -24,7 +24,7 @@ Languages: ru, en.
 
 ## Further answers
 
-- **Scope of P1:** `setup`, `session start|status|end`, `account check`, `folders list`, `sync`. Messages commands,
+- **Scope of P1:** `session start|status|end` (start also creates the profile), `account check`, `folders list`, `sync`. Messages commands,
   rules, mbox, Gmail extensions, OAuth and sending are later phases.
 - **Port:** `src/mail/port.ts` is a local copy of the `MailSource` shape from cli-memo. `src/sync.ts` is a stand-in
   for cli-core's `syncMail` (no resume points, deletion detection, rules or attachment text). Both switch to

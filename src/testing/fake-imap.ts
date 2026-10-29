@@ -26,6 +26,14 @@ export interface FakeOptions {
   throttleBodies?: boolean
   /** Drops the connection instead of answering this many UID SEARCH commands, as a flaky network does. */
   dropSearches?: number
+  /** UIDs a FETCH answers with an untagged `NO [UNAVAILABLE]` instead of the message, as Yandex does; each once. */
+  unavailableOnce?: number[]
+  /** Closes the connection on this many UID FETCH commands, after answering the first of their messages. */
+  dropFetches?: number
+  /** Sleeps this long before answering a UID FETCH, to make a request time out. */
+  fetchDelayMs?: number
+  /** Changes the folder's UIDVALIDITY after this many connections have been dropped by `dropFetches`. */
+  validityAfterDrop?: number
 }
 
 export interface FakeImap {
@@ -88,6 +96,9 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
   ]
   const sockets = new Set<Socket>()
   let dropsLeft = options.dropSearches ?? 0
+  let fetchDropsLeft = options.dropFetches ?? 0
+  const unavailable = new Set(options.unavailableOnce ?? [])
+  let validityShift = 0
 
   const serve = (socket: Socket) => {
     sockets.add(socket)
@@ -146,7 +157,7 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
           send(`* ${folder.messages.length} EXISTS`)
           send("* 0 RECENT")
           send("* FLAGS (\\Seen \\Flagged)")
-          send(`* OK [UIDVALIDITY ${folder.uidValidity ?? 777}] ok`)
+          send(`* OK [UIDVALIDITY ${(folder.uidValidity ?? 777) + validityShift}] ok`)
           send(`* OK [UIDNEXT ${Math.max(0, ...folder.messages.map((message) => message.uid)) + 1}] ok`)
           return send(`${tag} OK [${command === "SELECT" ? "READ-WRITE" : "READ-ONLY"}] done`)
         }
@@ -169,29 +180,45 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
             const wantsBody = /BODY(\.PEEK)?\[\]/i.test(items)
             if (wantsBody && options.throttleBodies) return send(`${tag} NO [THROTTLED] Too many commands`)
             const messages = selected?.messages ?? []
-            for (const uid of uidsIn(
-              set,
-              messages.map((message) => message.uid),
-            )) {
-              const message = messages.find((one) => one.uid === uid)
-              if (!message) continue
-              const parts = [`UID ${uid}`]
-              if (/FLAGS/i.test(items)) parts.push(`FLAGS (${(message.flags ?? []).join(" ")})`)
-              if (/INTERNALDATE/i.test(items))
-                parts.push(`INTERNALDATE "${message.date ?? "28-Oct-2026 10:00:00 +0000"}"`)
-              if (message.emailId && /EMAILID/i.test(items)) parts.push(`EMAILID (${message.emailId})`)
-              if (message.threadId && /THREADID/i.test(items)) parts.push(`THREADID (${message.threadId})`)
-              if (/RFC822\.SIZE/i.test(items)) parts.push(`RFC822.SIZE ${Buffer.byteLength(message.raw)}`)
-              if (/ENVELOPE/i.test(items)) parts.push(`ENVELOPE ${envelope(message.raw)}`)
-              const fields = /BODY(?:\.PEEK)?\[HEADER\.FIELDS \(([^)]*)\)\]/i.exec(items)
-              if (fields)
-                parts.push(
-                  `BODY[HEADER.FIELDS (${fields[1]})] ${literal(headerBlock(message.raw, (fields[1] ?? "").split(" ")))}`,
-                )
-              if (wantsBody) parts.push(`BODY[] ${literal(message.raw)}`)
-              send(`* ${messages.indexOf(message) + 1} FETCH (${parts.join(" ")})`)
+            const reply = () => {
+              let sent = 0
+              for (const uid of uidsIn(
+                set,
+                messages.map((message) => message.uid),
+              )) {
+                const message = messages.find((one) => one.uid === uid)
+                if (!message) continue
+                if (unavailable.delete(uid)) {
+                  send(
+                    `* NO [UNAVAILABLE] UID FETCH message ${messages.indexOf(message) + 1} uid ${uid}: failure due to backend error`,
+                  )
+                  continue
+                }
+                if (fetchDropsLeft > 0 && sent === 0) {
+                  fetchDropsLeft -= 1
+                  if (options.validityAfterDrop !== undefined) validityShift = options.validityAfterDrop
+                  return socket.destroy()
+                }
+                sent += 1
+                const parts = [`UID ${uid}`]
+                if (/FLAGS/i.test(items)) parts.push(`FLAGS (${(message.flags ?? []).join(" ")})`)
+                if (/INTERNALDATE/i.test(items))
+                  parts.push(`INTERNALDATE "${message.date ?? "28-Oct-2026 10:00:00 +0000"}"`)
+                if (message.emailId && /EMAILID/i.test(items)) parts.push(`EMAILID (${message.emailId})`)
+                if (message.threadId && /THREADID/i.test(items)) parts.push(`THREADID (${message.threadId})`)
+                if (/RFC822\.SIZE/i.test(items)) parts.push(`RFC822.SIZE ${Buffer.byteLength(message.raw)}`)
+                if (/ENVELOPE/i.test(items)) parts.push(`ENVELOPE ${envelope(message.raw)}`)
+                const fields = /BODY(?:\.PEEK)?\[HEADER\.FIELDS \(([^)]*)\)\]/i.exec(items)
+                if (fields)
+                  parts.push(
+                    `BODY[HEADER.FIELDS (${fields[1]})] ${literal(headerBlock(message.raw, (fields[1] ?? "").split(" ")))}`,
+                  )
+                if (wantsBody) parts.push(`BODY[] ${literal(message.raw)}`)
+                send(`* ${messages.indexOf(message) + 1} FETCH (${parts.join(" ")})`)
+              }
+              return send(`${tag} OK done`)
             }
-            return send(`${tag} OK done`)
+            return options.fetchDelayMs ? void setTimeout(reply, options.fetchDelayMs) : reply()
           }
           return send(`${tag} BAD unknown UID command`)
         }

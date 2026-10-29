@@ -13,16 +13,14 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 |---|---|---|---|
 | `commands` |  | ✅ |  |
 | `commands info` |  | ✅ |  |
-| `setup` |  | ✅ |  |
-| `setup` | `--name` | ✅ |  |
-| `setup` | `--provider` | ✅ |  |
-| `setup` | `--host` | ✅ |  |
-| `setup` | `--port` | ✅ |  |
-| `setup` | `--security` | ✅ |  |
-| `setup` | `--login` | ✅ |  |
-| `setup` | `--folder` | ✅ |  |
-| `setup` | `--replace` | ✅ |  |
 | `session start` |  | ✅ |  |
+| `session start` | `--address` | ✅ |  |
+| `session start` | `--provider` | ✅ |  |
+| `session start` | `--host` | ✅ |  |
+| `session start` | `--port` | ✅ |  |
+| `session start` | `--security` | ✅ |  |
+| `session start` | `--login` | ✅ |  |
+| `session start` | `--folder` | ✅ |  |
 | `session status` |  | ✅ |  |
 | `session status` | `--check` | ✅ |  |
 | `session end` |  | ✅ |  |
@@ -31,8 +29,10 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `sync` |  | ✅ |  |
 | `sync` | `--since-time` | ✅ |  |
 | `sync` | `--limit` | ✅ |  |
+| `sync` | `--max-pages` | ✅ |  |
 | `sync` | `--folder` | ✅ |  |
 | `sync` | `--rescan` | ✅ |  |
+| `status` |  | ✅ |  |
 | `doctor` |  | ✅ |  |
 | `skill show` |  | ✅ |  |
 | `skill show` | `--for` | ✅ |  |

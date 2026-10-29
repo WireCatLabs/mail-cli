@@ -11,7 +11,7 @@ Works with:
   drive                   Google Drive and Docs as local text, searchable with your other WireCat data
   memo context <person>   one person across messengers, mail, notes and meetings
 
-Start here:   mail personal setup  (any profile name works)
-Next:         mail commands        every command, by section
-              mail help options    output, offline, timeouts, dry run
-For agents:   mail skill show      rules and the discovery loop
+Start here:   mail personal session start --address <email>  (any profile name works)
+Next:         mail commands                                  every command, by section
+              mail help options                              output, offline, timeouts, dry run
+For agents:   mail skill show                                rules and the discovery loop

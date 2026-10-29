@@ -20,7 +20,7 @@ import { doctorCommand } from "./commands/doctor.js"
 import { foldersCommand } from "./commands/folders.js"
 import { mcpCommand } from "./commands/mcp.js"
 import { sessionCommand } from "./commands/session.js"
-import { setupCommand } from "./commands/setup.js"
+import { statusCommand } from "./commands/status.js"
 import { syncCommand } from "./commands/sync.js"
 import { configuration } from "./config.js"
 import { IDENTITY, PACKAGE, SKILL } from "./identity.js"
@@ -38,14 +38,15 @@ const update = appUpdate({
 
 export const definition = (): ProgramDefinition => ({
   app: IDENTITY,
+  firstScreen: { start: `${IDENTITY.command} personal session start --address <email>` },
   configuration,
   commands: () => [
     commandsCommand(IDENTITY),
-    setupCommand(),
     sessionCommand(),
     accountCommand(),
     foldersCommand(),
     syncCommand(),
+    statusCommand(),
     doctorCommand(),
     skillCommand(IDENTITY, SKILL),
     mcpCommand(),

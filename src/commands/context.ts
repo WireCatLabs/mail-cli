@@ -5,7 +5,7 @@ import type { Command } from "commander"
 import { configuration } from "../config.js"
 import type { DiscoveryDeps } from "../discovery.js"
 import { IDENTITY } from "../identity.js"
-import { type ImapEndpoint, type ImapMailSource, imapSource } from "../mail/imap.js"
+import { type ImapEndpoint, type ImapMailSource, type ImapTuning, imapSource } from "../mail/imap.js"
 import { type LookupHimalaya, passwordStore } from "../secret.js"
 
 /** What a test hands `run()` in place of the network, the keyring and `secret-tool`. */
@@ -13,7 +13,7 @@ export interface MailEnvironment extends BaseEnvironment {
   keyring?: KeyringStore
   himalaya?: LookupHimalaya
   discovery?: DiscoveryDeps
-  connect?: (endpoint: ImapEndpoint, password: string) => ImapMailSource
+  connect?: (endpoint: ImapEndpoint, password: string, tuning?: ImapTuning) => ImapMailSource
 }
 
 export const contextOf = (command: Command) => {
@@ -33,7 +33,7 @@ export const endpointOf = (settings: ReturnType<typeof contextOf>["settings"]): 
   if (!address || !host || !port || !security)
     throw new CliError(
       "configuration_error",
-      `profile ${settings.profile} has no mail server; run \`${IDENTITY.command} setup <address> --name ${settings.profile}\``,
+      `profile ${settings.profile} has no mail server; run \`${IDENTITY.command} ${settings.profile} session start --address <email>\``,
     )
   return { host, port, security, login: login ?? address }
 }
@@ -47,7 +47,11 @@ export const passwordsOf = (context: ReturnType<typeof contextOf>) =>
   })
 
 /** An opened source for the profile, with the password read from the keyring; call `close` when done. */
-export const openSource = async (context: ReturnType<typeof contextOf>) => {
+/** A retry that would end after the run's deadline is not made; this much is kept back for saving and answering. */
+const RETRY_MARGIN_MS = 3_000
+
+export const openSource = async (context: ReturnType<typeof contextOf>, tuning: ImapTuning = {}) => {
+  const { deadline, signal } = context.environment
   const endpoint = endpointOf(context.settings)
   const stored = await passwordsOf(context).read()
   if (!stored)
@@ -57,7 +61,14 @@ export const openSource = async (context: ReturnType<typeof contextOf>) => {
       { reason: "mail.no-password" },
     )
   const connect = context.environment.connect ?? imapSource
-  return { source: connect(endpoint, stored.secret), endpoint, passwordFrom: stored.source }
+  const bounds: ImapTuning = {
+    timeLeftMs: () => {
+      const now = deadline?.()
+      return now ? now.endsAt - Date.now() - RETRY_MARGIN_MS : undefined
+    },
+    ...(signal ? { signal } : {}),
+  }
+  return { source: connect(endpoint, stored.secret, { ...bounds, ...tuning }), endpoint, passwordFrom: stored.source }
 }
 
 export const collect = (value: string, previous: string[] = []): string[] => [...previous, value]

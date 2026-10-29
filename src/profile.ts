@@ -9,15 +9,6 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 export const configPath = (env: NodeJS.ProcessEnv): string =>
   configFilePath(resolvePaths({ appName: IDENTITY.appName, prefix: IDENTITY.envPrefix, env }).config)
 
-/** The profile name `mail setup` proposes: the part before the @, cleaned to what a profile name allows. */
-export const proposedName = (address: string): string => {
-  const local = (address.split("@")[0] ?? "")
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]/g, "-")
-    .replace(/^[^a-z0-9]+/, "")
-  return usableProfileName(local || "mail")
-}
-
 export const profileOf = (discovery: Discovery, folders?: string[]) => ({
   address: discovery.address,
   ...(discovery.login === discovery.address ? {} : { login: discovery.login }),

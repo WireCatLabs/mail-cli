@@ -35,9 +35,58 @@ export type ImapMailSource = MailSource & {
   close(): Promise<void>
 }
 
+/**
+ * How the source spends a connection. The defaults come from measuring Yandex 360 (cli-testing,
+ * performance/mail/yandex-imap-sync): a header FETCH takes 0.1 to 0.7 s per message and the time per message grows with
+ * the size of the command, four connections read 2 to 3 times faster than one, and the server sometimes answers one
+ * message with `NO [UNAVAILABLE]` and then closes the connection. So a call reads 15 messages on each of 4 connections:
+ * a request of the budget (listBatch, fetchBatch) is 60 messages and takes about 9 s.
+ */
+export interface ImapTuning {
+  /** Messages in one FETCH command. */
+  listSize?: number
+  fetchSize?: number
+  /** Parallel connections one `list` or `fetchRaw` call spreads its commands over. */
+  connections?: number
+  /** One command's own limit; the socket limit only catches a dead line. */
+  requestTimeoutMs?: number
+  /** Waits before each retry of a command, jittered; the last one repeats. */
+  backoffMs?: readonly number[]
+  /** A hard ceiling per command; the budget and the deadline usually stop the retries first. */
+  maxAttempts?: number
+  /** A retry is a request of the run's budget: false stops the retries. */
+  canRetry?: () => boolean
+  /** Time left to the run's deadline; a retry that would not fit is not made. */
+  timeLeftMs?: () => number | undefined
+  signal?: AbortSignal
+  sleep?: (ms: number, signal?: AbortSignal) => Promise<void>
+  random?: () => number
+}
+
+export const IMAP_DEFAULTS = {
+  listSize: 15,
+  fetchSize: 15,
+  connections: 4,
+  requestTimeoutMs: 90_000,
+  backoffMs: [1_000, 3_000, 10_000],
+  maxAttempts: 8,
+} as const
+
 const HEADER_FIELDS = ["list-id", "list-unsubscribe", "precedence"]
-const LIST_BATCH = 50
-const FETCH_BATCH = 25
+
+const nap = (ms: number, signal?: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) return reject(signal.reason)
+    const timer = setTimeout(resolve, ms)
+    signal?.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timer)
+        reject(signal.reason)
+      },
+      { once: true },
+    )
+  })
 
 const digest = (id: string) => `imap:${createHash("sha256").update(id).digest("hex")}`
 
@@ -72,9 +121,18 @@ export const mapImapError = (error: unknown): CliError => {
       retryable: true,
       ...(typeof e.throttleReset === "number" ? { retry_after_ms: e.throttleReset } : {}),
     })
-  if (e.code === "ETIMEDOUT" || e.code === "ETIMEOUT" || e.code === "ConnectionTimeout" || e.code === "GreetingTimeout")
+  if (
+    e.code === "ETIMEDOUT" ||
+    e.code === "ETIMEOUT" ||
+    e.code === "ConnectionTimeout" ||
+    e.code === "GreetingTimeout" ||
+    e.code === "RequestTimeout"
+  )
     return new CliError("timeout", "the mail server did not answer in time", { retryable: true, ...causeOf(e.code) })
-  if (e.code && /^(ECONN|ENOTFOUND|EAI_|ENETUNREACH|EHOSTUNREACH|NoConnection|EPIPE)/.test(e.code))
+  if (
+    e.code &&
+    /^(ECONN|ENOTFOUND|EAI_|ENETUNREACH|EHOSTUNREACH|NoConnection|EPIPE|Closed|EConnectionClosed)/.test(e.code)
+  )
     return new CliError("network_error", "cannot reach the mail server", { retryable: true, ...causeOf(e.code) })
   return new CliError(
     "provider_error",
@@ -129,12 +187,17 @@ const roleOf = (entry: ListResponse): string | null => {
   return entry.specialUse ? entry.specialUse.replace(/^\\/, "").toLowerCase() : null
 }
 
-/** One IMAP connection, opened on first use and closed by `close`; the password never leaves this closure. */
-export const imapSource = (endpoint: ImapEndpoint, password: string): ImapMailSource => {
-  let client: ImapFlow | undefined
+/** One IMAP source, its connections opened on first use and closed by `close`; the password never leaves this closure. */
+export const imapSource = (endpoint: ImapEndpoint, password: string, tuning: ImapTuning = {}): ImapMailSource => {
+  const { listSize, fetchSize, connections, requestTimeoutMs, backoffMs, maxAttempts } = { ...IMAP_DEFAULTS, ...tuning }
+  const { canRetry, timeLeftMs, signal, sleep = nap, random = Math.random } = tuning
+  const clients: (ImapFlow | undefined)[] = []
+  /** Each folder's UIDVALIDITY as the run first saw it; a reconnect that finds another one stops the run. */
+  const validities = new Map<string, string>()
 
-  const connected = async (): Promise<ImapFlow> => {
-    if (client?.usable) return client
+  const connect = async (slot: number): Promise<ImapFlow> => {
+    const existing = clients[slot]
+    if (existing?.usable) return existing
     const next = new ImapFlow({
       host: endpoint.host,
       port: endpoint.port,
@@ -145,56 +208,155 @@ export const imapSource = (endpoint: ImapEndpoint, password: string): ImapMailSo
       disableAutoIdle: true,
       connectionTimeout: 15000,
       greetingTimeout: 15000,
-      socketTimeout: 600000,
+      socketTimeout: 120000,
     })
     // An 'error' event with no listener would end the process, and the failing call already rejects.
     next.on("error", () => {})
-    try {
-      await next.connect()
-    } catch (error) {
-      throw mapImapError(error)
-    }
-    client = next
+    await next.connect()
+    clients[slot] = next
     return next
   }
 
-  const once = async <T>(folder: string, work: (open: ImapFlow, validity: string) => Promise<T>): Promise<T> => {
-    const open = await connected()
+  const drop = (slot: number) => {
+    const open = clients[slot]
+    clients[slot] = undefined
     try {
-      const lock = await open.getMailboxLock(folder, { readOnly: true })
+      open?.close()
+    } catch {}
+  }
+
+  /** One command's own deadline, cut to the run's: a stuck command closes its connection and fails as a timeout. */
+  const limited = async <T>(slot: number, work: Promise<T>): Promise<T> => {
+    const left = timeLeftMs?.()
+    const ms = left === undefined ? requestTimeoutMs : Math.max(1, Math.min(requestTimeoutMs, left))
+    let timer: NodeJS.Timeout | undefined
+    const expired = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        drop(slot)
+        reject(Object.assign(new Error("request timed out"), { code: "RequestTimeout" }))
+      }, ms)
+    })
+    work.catch(() => {})
+    try {
+      return await Promise.race([work, expired])
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+
+  const once = async <T>(
+    slot: number,
+    folder: string | undefined,
+    expected: string | undefined,
+    work: (open: ImapFlow, validity: string) => Promise<T>,
+  ): Promise<T> => {
+    const open = await limited(slot, connect(slot))
+    if (folder === undefined) return limited(slot, work(open, ""))
+    const lock = await limited(slot, open.getMailboxLock(folder, { readOnly: true }))
+    try {
+      const validity = open.mailbox ? String(open.mailbox.uidValidity) : ""
+      const was = expected ?? validities.get(folder)
+      if (was !== undefined && validity !== was)
+        throw new CliError("invalid_response", "UIDVALIDITY changed during the run; run it again", {
+          reason: "mail.uidvalidity-changed",
+        })
+      return await limited(slot, work(open, validity))
+    } finally {
       try {
-        const validity = open.mailbox ? String(open.mailbox.uidValidity) : ""
-        return await work(open, validity)
-      } finally {
         lock.release()
+      } catch {}
+    }
+  }
+
+  /**
+   * Every call here only reads, so a failed command is safe to send again. A dropped line or a command that timed
+   * out closes its connection, waits (jittered backoff) and tries on a fresh one, for as long as the run's budget
+   * and deadline allow: a retry is a request of the budget, and none outlives the deadline.
+   */
+  const retrying = async <T>(slot: number, command: () => Promise<T>): Promise<T> => {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await command()
+      } catch (raw) {
+        const error = mapImapError(raw)
+        const transient = error.code === "network_error" || error.code === "timeout"
+        if (transient) drop(slot)
+        if (!transient || attempt >= maxAttempts || signal?.aborted) throw error
+        const base = backoffMs[Math.min(attempt, backoffMs.length) - 1] ?? 10_000
+        const wait = Math.round(base * (0.5 + random()))
+        const left = timeLeftMs?.()
+        if (left !== undefined && left <= wait) throw error
+        if (canRetry && !canRetry()) throw error
+        await sleep(wait, signal)
       }
-    } catch (error) {
-      throw mapImapError(error)
     }
   }
 
-  // Every call here only reads, so one more try on a fresh connection after a dropped one is safe.
-  const inFolder = async <T>(folder: string, work: (open: ImapFlow, validity: string) => Promise<T>): Promise<T> => {
-    try {
-      return await once(folder, work)
-    } catch (error) {
-      if (!(error instanceof CliError) || error.code !== "network_error") throw error
-      client?.close()
-      client = undefined
-      return once(folder, work)
+  const inFolder = <T>(
+    folder: string,
+    work: (open: ImapFlow, validity: string) => Promise<T>,
+    expected?: string,
+    slot = 0,
+  ): Promise<T> => retrying(slot, () => once(slot, folder, expected, work))
+
+  /** Runs `work` over the batches on up to `connections` connections; the first failure stops the others. */
+  const spread = async <I, O, E = never>(
+    folder: string,
+    batches: I[],
+    work: (open: ImapFlow, batch: I) => Promise<O>,
+    expected: string | undefined,
+    onError?: (error: unknown, batch: I) => E,
+  ): Promise<(O | E)[]> => {
+    const results: (O | E)[] = new Array(batches.length)
+    let next = 0
+    let failure: unknown
+    const worker = async (slot: number) => {
+      for (;;) {
+        const index = next++
+        if (index >= batches.length || failure !== undefined) return
+        const batch = batches[index] as I
+        try {
+          results[index] = await inFolder(folder, (open) => work(open, batch), expected, slot)
+        } catch (error) {
+          if (onError === undefined) {
+            failure ??= error
+            return
+          }
+          try {
+            results[index] = onError(error, batch)
+          } catch (fatal) {
+            failure ??= fatal
+            return
+          }
+        }
+      }
     }
+    await Promise.all(Array.from({ length: Math.min(connections, batches.length) }, (_, slot) => worker(slot)))
+    if (failure !== undefined) throw failure
+    return results
   }
 
-  const search = (since: Date, folder: string): Promise<Searched> =>
-    inFolder(folder, async (open, validity) => {
+  const chunks = <T>(items: T[], size: number): T[][] => {
+    const out: T[][] = []
+    for (let start = 0; start < items.length; start += size) out.push(items.slice(start, start + size))
+    return out
+  }
+
+  const search = async (since: Date, folder: string): Promise<Searched> => {
+    const found = await inFolder(folder, async (open, validity) => {
       const uids = await open.search({ since }, { uid: true })
       return { ...(validity ? { validity } : {}), uids: (uids || []).map(String) }
     })
+    if (found.validity) validities.set(folder, found.validity)
+    return found
+  }
 
-  const folderList = async (): Promise<FolderInfo[]> => {
-    const open = await connected()
-    try {
-      const entries = await open.list({ statusQuery: { messages: true, unseen: true } })
+  const folderList = (): Promise<FolderInfo[]> =>
+    retrying(0, async () => {
+      const entries = await limited(
+        0,
+        connect(0).then((open) => open.list({ statusQuery: { messages: true, unseen: true } })),
+      )
       return entries
         .filter((entry) => !entry.flags.has("\\Noselect") && !entry.flags.has("\\NonExistent"))
         .map((entry) => ({
@@ -204,12 +366,11 @@ export const imapSource = (endpoint: ImapEndpoint, password: string): ImapMailSo
           messages: entry.status?.messages ?? null,
           unseen: entry.status?.unseen ?? null,
         }))
-    } catch (error) {
-      throw mapImapError(error)
-    }
-  }
+    })
 
   return {
+    listBatch: listSize * connections,
+    fetchBatch: fetchSize * connections,
     search,
 
     present: (uids, folder) =>
@@ -229,14 +390,13 @@ export const imapSource = (endpoint: ImapEndpoint, password: string): ImapMailSo
       const searched = options?.searched ?? (await search(since, folder))
       if (!searched.validity) throw new CliError("invalid_response", "IMAP did not report UIDVALIDITY")
       const validity = searched.validity
-      const listed: Listed[] = []
-      // One call per batch: a dropped connection costs only that batch, and the folder must be the same one after it.
-      for (let start = 0; start < searched.uids.length; start += LIST_BATCH) {
-        const batch = searched.uids.slice(start, start + LIST_BATCH)
-        const messages = await inFolder(folder, async (open, current) => {
-          if (current !== validity)
-            throw new CliError("invalid_response", "UIDVALIDITY changed during the run; run it again")
-          return open.fetchAll(
+      validities.set(folder, validity)
+      // A message the server answers with `NO [UNAVAILABLE]` is simply absent here; the sync asks for it again later.
+      const parts = await spread(
+        folder,
+        chunks(searched.uids, listSize),
+        (open, batch) =>
+          open.fetchAll(
             batch.join(","),
             {
               uid: true,
@@ -249,11 +409,10 @@ export const imapSource = (endpoint: ImapEndpoint, password: string): ImapMailSo
               headers: HEADER_FIELDS,
             },
             { uid: true },
-          )
-        })
-        for (const message of messages) listed.push(listedOf(message, folder, validity))
-      }
-      return listed
+          ),
+        validity,
+      )
+      return parts.flat().map((message) => listedOf(message, folder, validity))
     },
 
     fetchRaw: async (items) => {
@@ -261,42 +420,52 @@ export const imapSource = (endpoint: ImapEndpoint, password: string): ImapMailSo
       const byFolder = new Map<string, Listed[]>()
       for (const item of items)
         byFolder.set(item.folder ?? "INBOX", [...(byFolder.get(item.folder ?? "INBOX") ?? []), item])
-      for (const [folder, group] of byFolder)
-        for (let start = 0; start < group.length; start += FETCH_BATCH) {
-          const batch = group.slice(start, start + FETCH_BATCH)
-          try {
-            const sources = await inFolder(folder, async (open) => {
-              const found = new Map<string, Uint8Array>()
-              const messages = await open.fetchAll(
-                batch.map(({ uid }) => uid).join(","),
-                { uid: true, source: true },
-                { uid: true },
-              )
-              for (const message of messages) if (message.source) found.set(String(message.uid), message.source)
-              return found
-            })
-            for (const item of batch)
-              read.set(item, sources.get(item.uid) ?? new CliError("not_found", `email ${item.uid} was not returned`))
-          } catch (error) {
-            // A throttled or dropped connection fails the whole run; one unreadable batch costs only itself.
-            if (
-              error instanceof CliError &&
-              ["rate_limited", "authentication_error", "network_error", "timeout"].includes(error.code)
+      for (const [folder, group] of byFolder) {
+        const batches = chunks(group, fetchSize)
+        const answers = await spread(
+          folder,
+          batches,
+          async (open, batch) => {
+            const found = new Map<string, Uint8Array>()
+            const messages = await open.fetchAll(
+              batch.map(({ uid }) => uid).join(","),
+              { uid: true, source: true },
+              { uid: true },
             )
-              throw error
-            for (const item of batch) read.set(item, error instanceof Error ? error : new Error(String(error)))
+            for (const message of messages) if (message.source) found.set(String(message.uid), message.source)
+            return found
+          },
+          undefined,
+          (error) => {
+            // A throttled or dropped connection fails the whole run; one unreadable batch costs only itself.
+            const mapped = mapImapError(error)
+            if (["rate_limited", "authentication_error", "network_error", "timeout"].includes(mapped.code)) throw mapped
+            return mapped
+          },
+        )
+        for (const [index, batch] of batches.entries()) {
+          const answer = answers[index]
+          for (const item of batch) {
+            const found = answer instanceof Map ? answer.get(item.uid) : undefined
+            read.set(
+              item,
+              found ??
+                (answer instanceof Error ? answer : undefined) ??
+                new CliError("not_found", `email ${item.uid} was not returned`, { reason: "mail.not-returned" }),
+            )
           }
         }
+      }
       return items.map((item) => read.get(item) as Uint8Array | Error)
     },
 
     folderList,
 
-    check: async () => {
-      const open = await connected()
-      const has = (name: string) => open.capabilities.has(name)
-      try {
-        const folders = (await open.list()).length
+    check: () =>
+      retrying(0, async () => {
+        const open = await limited(0, connect(0))
+        const has = (name: string) => open.capabilities.has(name)
+        const folders = (await limited(0, open.list())).length
         return {
           login: endpoint.login,
           capabilities: [...open.capabilities.keys()].sort(),
@@ -312,20 +481,20 @@ export const imapSource = (endpoint: ImapEndpoint, password: string): ImapMailSo
           },
           folders,
         }
-      } catch (error) {
-        throw mapImapError(error)
-      }
-    },
+      }),
 
     close: async () => {
-      const open = client
-      client = undefined
-      if (!open) return
-      try {
-        await open.logout()
-      } catch {
-        open.close()
-      }
+      const open = clients.splice(0)
+      await Promise.all(
+        open.map(async (one) => {
+          if (!one) return
+          try {
+            await one.logout()
+          } catch {
+            one.close()
+          }
+        }),
+      )
     },
   }
 }

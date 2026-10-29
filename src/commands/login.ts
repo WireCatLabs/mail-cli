@@ -4,11 +4,11 @@ import type { ImapEndpoint, ImapMailSource } from "../mail/imap.js"
 import type { Prepare } from "../providers.js"
 
 /** A refused login, with the provider's likely cause and where the steps are; any other error passes through. */
-const explained = (error: unknown, address: string, prepare: Prepare): unknown =>
+const explained = (error: unknown, prepare: Prepare): unknown =>
   isCliError(error) && error.details.reason === "mail.login-refused"
     ? new CliError(
         error.code,
-        `${error.message}. Likely cause: ${prepare.refused} \`${IDENTITY.command} setup ${address}\` shows the steps again.`,
+        `${error.message}. Likely cause: ${prepare.refused} Run \`${IDENTITY.command} <profile> session start\` to see the steps again.`,
         error.details,
       )
     : error
@@ -18,7 +18,6 @@ export const checkLogin = async (
   connect: (endpoint: ImapEndpoint, password: string) => ImapMailSource,
   endpoint: ImapEndpoint,
   password: string,
-  address: string,
   prepare: Prepare,
 ) => {
   let source: ImapMailSource | undefined
@@ -26,7 +25,7 @@ export const checkLogin = async (
     source = connect(endpoint, password)
     return await source.check()
   } catch (error) {
-    throw explained(error, address, prepare)
+    throw explained(error, prepare)
   } finally {
     await source?.close()
   }
