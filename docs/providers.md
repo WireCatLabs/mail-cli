@@ -12,10 +12,10 @@ its screens; the help page is the source of truth.
 
 ## Yandex
 
-1. Open https://mail.yandex.ru/#setup/client (or the gear, «Все настройки», «Почтовые программы»).
+1. Open <https://mail.yandex.ru/#setup/client> (or the gear, «Все настройки», «Почтовые программы»).
 2. Under «Разрешить доступ к почтовому ящику с помощью почтовых клиентов» turn on «С сервера imap.yandex.ru по протоколу IMAP».
 3. Make sure «Пароли приложений и OAuth токены» is on, then save.
-4. Open https://id.yandex.ru/security, tab «Безопасность», section «Доступ к вашим данным», «Пароли приложений».
+4. Open <https://id.yandex.ru/security>, tab «Безопасность», section «Доступ к вашим данным», «Пароли приложений».
 5. Under «Создать пароль приложения» choose the type «Почта», give the password a name and click «Далее».
 6. Copy the password at once: Yandex shows it only once.
 
@@ -28,7 +28,7 @@ Read from: <https://yandex.ru/support/yandex-360/customers/mail/ru/mail-clients/
 
 1. Personal Google Account: IMAP is always on, nothing to switch. Google Workspace: the administrator controls it, and the "Forwarding and POP/IMAP" tab in Gmail Settings, "See all settings", may be missing.
 2. Turn on 2-Step Verification for the Google Account.
-3. Open https://myaccount.google.com/apppasswords and create an app password. Google's help page does not list the labels of that screen, so none are quoted here.
+3. Open <https://myaccount.google.com/apppasswords> and create an app password. Google's help page does not list the labels of that screen, so none are quoted here.
 4. Copy the 16 digit password and use it instead of the account password.
 
 - App passwords are not offered if 2-Step Verification is set up only for security keys, on a work or school account, or with Advanced Protection on.
@@ -38,7 +38,7 @@ Read from: <https://support.google.com/mail/answer/7126229>, <https://support.go
 ## iCloud
 
 1. Turn on two-factor authentication for the Apple Account.
-2. Go to https://account.apple.com and sign in.
+2. Go to <https://account.apple.com> and sign in.
 3. In the "Sign In and Security" section select "App Specific Passwords".
 4. Select "Generate an app specific password" and follow the on-screen steps.
 5. Copy the password when it appears; Apple's page does not say whether it can be shown again.
@@ -49,7 +49,7 @@ Read from: <https://support.apple.com/en-us/102654>, <https://support.apple.com/
 
 ## Mail.ru
 
-1. Open https://e.mail.ru/inbox.
+1. Open <https://e.mail.ru/inbox>.
 2. Bottom left click «Настройки», then «Все настройки», «Безопасность», «Пароли для внешних приложений».
 3. Click «Создать», enter a name and click «Продолжить».
 4. Choose «Полный доступ к Почте» as the protocol type and click «Продолжить».
