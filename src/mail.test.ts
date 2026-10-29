@@ -80,6 +80,8 @@ const harness = async (options: { throttle?: boolean; fake?: Partial<FakeOptions
     MAIL_STATE_DIR: mkdtempSync(join(tmpdir(), "state-")),
     MESSAGING_STORE: join(mkdtempSync(join(tmpdir(), "store-")), "wirecat.db"),
   }
+  // A prompt is refused in CI, and these tests answer prompts.
+  delete env.CI
   const fixedTuning = options.tuning
   const mail = async (
     argv: string[],
