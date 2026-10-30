@@ -426,7 +426,7 @@ describe("account check, folders and sync", () => {
 
     const second = await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])
     expect(item(second.out)).toMatchObject({ saved: 0 })
-    expect(item(second.out)).toMatchObject({ listed: 2, already_stored: 2, saved: 0 })
+    expect(item(second.out)).toMatchObject({ listed: 0, already_stored: 0, saved: 0 })
 
     const store = await openStore({ path: storePath(env), env, command: "mail" })
     try {

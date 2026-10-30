@@ -30,7 +30,9 @@ Languages: ru, en.
   for cli-core's `syncMail` (no resume points, deletion detection, rules or attachment text). Both switch to
   `@wirecat/cli-core/mail` with one import each once it is released.
 - **Adapter:** `src/mail/imap.ts` on imapflow. A message id is the server's email id when it gives one (OBJECTID or
-  Gmail's X-GM-MSGID), else a hash of the Message-ID header.
+  Gmail's X-GM-MSGID), else a hash of the Message-ID header. On a server with neither (Yandex) a listing asks only for
+  UID, flags, date and size (`quick`) and the hash is taken from the Message-ID of the raw message (`identify`), which
+  must equal imapflow's ENVELOPE value (the trimmed first header) or stored mail would get a second id.
 - **Password:** OS keyring only (service `mail-cli`, account the profile); `MAIL_PASSWORD` for a run with no keyring;
   read-only fallback to Himalaya's `secret-tool` entry. No file fallback.
 - **imapflow, checked against 2.9.1:** a header or body fetch uses `BODY.PEEK` (read in `fetch.js`; the test asserts

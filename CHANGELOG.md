@@ -19,6 +19,12 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Fixed
 
+- `sync` on a server with no message ids (Yandex) lists only UID, flags, date and size and downloads each new message
+  once, taking its id from the Message-ID, so ids already stored do not change and mail already stored is not read
+  again. A header listing of 200 messages took 5 to 40 s there and often failed with `NO [UNAVAILABLE]`, so months of
+  mail took hours. Rules and the bulk class are decided on the downloaded message, so a message a skip rule drops is
+  downloaded once. A new UIDVALIDITY, changed rules or `--rescan` still list with headers. A quick run does not prove
+  deletions or refresh flags of mail it skips; `--rescan` does. Needs `@wirecat/cli-core` with `quick` and `identify`.
 - `sync` no longer fails with "database is locked" while another tool (memo's timer) writes the shared store at the same
   time; `@wirecat/cli-core` 0.485.0 waits for the write lock by trying every millisecond.
 - A read that finds no mailbox selected on its connection (imapflow clears the selection when a SELECT fails and still
