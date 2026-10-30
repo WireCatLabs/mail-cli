@@ -135,7 +135,7 @@ export const mapImapError = (error: unknown): CliError => {
     return new CliError("timeout", "the mail server did not answer in time", { retryable: true, ...causeOf(e.code) })
   if (
     e.code &&
-    /^(ECONN|ENOTFOUND|EAI_|ENETUNREACH|EHOSTUNREACH|NoConnection|EPIPE|Closed|EConnectionClosed|UnexpectedTag|MissingTag|InvalidResponse|ResponseProcessingFailed|ParserError|PollFailed|TooManyResponses)/.test(
+    /^(ECONN|ENOTFOUND|EAI_|ENETUNREACH|EHOSTUNREACH|NoConnection|EPIPE|Closed|EConnectionClosed|UnexpectedTag|MissingTag|InvalidResponse|ResponseProcessingFailed|ParserError|PollFailed|TooManyResponses|NoMailboxSelected)/.test(
       e.code,
     )
   )
@@ -266,7 +266,10 @@ export const imapSource = (endpoint: ImapEndpoint, password: string, tuning: Ima
     if (folder === undefined) return limited(slot, work(open, ""))
     const lock = await limited(slot, open.getMailboxLock(folder, { readOnly: true }))
     try {
-      const validity = open.mailbox ? String(open.mailbox.uidValidity) : ""
+      // imapflow clears the selection when a SELECT fails or the server closes the mailbox, and a connection
+      // in that state still counts as usable: a command sent on it fails with NoMailboxSelected.
+      if (!open.mailbox) throw Object.assign(new Error("no mailbox is selected"), { code: "NoMailboxSelected" })
+      const validity = String(open.mailbox.uidValidity)
       const was = expected ?? validities.get(folder)
       if (was !== undefined && validity !== was)
         throw new CliError("invalid_response", "UIDVALIDITY changed during the run; run it again", {
