@@ -55,7 +55,7 @@
   "dependencies": {
     "@modelcontextprotocol/server": "2.4.0",
     "@wirecat/cli-base": "0.63.0",
-    "@wirecat/cli-core": "0.487.0",
+    "@wirecat/cli-core": "0.488.0",
     "commander": "15.0.0",
     "imapflow": "2.9.1",
     "valibot": "1.5.0"

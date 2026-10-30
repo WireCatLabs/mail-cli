@@ -67,11 +67,15 @@ it("stores mail under the same ids as the header listing and does not read store
   expect(stored).toHaveLength(2)
   const read = bodies()
 
+  const backfill = await sync()
+
+  expect(backfill).toMatchObject({ saved: 0, listed: 2, alreadyStored: 2, complete: true })
+  expect(bodies()).toBe(read)
+  expect(fake.commands.filter((command) => /ENVELOPE/i.test(command)).length).toBeGreaterThan(0)
   const again = await sync()
 
   expect(again).toMatchObject({ saved: 0, listed: 0, complete: true })
   expect(bodies()).toBe(read)
-  expect(fake.commands.filter((command) => /ENVELOPE/i.test(command)).length).toBeGreaterThan(0)
   expect(await ids()).toEqual(stored)
 })
 
