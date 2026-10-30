@@ -19,6 +19,8 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Fixed
 
+- `sync` no longer stops for good on a message Yandex can never read. Yandex refuses the whole body FETCH with `NO [UNAVAILABLE]` when one of its messages is broken on its side; the batch is now read again one message at a time, and only that message is reported unreadable.
+
 - `sync` on a server with no message ids (Yandex) lists only UID, flags, date and size and downloads each new message
   once, taking its id from the Message-ID, so ids already stored do not change and mail already stored is not read
   again. A header listing of 200 messages took 5 to 40 s there and often failed with `NO [UNAVAILABLE]`, so months of

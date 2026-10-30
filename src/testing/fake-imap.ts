@@ -32,6 +32,8 @@ export interface FakeOptions {
   dropFetches?: number
   /** Answers this many UID FETCH commands with a tagged `NO [UNAVAILABLE]`, as a busy backend does. */
   refuseFetches?: number
+  /** UIDs whose body Yandex can never read: a body FETCH that names any of them is refused whole, every time. */
+  brokenBodies?: number[]
   /** Sleeps this long before answering a UID FETCH, to make a request time out. */
   fetchDelayMs?: number
   /** Changes the folder's UIDVALIDITY after this many connections have been dropped by `dropFetches`. */
@@ -81,6 +83,14 @@ const uidsIn = (set: string, all: number[]): number[] =>
     const low = Number(from)
     const high = to === undefined ? low : to === "*" ? Math.max(...all) : Number(to)
     return all.filter((uid) => uid >= Math.min(low, high) && uid <= Math.max(low, high))
+  })
+
+const uidsOf = (set: string): number[] =>
+  set.split(",").flatMap((part) => {
+    const [from, to] = part.split(":").map(Number)
+    if (from === undefined || Number.isNaN(from)) return []
+    const last = to === undefined || Number.isNaN(to) ? from : to
+    return Array.from({ length: last - from + 1 }, (_, i) => from + i)
   })
 
 export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => {
@@ -185,6 +195,8 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
               refusalsLeft -= 1
               return send(`${tag} NO [UNAVAILABLE] backend error`)
             }
+            if (wantsBody && options.brokenBodies?.some((uid) => uidsOf(set).includes(uid)))
+              return send(`${tag} NO [UNAVAILABLE] UID FETCH failure due to backend error`)
             if (wantsBody && options.throttleBodies) return send(`${tag} NO [THROTTLED] Too many commands`)
             const messages = selected?.messages ?? []
             const reply = () => {

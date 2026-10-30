@@ -484,9 +484,8 @@ export const imapSource = (endpoint: ImapEndpoint, password: string, tuning: Ima
       const byFolder = new Map<string, Quick[]>()
       for (const item of items)
         byFolder.set(item.folder ?? "INBOX", [...(byFolder.get(item.folder ?? "INBOX") ?? []), item])
-      for (const [folder, group] of byFolder) {
-        const batches = chunks(group, fetchSize)
-        const answers = await spread(
+      const bodies = (folder: string, batches: Quick[][]) =>
+        spread(
           folder,
           batches,
           async (open, batch) => {
@@ -507,9 +506,27 @@ export const imapSource = (endpoint: ImapEndpoint, password: string, tuning: Ima
             return mapped
           },
         )
+      for (const [folder, group] of byFolder) {
+        const batches = chunks(group, fetchSize)
+        const answers = await bodies(folder, batches)
         for (const [index, batch] of batches.entries()) {
-          const answer = answers[index]
+          let answer = answers[index]
+          // Yandex refuses a whole FETCH when one of its messages cannot be read; one by one, only that one is lost.
+          if (answer instanceof CliError && answer.code === "provider_unavailable" && batch.length > 1) {
+            const singles = await bodies(
+              folder,
+              batch.map((item) => [item]),
+            )
+            answer = new Map()
+            for (const [at, item] of batch.entries()) {
+              const single = singles[at]
+              if (single instanceof Map && single.has(item.uid))
+                answer.set(item.uid, single.get(item.uid) as Uint8Array)
+              else if (single instanceof Error) read.set(item, single)
+            }
+          }
           for (const item of batch) {
+            if (read.has(item)) continue
             const found = answer instanceof Map ? answer.get(item.uid) : undefined
             read.set(
               item,

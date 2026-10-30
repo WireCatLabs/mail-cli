@@ -204,6 +204,23 @@ it("answers an Error, not a failed call, for a body the server did not return", 
   expect(raws[1]).toMatchObject({ code: "not_found", details: { reason: "mail.not-returned" } })
 })
 
+it("loses only the message Yandex can never read when it refuses the whole batch", async () => {
+  fake = await serve(false, 0, { brokenBodies: [4] })
+  const waits: number[] = []
+  const source = sourceOf(fake.port, undefined, { sleep: async (ms) => void waits.push(ms) })
+  const listed = ["4", "7"].map((uid) => ({
+    uid,
+    messageId: uid,
+    threadId: uid,
+    receivedAt: "2026-10-27T10:00:00.000Z",
+    folder: "INBOX",
+  }))
+  const raws = await source.fetchRaw(listed)
+  await source.close()
+  expect(raws[0]).toMatchObject({ code: "provider_unavailable", details: { cause_code: "UNAVAILABLE" } })
+  expect(raws[1]).toBeInstanceOf(Uint8Array)
+})
+
 it("times a command out on its own and reports the transport code", async () => {
   fake = await serve(false, 0, { fetchDelayMs: 600 })
   const source = sourceOf(fake.port, undefined, { requestTimeoutMs: 200, maxAttempts: 2 })
