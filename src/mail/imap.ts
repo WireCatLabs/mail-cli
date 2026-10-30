@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
 import { CliError } from "@wirecat/cli-base"
-import type { Listed, MailHeaders, MailSource, Searched } from "@wirecat/cli-core/mail"
+import type { Listed, MailHeaders, MailSource, Quick, Searched } from "@wirecat/cli-core/mail"
 import { type FetchMessageObject, ImapFlow, type ListResponse } from "imapflow"
 
 export interface ImapEndpoint {
@@ -45,6 +45,8 @@ export type ImapMailSource = MailSource & {
 export interface ImapTuning {
   /** Messages in one FETCH command. */
   listSize?: number
+  /** UIDs in one FETCH that asks only for flags, date and size. */
+  quickSize?: number
   fetchSize?: number
   /** Parallel connections one `list` or `fetchRaw` call spreads its commands over. */
   connections?: number
@@ -65,6 +67,7 @@ export interface ImapTuning {
 
 export const IMAP_DEFAULTS = {
   listSize: 15,
+  quickSize: 500,
   fetchSize: 15,
   connections: 4,
   requestTimeoutMs: 90_000,
@@ -174,24 +177,45 @@ const headersOf = (message: FetchMessageObject): MailHeaders => {
   }
 }
 
-const listedOf = (message: FetchMessageObject, folder: string, validity: string): Listed => {
-  const messageId = message.envelope?.messageId
-  // Without a stable id the Message-ID is the identity; without that, the UID, which means nothing without UIDVALIDITY.
-  const identity = messageId ?? `uid:${folder}:${validity}:${message.uid}`
+const quickOf = (message: FetchMessageObject, folder: string): Quick => {
   const flags = message.flags ?? new Set<string>()
   const received = message.internalDate instanceof Date ? message.internalDate : new Date(message.internalDate ?? 0)
   return {
     uid: String(message.uid),
-    messageId: message.emailId ? String(message.emailId) : digest(identity),
-    threadId: message.threadId ? String(message.threadId) : digest(identity),
     receivedAt: received.toISOString(),
     folder,
     ...(message.size === undefined ? {} : { size: message.size }),
     seen: flags.has("\\Seen"),
     flagged: flags.has("\\Flagged"),
     labels: message.labels ? [...message.labels] : flags.has("\\Flagged") ? ["Starred"] : [],
+  }
+}
+
+/** Without a stable id the Message-ID is the identity; without that, the UID, which means nothing without UIDVALIDITY. */
+const idsOf = (messageId: string | undefined, folder: string, validity: string, uid: string) => {
+  const identity = messageId ?? `uid:${folder}:${validity}:${uid}`
+  return { messageId: digest(identity), threadId: digest(identity) }
+}
+
+const listedOf = (message: FetchMessageObject, folder: string, validity: string): Listed => {
+  const ids = idsOf(message.envelope?.messageId, folder, validity, String(message.uid))
+  return {
+    ...quickOf(message, folder),
+    ...(message.emailId ? { messageId: String(message.emailId) } : { messageId: ids.messageId }),
+    threadId: message.threadId ? String(message.threadId) : ids.threadId,
     headers: headersOf(message),
   }
+}
+
+/**
+ * The Message-ID as the server's ENVELOPE gives it (imapflow trims the value of the first header), so the id of a
+ * message read as bytes is the id `list` gives it.
+ */
+const messageIdOf = (raw: Uint8Array): string | undefined => {
+  const bytes = Buffer.from(raw.buffer, raw.byteOffset, raw.byteLength)
+  const ends = [bytes.indexOf("\r\n\r\n"), bytes.indexOf("\n\n")].filter((at) => at !== -1)
+  const head = bytes.subarray(0, ends.length ? Math.min(...ends) : bytes.length).toString("utf8")
+  return /^message-id:[ \t]*(.*)$/im.exec(head.replace(/\r?\n[ \t]+/g, " "))?.[1]?.trim() || undefined
 }
 
 const roleOf = (entry: ListResponse): string | null => {
@@ -201,7 +225,10 @@ const roleOf = (entry: ListResponse): string | null => {
 
 /** One IMAP source, its connections opened on first use and closed by `close`; the password never leaves this closure. */
 export const imapSource = (endpoint: ImapEndpoint, password: string, tuning: ImapTuning = {}): ImapMailSource => {
-  const { listSize, fetchSize, connections, requestTimeoutMs, backoffMs, maxAttempts } = { ...IMAP_DEFAULTS, ...tuning }
+  const { listSize, quickSize, fetchSize, connections, requestTimeoutMs, backoffMs, maxAttempts } = {
+    ...IMAP_DEFAULTS,
+    ...tuning,
+  }
   const { canRetry, timeLeftMs, signal, sleep = nap, random = Math.random } = tuning
   const clients: (ImapFlow | undefined)[] = []
   /** Each folder's UIDVALIDITY as the run first saw it; a reconnect that finds another one stops the run. */
@@ -361,7 +388,9 @@ export const imapSource = (endpoint: ImapEndpoint, password: string, tuning: Ima
   const search = async (since: Date, folder: string): Promise<Searched> => {
     const found = await inFolder(folder, async (open, validity) => {
       const uids = await open.search({ since }, { uid: true })
-      return { ...(validity ? { validity } : {}), uids: (uids || []).map(String) }
+      // Message ids come free with OBJECTID and Gmail's extensions; without them the envelope costs a read per message.
+      const quick = !open.capabilities.has("OBJECTID") && !open.capabilities.has("X-GM-EXT-1")
+      return { ...(validity ? { validity } : {}), uids: (uids || []).map(String), ...(quick ? { quick } : {}) }
     })
     if (found.validity) validities.set(folder, found.validity)
     return found
@@ -431,9 +460,28 @@ export const imapSource = (endpoint: ImapEndpoint, password: string, tuning: Ima
       return parts.flat().map((message) => listedOf(message, folder, validity))
     },
 
+    quick: async (_since, folder, { searched }) => {
+      if (!searched.validity) throw new CliError("invalid_response", "IMAP did not report UIDVALIDITY")
+      const validity = searched.validity
+      validities.set(folder, validity)
+      const parts = await spread(
+        folder,
+        chunks(searched.uids, quickSize),
+        (open, batch) =>
+          open.fetchAll(batch.join(","), { uid: true, flags: true, internalDate: true, size: true }, { uid: true }),
+        validity,
+      )
+      return parts.flat().map((message) => quickOf(message, folder))
+    },
+
+    identify: (raw, item) => {
+      const validity = validities.get(item.folder ?? "INBOX") ?? ""
+      return idsOf(messageIdOf(raw), item.folder ?? "INBOX", validity, item.uid)
+    },
+
     fetchRaw: async (items) => {
-      const read = new Map<Listed, Uint8Array | Error>()
-      const byFolder = new Map<string, Listed[]>()
+      const read = new Map<Quick, Uint8Array | Error>()
+      const byFolder = new Map<string, Quick[]>()
       for (const item of items)
         byFolder.set(item.folder ?? "INBOX", [...(byFolder.get(item.folder ?? "INBOX") ?? []), item])
       for (const [folder, group] of byFolder) {

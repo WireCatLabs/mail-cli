@@ -1,6 +1,7 @@
+import type { Quick, Searched } from "@wirecat/cli-core/mail"
 import { ImapFlow } from "imapflow"
 import { afterEach, expect, it, vi } from "vitest"
-import { type FakeImap, type FakeOptions, startFakeImap } from "../testing/fake-imap.js"
+import { type FakeImap, type FakeMessage, type FakeOptions, startFakeImap } from "../testing/fake-imap.js"
 import { type ImapTuning, imapSource, mapImapError } from "./imap.js"
 
 const raw = (id: string, subject: string, extra = "") =>
@@ -77,7 +78,7 @@ it("reads UIDVALIDITY on open, lists envelopes and never asks for a body without
   const listed = await source.list(new Date("2026-10-01"), "INBOX", searched ? { searched } : {})
   const raws = await source.fetchRaw(listed)
   await source.close()
-  expect(searched).toEqual({ validity: "777", uids: ["4", "7"] })
+  expect(searched).toEqual({ validity: "777", uids: ["4", "7"], quick: true })
   expect(listed.map(({ uid, seen, folder }) => ({ uid, seen, folder }))).toEqual([
     { uid: "4", seen: true, folder: "INBOX" },
     { uid: "7", seen: false, folder: "INBOX" },
@@ -296,4 +297,54 @@ it("maps NoMailboxSelected to a retryable network error with its code kept", () 
     code: "network_error",
     details: { cause_code: "NoMailboxSelected", retryable: true },
   })
+})
+
+const FROM = new Date("2026-10-01")
+
+it("lists a server with no message ids quickly: UID, flags, date and size, with no envelope and no body", async () => {
+  fake = await serve()
+  const source = sourceOf(fake.port)
+  const searched = await source.search?.(FROM, "INBOX")
+  const quick = await source.quick?.(FROM, "INBOX", { searched: searched as Searched })
+  const full = await source.list(FROM, "INBOX")
+  await source.close()
+  const fetches = fake.commands.filter((command) => command.startsWith("UID FETCH"))
+  expect(fetches[0]).toMatch(/FLAGS/)
+  expect(fetches[0]).not.toMatch(/ENVELOPE|BODY/i)
+  expect(quick?.map(({ uid, seen, flagged, size, receivedAt }) => ({ uid, seen, flagged, size, receivedAt }))).toEqual(
+    full.map(({ uid, seen, flagged, size, receivedAt }) => ({ uid, seen, flagged, size, receivedAt })),
+  )
+})
+
+const serveMessages = (messages: FakeMessage[]) =>
+  startFakeImap({
+    login: "ya@burobiz.ru",
+    password: "app-secret-1",
+    folders: [{ name: "INBOX", messages }],
+  })
+
+it("does not call a listing quick when the server gives message ids", async () => {
+  fake = await serveMessages([{ uid: 4, raw: raw("a", "first"), emailId: "E1", threadId: "T1" }])
+  const source = sourceOf(fake.port)
+  const searched = await source.search?.(FROM, "INBOX")
+  await source.close()
+  expect(searched?.quick).toBeUndefined()
+})
+
+it("gives mail read as bytes the id the envelope listing gives it, a folded or missing Message-ID included", async () => {
+  fake = await serveMessages([
+    { uid: 4, raw: raw("a", "plain") },
+    { uid: 5, raw: raw("b", "folded").replace("Message-ID: <b@example.com>", "Message-ID:\r\n <b@example.com>") },
+    { uid: 6, raw: raw("c", "none").replace(/Message-ID:.*\r\n/, "") },
+  ])
+  const source = sourceOf(fake.port)
+  const searched = (await source.search?.(FROM, "INBOX")) as Searched
+  const full = await source.list(FROM, "INBOX", { searched })
+  const quick = (await source.quick?.(FROM, "INBOX", { searched })) as Quick[]
+  const raws = await source.fetchRaw(quick)
+  await source.close()
+  expect(quick.map((item, index) => source.identify?.(raws[index] as Uint8Array, item))).toEqual(
+    full.map(({ messageId, threadId }) => ({ messageId, threadId })),
+  )
+  expect(new Set(full.map(({ messageId }) => messageId)).size).toBe(3)
 })

@@ -45,7 +45,9 @@ and takes `--limit` per run, and `--rescan` to list the whole window again. It s
 A sync of a big mailbox does not fit one run. It spends a request budget sized to its deadline (15 minutes at a
 terminal, 45 seconds over MCP; `--timeout` changes it, `--max-pages` lowers the budget), saves after each part and
 answers `state: partial` with the same command in `next`; run it again to go on. `mail <profile> status` says how far it
-is. A message the server fails on (Yandex answers some with `NO [UNAVAILABLE]`) is asked for once more at the end of
+is. On a server that gives no message id (Yandex) the listing is only UID, flags, date and size, and each new message
+is downloaded once: stored mail is skipped by UID, so a rerun reads nothing again. Such a run does not notice mail deleted
+at the server or changed flags on mail it skips; `--rescan` lists everything with headers and does both. A message the server fails on (Yandex answers some with `NO [UNAVAILABLE]`) is asked for once more at the end of
 the run, and if it still fails it is counted in `unreadable` and left for the next run. When the server closes the
 connection the sync reconnects after 1, 3 and 10 seconds (jittered), checks that UIDVALIDITY is the same and goes on from
 the failed request, for as long as the budget and the deadline allow; a failure keeps the transport's own code as
