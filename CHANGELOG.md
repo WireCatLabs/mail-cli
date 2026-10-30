@@ -19,6 +19,8 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Fixed
 
+- `sync` no longer fails with "database is locked" while another tool (memo's timer) writes the shared store at the same
+  time; `@wirecat/cli-core` 0.485.0 waits for the write lock by trying every millisecond.
 - A read that finds no mailbox selected on its connection (imapflow clears the selection when a SELECT fails and still
   calls the connection usable) closes it and goes on after the same wait and on a fresh connection as a dropped line,
   instead of ending the run with `provider_error`.
