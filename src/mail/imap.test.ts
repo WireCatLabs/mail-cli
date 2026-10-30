@@ -1,4 +1,5 @@
-import { afterEach, expect, it } from "vitest"
+import { ImapFlow } from "imapflow"
+import { afterEach, expect, it, vi } from "vitest"
 import { type FakeImap, type FakeOptions, startFakeImap } from "../testing/fake-imap.js"
 import { type ImapTuning, imapSource, mapImapError } from "./imap.js"
 
@@ -7,6 +8,7 @@ const raw = (id: string, subject: string, extra = "") =>
 
 let fake: FakeImap | undefined
 afterEach(async () => {
+  vi.restoreAllMocks()
   await fake?.close()
   fake = undefined
 })
@@ -266,4 +268,32 @@ it("retries a command the server refused with a tagged NO [UNAVAILABLE]", async 
   await source.close()
   expect(listed.map(({ uid }) => uid)).toEqual(["4", "7"])
   expect(waits).toHaveLength(2)
+})
+
+it("reconnects and selects the folder again when a command finds no mailbox selected", async () => {
+  fake = await serve()
+  const fetchAll = ImapFlow.prototype.fetchAll
+  let failed = false
+  vi.spyOn(ImapFlow.prototype, "fetchAll").mockImplementation(function (this: ImapFlow, ...args) {
+    if (failed) return fetchAll.apply(this, args)
+    failed = true
+    return Promise.reject(Object.assign(new Error("No mailbox is selected"), { code: "NoMailboxSelected" }))
+  })
+  const waits: number[] = []
+  const source = sourceOf(fake.port, undefined, { sleep: async (ms) => void waits.push(ms) })
+  const listed = await source.list(SINCE, "INBOX")
+  await source.close()
+  expect(listed.map(({ uid }) => uid)).toEqual(["4", "7"])
+  expect(waits).toHaveLength(1)
+  const lines = fake.commands
+    .filter((command) => /^(EXAMINE|SELECT|UID FETCH)/.test(command))
+    .map((c) => c.split(" ")[0])
+  expect(lines).toEqual(["EXAMINE", "EXAMINE", "UID"])
+})
+
+it("maps NoMailboxSelected to a retryable network error with its code kept", () => {
+  expect(mapImapError({ code: "NoMailboxSelected" })).toMatchObject({
+    code: "network_error",
+    details: { cause_code: "NoMailboxSelected", retryable: true },
+  })
 })

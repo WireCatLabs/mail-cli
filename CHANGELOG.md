@@ -19,6 +19,9 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Fixed
 
+- A read that finds no mailbox selected on its connection (imapflow clears the selection when a SELECT fails and still
+  calls the connection usable) closes it and goes on after the same wait and on a fresh connection as a dropped line,
+  instead of ending the run with `provider_error`.
 - `sync` spends a request budget sized to its deadline (15 minutes at a terminal, 45 seconds over MCP) and answers
   `state: partial` with `next` when it stops early; mid-folder progress is saved after every part, so a large folder
   finishes over several runs. `--max-pages` lowers the budget; `mail <profile> status` shows how far a sync is.
