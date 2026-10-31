@@ -2,6 +2,16 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## 0.1.1 — 01.11.2026
+
+### Fixed
+
+- **The docs take you from `sync` to a first found email, and say how the password is really kept.** Installation,
+  usage and the docs index end with `memo search mail`, since `mail` fills the shared store and memo searches it. The
+  password is kept in the keyring, falls back to a private file when the keyring fails, and can come from
+  `MAIL_PASSWORD`; it is never read from stdin. `rate_limited` names both causes: the server limiting the account, and
+  `sync` running out of its own request budget. The docs also say that `memo mail delete` moves Gmail mail to Trash.
+
 ## 0.1.0 — 31.10.2026
 
 ### Added
