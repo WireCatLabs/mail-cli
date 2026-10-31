@@ -29,6 +29,7 @@ export const statusCommand = (): Command =>
         if (!existsSync(storePath(context.env))) return []
         // Read-only, so it answers while a sync holds the write lock.
         const store = await openMailStore(context.env, { readOnly: true })
+        context.environment.trackCloseable?.(store)
         try {
           const stored = await store.accounts.storedAccount(key).catch(() => null)
           const names =

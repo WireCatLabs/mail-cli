@@ -54,6 +54,7 @@ try {
     WIRECAT_STATE_DIR: join(temp, "wirecat"),
     MESSAGING_STORE: join(temp, "never-owner.db"),
     MAIL_NO_UPDATE_CHECK: "1",
+    DBUS_SESSION_BUS_ADDRESS: "disabled:",
   }
   const bin = join(installed, "node_modules", name, "dist/bin/mail.js")
   const run = (args: string[]) =>

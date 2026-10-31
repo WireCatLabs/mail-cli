@@ -1,12 +1,5 @@
 import { execFile } from "node:child_process"
-import {
-  CliError,
-  Credentials,
-  type KeyringStore,
-  pathsAreOverridden,
-  resolvePaths,
-  systemKeyring,
-} from "@wirecat/cli-base"
+import { CliError, Credentials, isMovedRun, type KeyringStore, resolvePaths, systemKeyring } from "@wirecat/cli-base"
 import { IDENTITY } from "./identity.js"
 
 export type PasswordSource = "environment" | "keyring" | "himalaya"
@@ -33,10 +26,13 @@ export interface PasswordOptions {
 
 /** The app password of one profile. The keyring only: a password never falls back to a file. */
 export const passwordStore = ({ env, profile, keyring, himalaya }: PasswordOptions) => {
+  const moved = isMovedRun({ appName: IDENTITY.appName, prefix: IDENTITY.envPrefix, env })
+  // A moved run must not reach the owner's real Himalaya entry either (WC-SECR-24).
+  const lookupHimalaya = himalaya ?? (moved ? undefined : secretToolLookup)
   const credentials = new Credentials({
     configDir: resolvePaths({ appName: IDENTITY.appName, prefix: IDENTITY.envPrefix, env }).config,
     service: IDENTITY.appName,
-    isolated: pathsAreOverridden({ appName: IDENTITY.appName, prefix: IDENTITY.envPrefix, env }),
+    isolated: moved,
     envVar: `${IDENTITY.envPrefix}_PASSWORD`,
     storage: "keyring",
     keyring: keyring ?? systemKeyring,
@@ -52,7 +48,7 @@ export const passwordStore = ({ env, profile, keyring, himalaya }: PasswordOptio
         stored = undefined
       }
       if (stored) return { secret: stored.secret, source: stored.source === "environment" ? "environment" : "keyring" }
-      const old = await (himalaya ?? secretToolLookup)(profile)
+      const old = await lookupHimalaya?.(profile)
       return old ? { secret: old, source: "himalaya" } : undefined
     },
     write: (secret: string): void => {

@@ -174,6 +174,7 @@ const statusCommand = () =>
       refuseOffline(context.flags)
       const connect = context.environment.connect ?? imapSource
       const source = connect(endpointOf(context.settings), stored.secret)
+      context.environment.trackCloseable?.(source)
       try {
         await baseContext(this, configuration.resolveSettings).run(() => source.check())
       } finally {

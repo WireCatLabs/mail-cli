@@ -1,8 +1,9 @@
 import { CliError } from "@wirecat/cli-base"
 import { annotate } from "@wirecat/cli-base/commands"
+import { timezoneOf, zonedMoment } from "@wirecat/cli-base/query"
 import type { NextStep } from "@wirecat/cli-base/standards"
 import { baseContext, environmentOf, FETCH, itemOf, outputFor, renderAnswer, runBudgetOf } from "@wirecat/cli-core/cli"
-import { syncMail } from "@wirecat/cli-core/mail"
+import { type MailSyncResult, syncMail } from "@wirecat/cli-core/mail"
 import { Command } from "commander"
 import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
@@ -20,15 +21,38 @@ interface SyncFlags {
   rescan?: boolean
 }
 
-const sinceOf = (value: string | undefined, now: number): Date => {
+/** A time without a zone is read in `zone`, and a date alone starts at its local midnight (WC-TIME-3, WC-TIME-5). */
+const sinceOf = (value: string | undefined, zone: string, now: number): Date => {
   if (value === undefined) return new Date(now - DEFAULT_DAYS * DAY_MS)
-  const since = new Date(value)
-  if (Number.isNaN(since.getTime()) || since.getTime() > now)
-    throw new CliError("validation_error", "--since-time takes an ISO date or timestamp in the past", {
+  const refuse = () =>
+    new CliError("validation_error", "--since-time takes an ISO date or timestamp in the past", {
       param: "since-time",
     })
-  return since
+  let since: number
+  try {
+    since = zonedMoment(value, zone, { start: 0, end: value.length })
+  } catch (error) {
+    if (error instanceof CliError) throw refuse()
+    throw error
+  }
+  if (since > now) throw refuse()
+  return new Date(since)
 }
+
+const BUDGET_CODES = { requests: "rate_limited", deadline: "timeout", cancelled: "cancelled" } as const
+
+/** What the run left out, so `meta.complete` is false whenever any of it is there (WC-OUT-7). */
+const issuesOf = (report: MailSyncResult) => [
+  ...(report.unreadable?.length
+    ? [{ code: "invalid_response" as const, reason: "mail.unreadable", source: "sync" }]
+    : []),
+  ...(report.deletionsSkipped
+    ? [{ code: "outcome_unknown" as const, reason: "mail.deletions-skipped", source: "sync" }]
+    : []),
+  ...(report.stopped
+    ? [{ code: BUDGET_CODES[report.stopped], reason: `budget.${report.stopped}`, source: "sync" }]
+    : []),
+]
 
 const wholeNumberFor =
   (flag: string) =>
@@ -63,12 +87,15 @@ export const syncCommand = (): Command =>
     partial: true,
     examples: [
       `${IDENTITY.command} ya sync`,
-      `${IDENTITY.command} ya sync --since-time 2026-10-01T00:00:00Z --limit 200`,
+      `${IDENTITY.command} ya sync --since-time 2026-10-01 --limit 200`,
       `${IDENTITY.command} ya sync --folder INBOX`,
     ],
   })
     .description("read mail from the server into the shared store; mail already stored is skipped")
-    .option("--since-time <time>", "only mail received since this ISO date or timestamp (default: 30 days)")
+    .option(
+      "--since-time <time>",
+      "only mail received since this date or time; a date alone starts at local midnight, a time without a zone is local (default: 30 days)",
+    )
     .option("--limit <n>", "save at most this many new emails in this run, newest first", wholeNumberFor("limit"))
     .option(
       "--max-pages <pages>",
@@ -86,7 +113,8 @@ export const syncCommand = (): Command =>
       refuseOffline(context.flags)
       const address = context.settings.mailbox.address
       if (!address) throw new CliError("configuration_error", `profile ${context.profile} has no address`)
-      const since = sinceOf(args.sinceTime, Date.now())
+      const zone = timezoneOf()
+      const since = sinceOf(args.sinceTime, zone, Date.now())
       const { signal } = environmentOf(this)
       const budget = runBudgetOf(this, args.maxPages)
       // A retry is a request of the budget; openSource keeps it from ending after the deadline.
@@ -95,6 +123,7 @@ export const syncCommand = (): Command =>
         const report = await baseContext(this, configuration.resolveSettings).run(async () => {
           const folders = await foldersFor(args.folder, context.settings.mailbox.folders, () => source.folderList())
           const store = await openMailStore(context.env)
+          environmentOf(this).trackCloseable?.(store)
           try {
             return await syncMail(source, store, {
               account: { address, mode: "imap", folders },
@@ -108,6 +137,7 @@ export const syncCommand = (): Command =>
             await store.close()
           }
         })
+        const issues = issuesOf(report)
         const partial = report.state === "partial"
         const moved = report.saved + report.alreadyStored + report.skipped + report.envelopes > 0
         const timeout = this.optsWithGlobals<{ timeout?: string }>().timeout
@@ -144,6 +174,7 @@ export const syncCommand = (): Command =>
             {
               address: report.account,
               since: report.since,
+              timezone: zone,
               folders: report.coverage?.folders ?? [],
               state: report.state ?? (report.complete ? "complete" : "partial"),
               ...(report.stopped ? { stopped: report.stopped } : {}),
@@ -158,7 +189,15 @@ export const syncCommand = (): Command =>
               ...(report.deletionsSkipped ? { deletions_skipped: report.deletionsSkipped } : {}),
               ...(hint ? { hint } : {}),
             },
-            { next, meta: { complete: report.complete } },
+            {
+              next,
+              meta: {
+                complete: report.complete && issues.length === 0,
+                ...(issues.length ? { issues } : {}),
+                timezone: zone,
+                window: { since: since.toISOString() },
+              },
+            },
           ),
         )
       } finally {

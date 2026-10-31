@@ -31,6 +31,7 @@ const run = (args: string[], env: Record<string, string> = {}) =>
       [`${PREFIX}_CACHE_DIR`]: join(isolated, "cache"),
       [`${PREFIX}_NO_UPDATE_CHECK`]: "1",
       MESSAGING_STORE: join(isolated, "store.db"),
+      DBUS_SESSION_BUS_ADDRESS: "disabled:",
       ...env,
     },
   })

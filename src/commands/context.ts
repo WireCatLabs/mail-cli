@@ -46,10 +46,10 @@ export const passwordsOf = (context: ReturnType<typeof contextOf>) =>
     himalaya: context.environment.himalaya,
   })
 
-/** An opened source for the profile, with the password read from the keyring; call `close` when done. */
 /** A retry that would end after the run's deadline is not made; this much is kept back for saving and answering. */
 const RETRY_MARGIN_MS = 3_000
 
+/** An opened source for the profile, with the password read from the keyring; call `close` when done. */
 export const openSource = async (context: ReturnType<typeof contextOf>, tuning: ImapTuning = {}) => {
   const { deadline, signal } = context.environment
   const endpoint = endpointOf(context.settings)
@@ -68,7 +68,9 @@ export const openSource = async (context: ReturnType<typeof contextOf>, tuning: 
     },
     ...(signal ? { signal } : {}),
   }
-  return { source: connect(endpoint, stored.secret, { ...bounds, ...tuning }), endpoint, passwordFrom: stored.source }
+  const source = connect(endpoint, stored.secret, { ...bounds, ...tuning })
+  context.environment.trackCloseable?.(source)
+  return { source, endpoint, passwordFrom: stored.source }
 }
 
 export const collect = (value: string, previous: string[] = []): string[] => [...previous, value]
