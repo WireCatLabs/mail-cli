@@ -24,6 +24,14 @@ export interface PasswordOptions {
   himalaya?: LookupHimalaya | undefined
 }
 
+// cli-base warns once per Credentials, and a run over several profiles makes one per profile.
+const warnedRuns = new WeakSet<NodeJS.ProcessEnv>()
+const warnOnce = (env: NodeJS.ProcessEnv) => (message: string) => {
+  if (warnedRuns.has(env)) return
+  warnedRuns.add(env)
+  process.stderr.write(`${message}\n`)
+}
+
 /**
  * The app password of one profile: the keyring, or a private file when the keyring fails or the owner chose it
  * (WC-SECR-4). The file is read first, so a password kept there never waits on a locked keyring.
@@ -38,6 +46,7 @@ export const passwordStore = ({ env, profile, keyring = systemKeyring, himalaya 
     envVar: `${IDENTITY.envPrefix}_PASSWORD`,
     keyring,
     env,
+    warn: warnOnce(env),
   }
   const credentials = new Credentials(options)
   const file = new Credentials({ ...options, storage: "file" })
