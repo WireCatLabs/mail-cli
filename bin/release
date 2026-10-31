@@ -1,7 +1,8 @@
 #!/usr/bin/env sh
-# Publishes the version in package.json and tags it. Run on a clean `main` that matches origin/main; the owner runs
-# it, never an agent. When npm already has that version, or a higher one, it raises it to the next free one through a
-# pull request and publishes that (WC-REL-5). Nothing is published until `pnpm release:check` passes.
+# Publishes the version in package.json and tags it. Run on a clean `main` that matches origin/main. An agent may run
+# it without --local; --local is for the owner's first release only. When npm already has that version, or a higher
+# one, it raises it to the next free one through a pull request and publishes that (WC-REL-5). Nothing is published
+# until `pnpm release:check` passes.
 #
 #   bin/release           # publishes from GitHub Actions (.github/workflows/release.yml, npm trusted publishing)
 #   bin/release --local   # publishes from this computer: NPM_TOKEN if exported, else the keyring, else `npm login`
@@ -110,6 +111,7 @@ next=$(pnpm exec cli-dev next-version "$version" "$latest" "$versions")
 if [ "$next" != "$version" ]; then
   taken=""
   if published; then taken=1; why="$version is already on npm"; else why="$version is not above npm's latest $latest"; fi
+  next=$(node --experimental-strip-types scripts/version-level.ts --next "$next")
   echo "$why — publishing $next instead"
   # A version npm already has keeps its changelog section; the unreleased one becomes the new version.
   node -e 'const fs = require("fs"); const [o, n, taken] = process.argv.slice(1)

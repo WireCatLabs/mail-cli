@@ -35,6 +35,7 @@ jobs:
         contracts:upgrade
       checks: |
         bash scripts/audit.sh
+        pnpm smoke:node
 
   version:
     if: github.event_name == 'pull_request'

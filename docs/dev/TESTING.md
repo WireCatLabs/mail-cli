@@ -20,3 +20,11 @@ How the tests run, and what they never touch. The rules are the handbook's
   [drive-cli does](https://github.com/WireCatLabs/drive-cli/blob/150b105569a98fbd0d4b66349305ad84128adfda/package.json#L37), and remove the skip.
 - `pnpm smoke` installs the packed package into a temporary folder and runs it offline.
 - `pnpm audit:commands` audits the command tree beside the latest published WireCat CLIs.
+
+## The bundle a user installs
+
+`pnpm build` compiles `src/` with `tsc`, then cli-base's `cli-dev bundle`
+([WC-LAY-10](https://github.com/WireCatLabs/cli-base/blob/main/docs/standards/layout.md))
+bundles `dist/bin/mail.js` into `dist/bundle/` and makes the bin a loader. The vitest suite runs
+against `src/`, so `scripts/smoke-bundle.ts` is the proof the bundle works: `pnpm smoke:node` runs it
+under Node and `pnpm smoke:bun` under Bun, both in CI.

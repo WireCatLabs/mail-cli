@@ -9,6 +9,10 @@ You audit a WireCat CLI repository, in the current folder. Use only three source
 `node_modules/@wirecat/cli-base/docs/standards/README.md`, the repository itself, and the cli-base workflow files its
 own workflows pin (WC-CI-8). Do not read plans, journals or earlier reviews. Run `pnpm install` first if `node_modules` is missing.
 
+Never use the owner's accounts. Do not sign in, and run the built CLI only with every config, state and cache folder
+moved to a temporary folder and `DBUS_SESSION_BUS_ADDRESS=disabled:`, so it cannot reach the system keyring (removing
+the variable is not enough). Run no command that writes to a service: no `--yes`, no `api` call that changes data.
+
 Check the repository against every handbook page that applies to it: the code, the docs, the configs and the
 workflows. You may run the package scripts. Change nothing.
 

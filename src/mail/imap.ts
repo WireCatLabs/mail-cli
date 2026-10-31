@@ -1,7 +1,8 @@
-import { createHash } from "node:crypto"
 import { CliError } from "@wirecat/cli-base"
-import type { Listed, MailHeaders, MailSource, Quick, Searched } from "@wirecat/cli-core/mail"
-import { type FetchMessageObject, ImapFlow, type ListResponse } from "imapflow"
+import type { MailSource, Quick, Searched } from "@wirecat/cli-core/mail"
+import { type FetchMessageObject, ImapFlow } from "imapflow"
+import { mapImapError } from "./imap-errors.js"
+import { HEADER_FIELDS, idsOf, listedOf, messageIdOf, quickOf, roleOf } from "./imap-messages.js"
 
 export interface ImapEndpoint {
   host: string
@@ -75,8 +76,6 @@ export const IMAP_DEFAULTS = {
   maxAttempts: 8,
 } as const
 
-const HEADER_FIELDS = ["list-id", "list-unsubscribe", "precedence"]
-
 const nap = (ms: number, signal?: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
     if (signal?.aborted) return reject(signal.reason)
@@ -90,138 +89,6 @@ const nap = (ms: number, signal?: AbortSignal) =>
       { once: true },
     )
   })
-
-const digest = (id: string) => `imap:${createHash("sha256").update(id).digest("hex")}`
-
-/** The raw error code (ECONNRESET, ETIMEDOUT) so a failed run can be diagnosed; never the server's text. */
-const causeOf = (code: string | undefined) => (code && /^[A-Za-z0-9_.-]{1,40}$/.test(code) ? { cause_code: code } : {})
-
-/** The server's error text can quote mail or names, so only its codes reach the caller. */
-export const mapImapError = (error: unknown): CliError => {
-  if (error instanceof CliError) return error
-  const e = error as {
-    code?: string
-    authenticationFailed?: boolean
-    responseStatus?: string
-    responseText?: string
-    serverResponseCode?: string
-    throttleReset?: number
-    response?: { attributes?: { section?: { value?: unknown }[] }[] }
-  }
-  // imapflow strips `[CODE]` from responseText and sets serverResponseCode on some commands only; the code is
-  // always in the parsed response.
-  const responseCode =
-    e.serverResponseCode ?? String(e.response?.attributes?.[0]?.section?.[0]?.value ?? "").toUpperCase()
-  if (e.authenticationFailed)
-    return new CliError(
-      "authentication_error",
-      "the mail server refused the login; check the app password and that IMAP and app passwords are on in the account settings",
-      { reason: "mail.login-refused" },
-    )
-  const throttled = e.code === "ETHROTTLE" || responseCode === "THROTTLED" || /throttl/i.test(e.responseText ?? "")
-  if (throttled)
-    return new CliError("rate_limited", "the mail server is limiting this account; wait and run the command again", {
-      retryable: true,
-      ...(typeof e.throttleReset === "number" ? { retry_after_ms: e.throttleReset } : {}),
-    })
-  if (
-    e.code === "ETIMEDOUT" ||
-    e.code === "ETIMEOUT" ||
-    e.code === "ConnectionTimeout" ||
-    e.code === "GreetingTimeout" ||
-    e.code === "RequestTimeout" ||
-    e.code === "CONNECT_TIMEOUT" ||
-    e.code === "GREETING_TIMEOUT" ||
-    e.code === "UPGRADE_TIMEOUT" ||
-    e.code === "LockTimeout"
-  )
-    return new CliError("timeout", "the mail server did not answer in time", { retryable: true, ...causeOf(e.code) })
-  if (
-    e.code &&
-    /^(ECONN|ENOTFOUND|EAI_|ENETUNREACH|EHOSTUNREACH|NoConnection|EPIPE|Closed|EConnectionClosed|UnexpectedTag|MissingTag|InvalidResponse|ResponseProcessingFailed|ParserError|PollFailed|TooManyResponses|NoMailboxSelected)/.test(
-      e.code,
-    )
-  )
-    return new CliError("network_error", "cannot reach the mail server", { retryable: true, ...causeOf(e.code) })
-  if (responseCode === "UNAVAILABLE")
-    return new CliError("provider_unavailable", "the mail server cannot answer this request now", {
-      retryable: true,
-      ...causeOf(responseCode),
-    })
-  return new CliError(
-    "provider_error",
-    `the mail server refused the request${e.responseStatus ? ` (${e.responseStatus})` : ""}`,
-    causeOf(e.code ?? (responseCode || e.responseStatus)),
-  )
-}
-
-const headersOf = (message: FetchMessageObject): MailHeaders => {
-  const from = message.envelope?.from?.[0]
-  const raw = message.headers ? message.headers.toString("utf8") : ""
-  const field = (name: string) =>
-    new RegExp(`^${name}:[ \\t]*(.*)$`, "im").exec(raw.replace(/\r?\n[ \t]+/g, " "))?.[1]?.trim()
-  const listId = field("list-id")
-  const bulk =
-    listId !== undefined ||
-    field("list-unsubscribe") !== undefined ||
-    /^(bulk|list|junk)$/i.test(field("precedence") ?? "")
-  return {
-    ...(from?.address ? { from: from.address.toLowerCase() } : {}),
-    ...(from?.name ? { fromName: from.name } : {}),
-    ...(message.envelope?.subject ? { subject: message.envelope.subject } : {}),
-    to: [...(message.envelope?.to ?? []), ...(message.envelope?.cc ?? [])].flatMap((a) =>
-      a.address ? [a.address.toLowerCase()] : [],
-    ),
-    ...(listId ? { listId } : {}),
-    bulk,
-  }
-}
-
-const quickOf = (message: FetchMessageObject, folder: string): Quick => {
-  const flags = message.flags ?? new Set<string>()
-  const received = message.internalDate instanceof Date ? message.internalDate : new Date(message.internalDate ?? 0)
-  return {
-    uid: String(message.uid),
-    receivedAt: received.toISOString(),
-    folder,
-    ...(message.size === undefined ? {} : { size: message.size }),
-    seen: flags.has("\\Seen"),
-    flagged: flags.has("\\Flagged"),
-    labels: message.labels ? [...message.labels] : flags.has("\\Flagged") ? ["Starred"] : [],
-  }
-}
-
-/** Without a stable id the Message-ID is the identity; without that, the UID, which means nothing without UIDVALIDITY. */
-const idsOf = (messageId: string | undefined, folder: string, validity: string, uid: string) => {
-  const identity = messageId ?? `uid:${folder}:${validity}:${uid}`
-  return { messageId: digest(identity), threadId: digest(identity) }
-}
-
-const listedOf = (message: FetchMessageObject, folder: string, validity: string): Listed => {
-  const ids = idsOf(message.envelope?.messageId, folder, validity, String(message.uid))
-  return {
-    ...quickOf(message, folder),
-    ...(message.emailId ? { messageId: String(message.emailId) } : { messageId: ids.messageId }),
-    threadId: message.threadId ? String(message.threadId) : ids.threadId,
-    headers: headersOf(message),
-  }
-}
-
-/**
- * The Message-ID as the server's ENVELOPE gives it (imapflow trims the value of the first header), so the id of a
- * message read as bytes is the id `list` gives it.
- */
-const messageIdOf = (raw: Uint8Array): string | undefined => {
-  const bytes = Buffer.from(raw.buffer, raw.byteOffset, raw.byteLength)
-  const ends = [bytes.indexOf("\r\n\r\n"), bytes.indexOf("\n\n")].filter((at) => at !== -1)
-  const head = bytes.subarray(0, ends.length ? Math.min(...ends) : bytes.length).toString("utf8")
-  return /^message-id:[ \t]*(.*)$/im.exec(head.replace(/\r?\n[ \t]+/g, " "))?.[1]?.trim() || undefined
-}
-
-const roleOf = (entry: ListResponse): string | null => {
-  if (entry.path.toUpperCase() === "INBOX") return "inbox"
-  return entry.specialUse ? entry.specialUse.replace(/^\\/, "").toLowerCase() : null
-}
 
 /** One IMAP source, its connections opened on first use and closed by `close`; the password never leaves this closure. */
 export const imapSource = (endpoint: ImapEndpoint, password: string, tuning: ImapTuning = {}): ImapMailSource => {

@@ -2,7 +2,7 @@ import { CliError } from "@wirecat/cli-base"
 import { metaOf } from "@wirecat/cli-base/commands"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { discover, domainOf, parseAutoconfig } from "./discovery.js"
-import { mapImapError } from "./mail/imap.js"
+import { mapImapError } from "./mail/imap-errors.js"
 import { createProgram } from "./program.js"
 import { secretToolLookup } from "./secret.js"
 
