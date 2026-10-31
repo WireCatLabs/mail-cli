@@ -90,7 +90,9 @@ it("reads UIDVALIDITY on open, lists envelopes and never asks for a body without
     bulk: true,
   })
   expect(listed[1]?.headers?.bulk).toBe(false)
-  expect(Buffer.from(raws[0] as Uint8Array).toString()).toContain("Hello first")
+  const first = raws[0]
+  if (!(first instanceof Uint8Array)) throw new Error("the first message was not read")
+  expect(Buffer.from(first).toString()).toContain("Hello first")
   const fetches = fake.commands.filter((command) => command.startsWith("UID FETCH"))
   expect(fetches.length).toBeGreaterThan(0)
   for (const fetch of fetches) {
