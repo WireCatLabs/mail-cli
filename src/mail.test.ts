@@ -517,6 +517,10 @@ describe("account check, folders and sync", () => {
     })
     const body = JSON.parse(first.out)
     expect(body.meta.complete).toBe(false)
+    expect(body.meta.issues).toEqual([
+      { code: "outcome_unknown", reason: "mail.deletions-skipped", source: "sync" },
+      { code: "rate_limited", reason: "budget.requests", source: "sync" },
+    ])
     expect(body.next[0]).toMatchObject({
       step: "mail.sync",
       command: "sync",
@@ -556,6 +560,21 @@ describe("account check, folders and sync", () => {
     const { mail } = await ready({ fake: { dropFetches: 2 } })
     const synced = await mail(["ya", "sync", "--since-time", "2026-10-01", "--folder", "INBOX", "--json"])
     expect(item(synced.out)).toMatchObject({ saved: 2, state: "complete" })
+  })
+
+  it("reads a --since-time date as local midnight and gives the zone and the UTC window", async () => {
+    const { mail } = await ready()
+    const zone = process.env.TZ
+    process.env.TZ = "Asia/Vladivostok"
+    try {
+      const synced = await mail(["ya", "sync", "--since-time", "2026-09-01", "--folder", "INBOX", "--json"])
+      const body = JSON.parse(synced.out)
+      expect(body.meta).toMatchObject({ timezone: "Asia/Vladivostok", window: { since: "2026-08-31T14:00:00.000Z" } })
+      expect(body.item.timezone).toBe("Asia/Vladivostok")
+    } finally {
+      if (zone === undefined) delete process.env.TZ
+      else process.env.TZ = zone
+    }
   })
 
   it("refuses a --since-time in the future", async () => {
