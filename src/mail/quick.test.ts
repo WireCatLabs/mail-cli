@@ -7,7 +7,7 @@ import { openMailStore } from "../store.js"
 import { type FakeImap, startFakeImap } from "../testing/fake-imap.js"
 import { imapSource } from "./imap.js"
 
-const LOGIN = "ya@burobiz.ru"
+const LOGIN = "me@example.com"
 const raw = (id: string, subject: string) =>
   `Message-ID: <${id}@example.com>\r\nDate: Tue, 27 Oct 2026 10:00:00 +0000\r\nFrom: Ann <ann@example.com>\r\nTo: ${LOGIN}\r\nSubject: ${subject}\r\n\r\nHello ${subject}\r\n`
 

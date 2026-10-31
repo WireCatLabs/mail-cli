@@ -5,7 +5,7 @@ import { type FakeImap, type FakeMessage, type FakeOptions, startFakeImap } from
 import { type ImapTuning, imapSource, mapImapError } from "./imap.js"
 
 const raw = (id: string, subject: string, extra = "") =>
-  `Message-ID: <${id}@example.com>\r\nDate: Tue, 27 Oct 2026 10:00:00 +0000\r\nFrom: Ann <ann@example.com>\r\nTo: ya@burobiz.ru\r\nSubject: ${subject}\r\n${extra}\r\n\r\nHello ${subject}\r\n`
+  `Message-ID: <${id}@example.com>\r\nDate: Tue, 27 Oct 2026 10:00:00 +0000\r\nFrom: Ann <ann@example.com>\r\nTo: me@example.com\r\nSubject: ${subject}\r\n${extra}\r\n\r\nHello ${subject}\r\n`
 
 let fake: FakeImap | undefined
 afterEach(async () => {
@@ -16,7 +16,7 @@ afterEach(async () => {
 
 const serve = (throttleBodies = false, dropSearches = 0, extra: Partial<FakeOptions> = {}) =>
   startFakeImap({
-    login: "ya@burobiz.ru",
+    login: "me@example.com",
     password: "app-secret-1",
     throttleBodies,
     dropSearches,
@@ -34,7 +34,7 @@ const serve = (throttleBodies = false, dropSearches = 0, extra: Partial<FakeOpti
   })
 
 const sourceOf = (port: number, password = "app-secret-1", tuning: ImapTuning = {}) =>
-  imapSource({ host: "127.0.0.1", port, security: "plain", login: "ya@burobiz.ru" }, password, {
+  imapSource({ host: "127.0.0.1", port, security: "plain", login: "me@example.com" }, password, {
     sleep: async () => {},
     ...tuning,
   })
@@ -343,7 +343,7 @@ it("lists a server with no message ids quickly: UID, flags, date and size, with 
 
 const serveMessages = (messages: FakeMessage[]) =>
   startFakeImap({
-    login: "ya@burobiz.ru",
+    login: "me@example.com",
     password: "app-secret-1",
     folders: [{ name: "INBOX", messages }],
   })

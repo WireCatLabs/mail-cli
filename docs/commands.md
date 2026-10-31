@@ -78,7 +78,7 @@ mail session start [options]
 
 **Returns:** sign in; a new profile is created first
 
-**Example:** `mail ya session start --address ya@burobiz.ru`, `mail ya session start`, `mail me session start --address me@example.com --host imap.example.com --security tls`
+**Example:** `mail ya session start --address me@example.com`, `mail ya session start`, `mail me session start --address me@example.com --host imap.example.com --security tls`
 
 ### `mail session status`
 

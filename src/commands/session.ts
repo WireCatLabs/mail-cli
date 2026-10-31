@@ -45,7 +45,7 @@ const startCommand = () =>
       lifetime: "interactive",
       mcp: false,
       examples: [
-        `${IDENTITY.command} ya session start --address ya@burobiz.ru`,
+        `${IDENTITY.command} ya session start --address me@example.com`,
         `${IDENTITY.command} ya session start`,
         `${IDENTITY.command} me session start --address me@example.com --host imap.example.com --security tls`,
       ],

@@ -7,7 +7,7 @@ an app password kept in the OS keyring. Its design is in [docs/dev/DESIGN.md](do
 
 ```sh
 npm install -g @wirecat/mail-cli
-mail ya session start --address ya@burobiz.ru
+mail ya session start --address me@example.com
 mail ya account check
 mail ya sync
 ```

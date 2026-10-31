@@ -12,7 +12,7 @@ import { run } from "./program.js"
 import { type FakeImap, type FakeOptions, startFakeImap } from "./testing/fake-imap.js"
 
 const PASSWORD = "fixture-app-password-4Rt9"
-const ADDRESS = "ya@burobiz.ru"
+const ADDRESS = "me@example.com"
 
 const raw = (id: string, subject: string, body: string, extra = "") =>
   `Message-ID: <${id}@example.com>\r\nDate: Tue, 27 Oct 2026 10:00:00 +0000\r\nFrom: Ann <ann@example.com>\r\n` +
