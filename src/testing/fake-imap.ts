@@ -34,6 +34,8 @@ export interface FakeOptions {
   refuseFetches?: number
   /** UIDs whose body Yandex can never read: a body FETCH that names any of them is refused whole, every time. */
   brokenBodies?: number[]
+  /** UIDs whose headers Yandex can never read either: a header FETCH that names any of them is refused whole. */
+  brokenHeaders?: number[]
   /** Sleeps this long before answering a UID FETCH, to make a request time out. */
   fetchDelayMs?: number
   /** Changes the folder's UIDVALIDITY after this many connections have been dropped by `dropFetches`. */
@@ -195,6 +197,8 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
               refusalsLeft -= 1
               return send(`${tag} NO [UNAVAILABLE] backend error`)
             }
+            if (/ENVELOPE/i.test(items) && options.brokenHeaders?.some((uid) => uidsOf(set).includes(uid)))
+              return send(`${tag} NO [UNAVAILABLE] UID FETCH failure due to backend error`)
             if (wantsBody && options.brokenBodies?.some((uid) => uidsOf(set).includes(uid)))
               return send(`${tag} NO [UNAVAILABLE] UID FETCH failure due to backend error`)
             if (wantsBody && options.throttleBodies) return send(`${tag} NO [THROTTLED] Too many commands`)
