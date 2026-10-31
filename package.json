@@ -55,8 +55,8 @@
     "docs:spell": "cspell lint --config cspell.json --no-progress --no-summary README.md SECURITY.md CHANGELOG.md AGENTS.md CLAUDE.md 'docs/*.md' 'skills/**/*.md'"
   },
   "dependencies": {
-    "@wirecat/cli-base": "0.67.0",
-    "@wirecat/cli-core": "0.505.0",
+    "@wirecat/cli-base": "0.68.1",
+    "@wirecat/cli-core": "0.507.0",
     "commander": "15.0.0",
     "imapflow": "2.9.1",
     "valibot": "1.5.0"

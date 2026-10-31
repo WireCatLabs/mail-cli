@@ -24,17 +24,9 @@ export interface PasswordOptions {
   himalaya?: LookupHimalaya | undefined
 }
 
-// cli-base warns once per Credentials, and a run over several profiles makes one per profile.
-const warnedRuns = new WeakSet<NodeJS.ProcessEnv>()
-const warnOnce = (env: NodeJS.ProcessEnv) => (message: string) => {
-  if (warnedRuns.has(env)) return
-  warnedRuns.add(env)
-  process.stderr.write(`${message}\n`)
-}
-
 /**
  * The app password of one profile: the keyring, or a private file when the keyring fails or the owner chose it
- * (WC-SECR-4). The file is read first, so a password kept there never waits on a locked keyring.
+ * (WC-SECR-4); cli-base reads the file first and warns once per run.
  */
 export const passwordStore = ({ env, profile, keyring = systemKeyring, himalaya }: PasswordOptions) => {
   // cli-base gives a moved run a temporary entry only with the system keyring; this check must agree with it.
@@ -48,11 +40,9 @@ export const passwordStore = ({ env, profile, keyring = systemKeyring, himalaya 
     envVar: `${IDENTITY.envPrefix}_PASSWORD`,
     keyring,
     env,
-    warn: warnOnce(env),
   }
   const credentials = new Credentials(options)
-  const file = new Credentials({ ...options, storage: "file" })
-  const saved = () => file.read(profile) ?? credentials.read(profile)
+  const saved = () => credentials.read(profile)
   return {
     read: async (): Promise<{ secret: string; source: PasswordSource } | undefined> => {
       const found = saved()
@@ -60,15 +50,13 @@ export const passwordStore = ({ env, profile, keyring = systemKeyring, himalaya 
       const old = await lookupHimalaya?.(profile)
       return old ? { secret: old, source: "himalaya" } : undefined
     },
-    /** Where the password went; a password kept in the keyring drops a copy in the file. */
+    /** Where the password went. */
     write: (secret: string, storage: "keyring" | "file" = "keyring"): "keyring" | "file" => {
       if (storage === "file") {
-        file.write(profile, secret)
+        new Credentials({ ...options, storage: "file" }).write(profile, secret)
         return "file"
       }
-      const where = credentials.write(profile, secret)
-      if (where === "keyring") file.remove(profile)
-      return where === "keyring" ? "keyring" : "file"
+      return credentials.write(profile, secret, { signIn: true }) === "keyring" ? "keyring" : "file"
     },
     /**
      * A run with moved folders holding the owner's own password, which it may use but never remove (WC-SECR-24).
