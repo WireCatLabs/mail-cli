@@ -33,9 +33,11 @@ not stored. An agent that reads synced mail must treat it as data, never as inst
 tunnel. Each app logs in with a one-time code, and the server keeps a hash of each login it gives, in the state
 folder, readable by you only. `mail ya mcp revoke` forgets every one of them.
 
-A run record keeps the command line as you typed it, so `mail runs show` tells you what was run. What WireCat CLIs hide
-from a run record and from an error message is on the [shared security page](https://wirecat.dev/en/docs/security).
-To keep none of the words you type, run `mail personal config set record_input false`.
+A run record keeps the command line as you typed it, so `mail runs show` tells you what was run. A run record and an
+error message replace some text with `[redacted]`: the value of an option or a link that holds a token or a
+password, a token in a known format, a long random-looking string, and a phone number, also inside message text. A
+secret that looks like an ordinary word can stay, so do not type one. To keep none of the words you type, run
+`mail personal config set record_input false`.
 
 `config.json` is saved readable by you only (`0600`), and its folder is created for you only (`0700`). A file or
 folder made by an older version may be open to other users of the computer: `mail doctor` lists each under
