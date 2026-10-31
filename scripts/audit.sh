@@ -11,10 +11,11 @@ trap 'rm -rf "$scratch"' EXIT
 export HOME="$scratch/home" MESSAGING_STORE="$scratch/store" WIRECAT_STATE_DIR="$scratch/state"
 mkdir -p "$HOME"
 npm install -g --prefix "$scratch/prefix" --ignore-scripts --no-audit --no-fund --loglevel error \
-  @wirecat/tg-cli @wirecat/max-cli @wirecat/whatsapp-cli @wirecat/cli-memo @wirecat/drive-cli @wirecat/zoom-cli
+  @wirecat/tg-cli @wirecat/max-cli @wirecat/whatsapp-cli @wirecat/cli-memo @wirecat/drive-cli @wirecat/zoom-cli \
+  @wirecat/gcal-cli
 bin="$scratch/prefix/bin"
 others=()
-for cli in tg max wa memo drive zm; do
+for cli in tg max wa memo drive zm gcal; do
   [ "$cli" = "$command" ] || others+=(--cli "$bin/$cli")
 done
 "$root/node_modules/.bin/cli-dev" audit --cli "$root/dist/bin/$command.js" "${others[@]}" --for "$command" \

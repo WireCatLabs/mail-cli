@@ -1,13 +1,13 @@
 ---
 name: release
-description: Prepare a release of this CLI for the owner to publish — run release:check, write the changelog under the handbook's headings, check the docs against what changed, raise the version in a pull request; the owner runs bin/release. Use when asked to release, prepare a release, cut a version, «выпуск», «выпустить версию».
+description: Release this CLI — run release:check, write the changelog under the handbook's headings, check the docs against what changed, raise the version in a pull request, merge it and publish with bin/release from GitHub Actions. Use when asked to release, prepare a release, cut a version, «выпуск», «выпустить версию».
 ---
 
 # Release
 
 The rules are the handbook's [Releases page](../../../../node_modules/@wirecat/cli-base/docs/standards/releases.md)
-(`WC-REL-<n>`), which wins over this skill. An agent prepares the release; the owner merges the release pull request
-and runs `bin/release`.
+(`WC-REL-<n>`), which wins over this skill. An agent prepares the release, merges the release pull request and runs
+`bin/release`, which publishes from GitHub Actions. Only the first release is the owner's, from this computer.
 
 1. **What changed.** In a worktree off `origin/main`: `git log --oneline "$(git describe --tags --abbrev=0 origin/main)..origin/main"`. The
    `docs/commands.md` diff shows what a cli-core or cli-base release changed in the commands.
@@ -24,10 +24,13 @@ and runs `bin/release`.
    before `1.0.0` this narrows `WC-REL-7`: a section with `Changed — may break callers` or `Removed` raises the minor
    (`0.1.8` to `0.2.0`), and so does one with `Added`; only a section of `Fixed`, `Security` or docs raises the patch.
    From `1.0.0`, a breaking change raises the major. `pnpm version:check` refuses a dated section whose number is
-   raised less than its headings need. Set the next version in `package.json`, run `pnpm version:sync`, date the
+   raised less than its headings need, and when `bin/release` moves to the next free number on npm it raises that
+   number to the level the headings need. Set the next version in `package.json`, run `pnpm version:sync`, date the
    section as `## <version> — DD.MM.YYYY`, run `pnpm release:check` again, and open the pull request
    `chore(release): <version>`.
-7. **The owner** merges it and runs `bin/release` on a clean `main`. `bin/release --local` publishes from this
-   computer when GitHub Actions cannot, with `NPM_TOKEN`, the npm token in the keyring, or the owner's own npm login.
+7. **The publish.** Merge it when its checks pass, then run `bin/release` on a clean `main`: it starts
+   `release.yml` and follows it (`WC-REL-11`). A messenger CLI also needs the owner's signed release report
+   (`WC-REL-10`). Never `bin/release --local`: that is the owner's, for the first release before npm trusts
+   `release.yml`, with `NPM_TOKEN`, the npm token in the keyring, or the owner's own npm login.
    The keyring is read only when `NPM_KEYRING_ACCOUNT` names the account the token is stored under (service `npm`);
    there is no default account. When that lookup fails, `bin/release` stops; it does not fall back to the npm login.
