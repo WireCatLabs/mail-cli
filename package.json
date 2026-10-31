@@ -1,6 +1,6 @@
 {
   "name": "@wirecat/mail-cli",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Read-only IMAP sync of a mailbox into the shared WireCat store, with the app password kept in the OS keyring — built for agents and scripts",
   "license": "Apache-2.0",
   "author": "Viacheslav Ptsarev",
