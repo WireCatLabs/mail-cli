@@ -19,7 +19,8 @@ others=()
 for cli in tg max wa memo drive zm; do
   [ "$cli" = "$command" ] || others+=(--cli "$bin/$cli")
 done
-"$root/node_modules/.bin/cli-dev" audit --cli "$root/dist/bin/$command.js" "${others[@]}" --for "$command" \
+# The CLIs run with a moved HOME, which still reads the owner's keyring entries; only they lose the bus, not npm.
+DBUS_SESSION_BUS_ADDRESS=disabled: "$root/node_modules/.bin/cli-dev" audit --cli "$root/dist/bin/$command.js" "${others[@]}" --for "$command" \
   --lint "$command=$root/lint" >"$scratch/scorecard.txt" || { cat "$scratch/scorecard.txt"; exit 1; }
 awk -v cli="$command" 'NR == 1 || $1 == cli' "$scratch/scorecard.txt"
 grep -q "^$command  *total " "$scratch/scorecard.txt" || { echo "audit: no scorecard row for $command" >&2; exit 1; }

@@ -54,7 +54,7 @@
   },
   "dependencies": {
     "@wirecat/cli-base": "0.65.5",
-    "@wirecat/cli-core": "0.491.0",
+    "@wirecat/cli-core": "0.496.0",
     "commander": "15.0.0",
     "imapflow": "2.9.1",
     "valibot": "1.5.0"

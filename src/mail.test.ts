@@ -2,9 +2,17 @@ import { EventEmitter } from "node:events"
 import { mkdtempSync, readFileSync, statSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { brokenKeyring, memoryKeyring } from "@wirecat/cli-base"
+import {
+  brokenKeyring,
+  isMovedRun,
+  memoryKeyring,
+  movedRunService,
+  pathsAreOverridden,
+  resolvePaths,
+  systemKeyring,
+} from "@wirecat/cli-base"
 import { openStore, storePath } from "@wirecat/cli-core/store"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
 import { discover } from "./discovery.js"
 import { type ImapEndpoint, type ImapTuning, imapSource } from "./mail/imap.js"
@@ -382,6 +390,57 @@ describe("session", () => {
     const ended = await mail(["ya", "session", "end", "--json"])
     expect(item(ended.out)).toMatchObject({ ended: true })
     expect(keyring.entries.size).toBe(0)
+  })
+
+  describe("with only HOME moved, against the system keyring (WC-SECR-24)", () => {
+    afterEach(() => vi.restoreAllMocks())
+
+    const movedHome = async () => {
+      const h = await harness()
+      const env: NodeJS.ProcessEnv = { ...h.env, HOME: mkdtempSync(join(tmpdir(), "home-")) }
+      for (const kind of ["CONFIG", "STATE", "CACHE"]) delete env[`MAIL_${kind}_DIR`]
+      const paths = { appName: "mail-cli", prefix: "MAIL", env }
+      expect(pathsAreOverridden(paths)).toBe(false)
+      expect(isMovedRun(paths)).toBe(true)
+      const entries = new Map<string, string>([["mail-cli\u0000ya", "owners-password"]])
+      const key = (service: string, account: string) => `${service}\u0000${account}`
+      vi.spyOn(systemKeyring, "get").mockImplementation(
+        (service, account) => entries.get(key(service, account)) ?? null,
+      )
+      vi.spyOn(systemKeyring, "set").mockImplementation((service, account, secret) => {
+        entries.set(key(service, account), secret)
+      })
+      const deleted = vi
+        .spyOn(systemKeyring, "delete")
+        .mockImplementation((service, account) => entries.delete(key(service, account)))
+      const end = () => h.mail(["ya", "session", "end", "--json"], { env, keyring: systemKeyring })
+      const temporary = key(movedRunService("mail-cli", resolvePaths(paths).config), "ya")
+      return { end, entries, deleted, temporary }
+    }
+
+    it("keeps the owner's password, removes nothing, and the answer says so", async () => {
+      const { end, entries, deleted } = await movedHome()
+
+      const ended = await end()
+
+      expect(ended.code).toBe(0)
+      expect(item(ended.out)).toEqual({ profile: "ya", ended: false, mail: "retained", kept: "owners-sign-in" })
+      expect(ended.err).toContain("owner's password")
+      expect(deleted).not.toHaveBeenCalled()
+      expect(entries.get("mail-cli\u0000ya")).toBe("owners-password")
+    })
+
+    it("ends a sign-in the run made itself, and removes only its temporary entry", async () => {
+      const { end, entries, deleted, temporary } = await movedHome()
+      entries.set(temporary, "own-password")
+
+      const ended = await end()
+
+      expect(item(ended.out)).toEqual({ profile: "ya", ended: true, mail: "retained" })
+      expect(deleted.mock.calls.map(([service]) => service)).not.toContain("mail-cli")
+      expect(entries.has(temporary)).toBe(false)
+      expect(entries.get("mail-cli\u0000ya")).toBe("owners-password")
+    })
   })
 })
 
