@@ -33,5 +33,12 @@
     "reason": "Lists the server's short fixed set of folders, which has nothing to filter; the query arrives with `messages list`. Review when messages list ships.",
     "owner": "@WireCatLabs",
     "review_after": "2027-01-28"
+  },
+  {
+    "rule": "list-without-query",
+    "target": "session list",
+    "reason": "Lists the few profiles on this computer, every one at once by design (WC-ACCT-12), as gcal's session list does; a filter would let a caller narrow it to one and read that as the only profile. Review if a computer commonly holds more profiles than fit one screen.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-31"
   }
 ]
