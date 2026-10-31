@@ -1,10 +1,10 @@
 import { chmodSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { expect, it, vi } from "vitest"
-import { doctorReport } from "./commands/doctor.js"
+import { appDoctorReport } from "@wirecat/cli-core/cli"
+import { expect, it } from "vitest"
 import { configuration } from "./config.js"
 import { IDENTITY } from "./identity.js"
-import { run } from "./program.js"
+import { createProgram, run } from "./program.js"
 
 const ran = async (argv: string[]) => {
   const out: string[] = []
@@ -67,19 +67,13 @@ it("doctor reports an unknown setting with the command that removes it", async (
 })
 
 it("doctor reports settings an environment variable breaks, and still answers", () => {
-  const { report } = doctorReport({ ...process.env, MAIL_EMBEDDING_DIMS: "many" })
+  const { report } = appDoctorReport(
+    IDENTITY,
+    configuration,
+    { ...process.env, MAIL_EMBEDDING_DIMS: "many" },
+    createProgram(),
+  )
   expect(report).toMatchObject({ config: { issues: [] }, settings: { error: expect.any(String) }, profiles: null })
-})
-
-it("doctor answers when reading the settings fails with an unexpected error", () => {
-  const spy = vi.spyOn(configuration, "resolveSettings").mockImplementation(() => {
-    throw new TypeError("boom")
-  })
-  try {
-    expect(doctorReport(process.env).report).toMatchObject({ settings: { error: "boom" }, profiles: null })
-  } finally {
-    spy.mockRestore()
-  }
 })
 
 it.skipIf(process.platform === "win32")(

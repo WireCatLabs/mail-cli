@@ -5,7 +5,7 @@
   "extends": ["./config/wirecat/biome.base.json"],
   "overrides": [
     {
-      "includes": ["src/**", "!src/mcp.ts", "!**/*.test.ts"],
+      "includes": ["src/**", "!src/testing/mcp.ts", "!**/*.test.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -15,7 +15,7 @@
                 "patterns": [
                   {
                     "group": ["@modelcontextprotocol/**"],
-                    "message": "only src/mcp.ts serves MCP; commands and services do not know the protocol"
+                    "message": "cli-core serves MCP; commands and services do not know the protocol"
                   }
                 ]
               }

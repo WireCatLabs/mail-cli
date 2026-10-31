@@ -40,5 +40,10 @@ Languages: ru, en.
   A Gmail style `NO [THROTTLED]` surfaces as a plain error with `responseStatus` NO and the code only in the parsed
   response; only the Microsoft 365 backoff text becomes `code ETHROTTLE`, which `fetch` retries three times. imapflow
   keeps one command in flight, so several `UID SEARCH` cannot share a round trip.
+- **MCP and doctor:** `mcp` and `doctor` are cli-core's `appMcpCommand` and `appDoctorCommand`, as in gcal; permission
+  keys are command paths (`commandPermissions`), so `--permission sync=deny`.
+- **Audit scope:** `config/parity-groups.json` compares mail with the published CLIs on `commands` and `upgrade` only,
+  as cli-base does for gcal: those CLIs still disagree among themselves on `doctor`, `mcp` and `skill`. Mail moves
+  back into cli-base's `all` group with gcal ([cli-base#390](https://github.com/WireCatLabs/cli-base/issues/390)).
 
 ## Open questions for the owner

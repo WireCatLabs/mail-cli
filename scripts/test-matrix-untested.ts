@@ -1,3 +1,8 @@
+const SHARED_MCP =
+  "cli-core's appMcpCommand; its app-mcp-command and mcp-server-command tests drive it, and src/mcp.test.ts and " +
+  "src/mcp-http.test.ts run mail's own server, config, revoke and refusals"
+const LONG_RUNNING = `starts an HTTP server or a background process that runs until stopped; ${SHARED_MCP}`
+
 export const UNTESTED: { command: string; option?: string; reason: string }[] = [
   {
     command: "",
@@ -9,26 +14,26 @@ export const UNTESTED: { command: string; option?: string; reason: string }[] = 
     option: "--version",
     reason: "Commander answers before any command runs, so the trace never sees it; `pnpm version:check` checks it",
   },
-  {
+  ...[undefined, "--port", "--public-url", "--permission", "--profiles"].map((option) => ({
     command: "mcp server start",
-    reason:
-      "starts a detached `mcp serve --http` from the built entry; cli-core tests mcpServerCommand, and the background run was checked by hand against dist/",
-  },
-  {
-    command: "mcp server start",
-    option: "--port",
-    reason:
-      "starts a detached `mcp serve --http` from the built entry; cli-core tests mcpServerCommand, and the background run was checked by hand against dist/",
-  },
-  {
-    command: "mcp server start",
-    option: "--public-url",
-    reason:
-      "starts a detached `mcp serve --http` from the built entry; cli-core tests mcpServerCommand, and the background run was checked by hand against dist/",
-  },
-  {
-    command: "mcp server stop",
-    reason:
-      "starts a detached `mcp serve --http` from the built entry; cli-core tests mcpServerCommand, and the background run was checked by hand against dist/",
-  },
+    ...(option ? { option } : {}),
+    reason: LONG_RUNNING,
+  })),
+  { command: "mcp server stop", reason: LONG_RUNNING },
+  { command: "mcp server stop", option: "--profiles", reason: LONG_RUNNING },
+  ...["--http", "--port", "--public-url", "--profiles"].map((option) => ({
+    command: "mcp serve",
+    option,
+    reason: LONG_RUNNING,
+  })),
+  ...[undefined, "--allow-writes", "--permission"].map((option) => ({
+    command: "mcp add",
+    ...(option ? { option } : {}),
+    reason: `writes Codex's or Claude Code's own MCP settings; ${SHARED_MCP}`,
+  })),
+  ...[undefined, "--permission"].map((option) => ({
+    command: "mcp check",
+    ...(option ? { option } : {}),
+    reason: `starts the installed mail as a child process, as the agent would; ${SHARED_MCP}`,
+  })),
 ]
