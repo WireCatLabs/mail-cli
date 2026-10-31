@@ -194,8 +194,16 @@ const endCommand = () =>
     .action(async function (this: Command) {
       const context = contextOf(this)
       refuseUnderReadOnly(this, "session end")
-      const removed = passwordsOf(context).remove()
-      answer(this, { profile: context.profile, ended: removed, mail: "retained" })
+      const passwords = passwordsOf(context)
+      if (passwords.usesOwnersSignIn()) {
+        answer(this, { profile: context.profile, ended: false, mail: "retained", kept: "owners-sign-in" })
+        outputFor(this).renderer.note(
+          `kept the app password of ${context.profile}: this run's folders are moved, and it uses the owner's password, ` +
+            "which only a run with the owner's own folders can remove",
+        )
+        return
+      }
+      answer(this, { profile: context.profile, ended: passwords.remove(), mail: "retained" })
     })
 
 export const sessionCommand = (): Command =>

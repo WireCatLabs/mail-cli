@@ -27,6 +27,11 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Fixed
 
+- A run with moved folders can no longer remove the owner's app password from the OS keyring (cli-base 0.65.5). Only
+  a run with `MAIL_*_DIR` counted as moved; a run with only `HOME` or an XDG folder moved used the real `mail-cli`
+  entry, and `session end` there removed it. Such a run now reads the owner's password but never
+  replaces or removes it, and stores a new one in a temporary entry. `session end` on the owner's password removes
+  nothing and answers `kept: "owners-sign-in"`.
 - `sync` no longer stops for good on a message Yandex can never read. Yandex refuses the whole body FETCH with
   `NO [UNAVAILABLE]` when one of its messages is broken on its side; the batch is now read again one message at a
   time, and only that message is reported unreadable.

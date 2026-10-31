@@ -1,12 +1,5 @@
 import { execFile } from "node:child_process"
-import {
-  CliError,
-  Credentials,
-  type KeyringStore,
-  pathsAreOverridden,
-  resolvePaths,
-  systemKeyring,
-} from "@wirecat/cli-base"
+import { CliError, Credentials, isMovedRun, type KeyringStore, resolvePaths, systemKeyring } from "@wirecat/cli-base"
 import { IDENTITY } from "./identity.js"
 
 export type PasswordSource = "environment" | "keyring" | "himalaya"
@@ -32,14 +25,16 @@ export interface PasswordOptions {
 }
 
 /** The app password of one profile. The keyring only: a password never falls back to a file. */
-export const passwordStore = ({ env, profile, keyring, himalaya }: PasswordOptions) => {
+export const passwordStore = ({ env, profile, keyring = systemKeyring, himalaya }: PasswordOptions) => {
+  // cli-base gives a moved run a temporary entry only with the system keyring; this check must agree with it.
+  const moved = keyring === systemKeyring && isMovedRun({ appName: IDENTITY.appName, prefix: IDENTITY.envPrefix, env })
   const credentials = new Credentials({
     configDir: resolvePaths({ appName: IDENTITY.appName, prefix: IDENTITY.envPrefix, env }).config,
     service: IDENTITY.appName,
-    isolated: pathsAreOverridden({ appName: IDENTITY.appName, prefix: IDENTITY.envPrefix, env }),
+    isolated: moved,
     envVar: `${IDENTITY.envPrefix}_PASSWORD`,
     storage: "keyring",
-    keyring: keyring ?? systemKeyring,
+    keyring,
     env,
   })
   return {
@@ -63,6 +58,19 @@ export const passwordStore = ({ env, profile, keyring, himalaya }: PasswordOptio
           "configuration_error",
           "the OS keyring is not available (locked, or no secret service is running); the password was not stored",
         )
+      }
+    },
+    /**
+     * A run with moved folders holding the owner's own password, which it may use but never remove (WC-SECR-24).
+     * Compared by value: the run's temporary entry, read first, may hold the same password.
+     */
+    usesOwnersSignIn: (): boolean => {
+      if (!moved) return false
+      try {
+        const stored = credentials.read(profile)
+        return stored?.source === "keyring" && keyring.get(IDENTITY.appName, profile) === stored.secret
+      } catch {
+        return false
       }
     },
     remove: (): boolean => {
