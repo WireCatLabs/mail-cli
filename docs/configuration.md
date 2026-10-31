@@ -15,6 +15,9 @@ a setting: it lives in the keyring, or in `MAIL_PASSWORD` for a run that has no 
 
 `config show` lists each setting and where it came from: the file, a variable or the default.
 
+`config set` also lists settings for search, speech and embeddings (`embedding_*`, `speech_model`, `picture_search`
+and others). Every WireCat CLI shares that list. `mail` ignores them.
+
 ## Permissions
 
 `permissions` decides what a command may do for this profile: `allow`, `ask`, `readonly` or `deny`, per permission

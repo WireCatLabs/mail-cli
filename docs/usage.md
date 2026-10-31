@@ -26,33 +26,43 @@ mail ya folders list                  # folders with role and counts
 mail ya sync --since-time 2026-10-01  # reads new mail into the shared store; stored mail is skipped
 ```
 
-`session start` on a new profile looks the address up in a built-in table (Yandex, Gmail, iCloud, Mail.ru, Fastmail,
-Outlook), then the MX record, then Thunderbird's ISPDB and the domain's own autoconfig file. Give `--host`, `--port`
-and `--security` to set a server by hand, or `--provider yandex` (any name in the table) when discovery finds nothing;
-at a terminal it asks which provider instead, and asks for the address when `--address` is missing. The profile is
-saved only after the server accepted the app password. Without a terminal nothing is asked: a missing `--address` or
-password is a validation error, and the password is read from `MAIL_PASSWORD`. Outlook accepts only OAuth for IMAP, so
-`session start` refuses it for now. An existing profile only asks for its password again; to change its server, use
-`config set` or a new profile name.
+`session start` on a new profile must find the mail server. It looks in a built-in table (Yandex, Gmail, iCloud,
+Mail.ru, Fastmail, Outlook). Then it looks at the domain's MX record. Then it asks Thunderbird's list of mail servers and the
+domain's own settings file. If none knows the server, set it yourself with `--host`, `--port` and
+`--security`, or name a provider from the table: `--provider yandex`.
 
-`session start` takes the password from the terminal or `MAIL_PASSWORD`, never from an option or a URL. It is stored only after the
-server accepted it, in the keyring; where the keyring fails, in a private file, said once on stderr, never asked
-(`--credential-storage file` chooses the file, not recommended). When neither has it, `mail` reads the entry Himalaya left (`secret-tool` service
-`himalaya`, account the profile name), so an existing setup needs no new password.
+At a terminal, `session start` asks for what is missing: the provider and the address. Without a terminal it asks
+nothing. A missing `--address` or password is then an error, and it reads the password from `MAIL_PASSWORD`. The
+profile is saved only after the server accepts the app password. Outlook accepts only OAuth for IMAP, so
+`session start` refuses it for now. To change the server of an existing profile, use `config set` or a new profile
+name.
 
-`sync` reads INBOX and the Sent folder unless `--folder` or the profile's `folders` says otherwise, newest first,
-and takes `--limit` per run, and `--rescan` to list the whole window again. It saves text and headers only: attachments are not stored.
+`session start` takes the password from the terminal or from `MAIL_PASSWORD`. It never takes it from an option or a
+URL. After the server accepts it, `mail` keeps it in the OS keyring. If the keyring fails, `mail` keeps it in a
+private file and says so once on stderr. `--credential-storage file` chooses the file; we do not recommend it. If
+`mail` has no password, it reads the one Himalaya left (`secret-tool`, service `himalaya`, account the profile
+name). An existing Himalaya setup then needs no new password.
 
-A sync of a big mailbox does not fit one run. It spends a request budget sized to its deadline (15 minutes at a
-terminal, 45 seconds over MCP; `--timeout` changes it, `--max-pages` lowers the budget), saves after each part and
-answers `state: partial` with the same command in `next`; run it again to go on. `mail <profile> status` says how far it
-is. On a server that gives no message id (Yandex) the listing is only UID, flags, date and size, and each new message
-is downloaded once: stored mail is skipped by UID, so a rerun reads nothing again. Such a run does not notice mail deleted
-at the server or changed flags on mail it skips; `--rescan` lists everything with headers and does both. A message the server fails on (Yandex answers some with `NO [UNAVAILABLE]`) is asked for once more at the end of
-the run, and if it still fails it is counted in `unreadable` and left for the next run. When the server closes the
-connection the sync reconnects after 1, 3 and 10 seconds (jittered), checks that UIDVALIDITY is the same and goes on from
-the failed request, for as long as the budget and the deadline allow; a failure keeps the transport's own code as
-`cause_code`, and `mail runs show` has it.
+`sync` reads INBOX and the Sent folder. `--folder` or the profile's `folders` setting names other folders. It reads
+the newest mail first. `--limit` caps the new mail of one run. `--rescan` lists the whole window again. It saves
+text and headers only. It does not store attachments.
+
+A big mailbox does not fit in one run. `sync` has a budget of requests to the server, set by its deadline: 15
+minutes at a terminal, 45 seconds over MCP. `--timeout` changes the deadline. `--max-pages` lowers the budget. The
+run saves what it read, then answers `state: partial` and gives the same command in `next`. Run it again to go on.
+`mail <profile> status` shows how far the sync is.
+
+Yandex gives no message id. For such a server, `sync` lists only each message's number, flags, date and size, and it
+downloads each new message once. It skips stored mail by that number, so a rerun reads nothing twice. It does not
+notice mail deleted on the server or changed flags on mail it skips. `--rescan` does both.
+
+Sometimes the server cannot answer for one message (Yandex answers some with `NO [UNAVAILABLE]`). `sync` asks for it
+again at the end of the run. If it still fails, `sync` counts it in `unreadable` and leaves it for the next run.
+
+Sometimes the server closes the connection. `sync` waits 1, 3, then 10 seconds, with a small random change so many
+runs do not retry together. It then reconnects. It checks that the server still numbers the folder's mail the same
+way, and goes on from the failed request while the budget and the deadline allow. If it still fails, the answer
+keeps the network error's own code as `cause_code`, and `mail runs show` has it.
 
 ## Output for scripts
 
@@ -69,7 +79,8 @@ leaves Hermes out. `mail personal mcp serve` serves the profile's commands over 
 claude mcp add mail -- mail personal mcp serve
 ```
 
-The server offers every command, the ones that write included. The profile's permissions decide what runs; see
+The server offers every command. A command that writes writes only to the local store, never to the mailbox. The
+profile's permissions decide what runs; see
 [settings](configuration.md#permissions).
 
 For ChatGPT and Claude in the browser,
@@ -78,3 +89,13 @@ For ChatGPT and Claude in the browser,
 `mail personal mcp revoke` ends every login. `mail personal mcp server start` runs the same
 server in the background, `mcp server status` shows its port, the login code and the apps logged in, and
 `mcp server stop` ends it.
+
+## Search your mail
+
+`mail` fills the shared store. [memo](https://github.com/WireCatLabs/cli-memo) searches and shows what is in it:
+
+```sh
+memo search mail "invoice"
+```
+
+See [memo search](https://github.com/WireCatLabs/cli-memo/blob/main/docs/search.md) for the query words.
