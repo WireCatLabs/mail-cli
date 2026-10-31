@@ -221,6 +221,14 @@ it("loses only the message Yandex can never read when it refuses the whole batch
   expect(raws[1]).toBeInstanceOf(Uint8Array)
 })
 
+it("lists the rest of a batch whose headers Yandex refuses for one message it can never read", async () => {
+  fake = await serve(false, 0, { brokenHeaders: [4] })
+  const source = sourceOf(fake.port)
+  const listed = await source.list(SINCE, "INBOX")
+  await source.close()
+  expect(listed.map(({ uid }) => uid)).toEqual(["7"])
+})
+
 it("times a command out on its own and reports the transport code", async () => {
   fake = await serve(false, 0, { fetchDelayMs: 600 })
   const source = sourceOf(fake.port, undefined, { requestTimeoutMs: 200, maxAttempts: 2 })

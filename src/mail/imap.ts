@@ -437,27 +437,43 @@ export const imapSource = (endpoint: ImapEndpoint, password: string, tuning: Ima
       const validity = searched.validity
       validities.set(folder, validity)
       // A message the server answers with `NO [UNAVAILABLE]` is simply absent here; the sync asks for it again later.
-      const parts = await spread(
-        folder,
-        chunks(searched.uids, listSize),
-        (open, batch) =>
-          open.fetchAll(
-            batch.join(","),
-            {
-              uid: true,
-              flags: true,
-              internalDate: true,
-              size: true,
-              envelope: true,
-              threadId: true,
-              labels: true,
-              headers: HEADER_FIELDS,
-            },
-            { uid: true },
-          ),
-        validity,
-      )
-      return parts.flat().map((message) => listedOf(message, folder, validity))
+      const listing = (batches: string[][]) =>
+        spread(
+          folder,
+          batches,
+          (open, batch) =>
+            open.fetchAll(
+              batch.join(","),
+              {
+                uid: true,
+                flags: true,
+                internalDate: true,
+                size: true,
+                envelope: true,
+                threadId: true,
+                labels: true,
+                headers: HEADER_FIELDS,
+              },
+              { uid: true },
+            ),
+          validity,
+          (error) => {
+            const mapped = mapImapError(error)
+            if (mapped.code !== "provider_unavailable") throw mapped
+            return mapped
+          },
+        )
+      const batches = chunks(searched.uids, listSize)
+      const parts = await listing(batches)
+      const messages: FetchMessageObject[] = []
+      for (const [index, part] of parts.entries()) {
+        if (!(part instanceof Error)) messages.push(...part)
+        // Yandex refuses even the headers of a message it can never read, and with it the whole FETCH.
+        else if ((batches[index] as string[]).length > 1)
+          for (const single of await listing((batches[index] as string[]).map((uid) => [uid])))
+            if (!(single instanceof Error)) messages.push(...single)
+      }
+      return messages.map((message) => listedOf(message, folder, validity))
     },
 
     quick: async (_since, folder, { searched }) => {
