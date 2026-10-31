@@ -1,11 +1,19 @@
 {
   "files": {
-    "includes": ["**", "!**/node_modules", "!**/dist", "!.worktrees", "!pnpm-lock.yaml", "!config/wirecat"]
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/dist",
+      "!.worktrees",
+      "!pnpm-lock.yaml",
+      "!config/wirecat",
+      "!lint/baseline"
+    ]
   },
   "extends": ["./config/wirecat/biome.base.json"],
   "overrides": [
     {
-      "includes": ["src/**", "!src/testing/mcp.ts", "!**/*.test.ts"],
+      "includes": ["src/**", "!src/testing/mcp.ts", "!src/mail/imap.ts", "!src/mail/imap-messages.ts", "!**/*.test.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -16,6 +24,50 @@
                   {
                     "group": ["@modelcontextprotocol/**"],
                     "message": "cli-core serves MCP; commands and services do not know the protocol"
+                  },
+                  {
+                    "group": ["imapflow", "imapflow/**"],
+                    "message": "only the IMAP adapter, src/mail/imap.ts and the mapping in src/mail/imap-messages.ts, imports imapflow; everything above it speaks cli-core's MailSource (WC-ARCH-3)"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/mail/imap.ts", "src/mail/imap-messages.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@modelcontextprotocol/**"],
+                    "message": "cli-core serves MCP; commands and services do not know the protocol"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/testing/mcp.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["imapflow", "imapflow/**"],
+                    "message": "only the IMAP adapter, src/mail/imap.ts and the mapping in src/mail/imap-messages.ts, imports imapflow; everything above it speaks cli-core's MailSource (WC-ARCH-3)"
                   }
                 ]
               }

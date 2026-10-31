@@ -2,7 +2,8 @@ import type { Quick, Searched } from "@wirecat/cli-core/mail"
 import { ImapFlow } from "imapflow"
 import { afterEach, expect, it, vi } from "vitest"
 import { type FakeImap, type FakeMessage, type FakeOptions, startFakeImap } from "../testing/fake-imap.js"
-import { type ImapTuning, imapSource, mapImapError } from "./imap.js"
+import { type ImapTuning, imapSource } from "./imap.js"
+import { mapImapError } from "./imap-errors.js"
 
 const raw = (id: string, subject: string, extra = "") =>
   `Message-ID: <${id}@example.com>\r\nDate: Tue, 27 Oct 2026 10:00:00 +0000\r\nFrom: Ann <ann@example.com>\r\nTo: me@example.com\r\nSubject: ${subject}\r\n${extra}\r\n\r\nHello ${subject}\r\n`
