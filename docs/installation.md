@@ -23,4 +23,15 @@ mail ya session start --address me@example.com
 mail ya account check
 ```
 
+## Search your mail
+
+After `sync`, the mail is in the shared store. `mail` fills the store. [memo](https://github.com/WireCatLabs/cli-memo)
+searches and shows it:
+
+```sh
+memo search mail "invoice"
+```
+
+See [memo search](https://github.com/WireCatLabs/cli-memo/blob/main/docs/search.md) for the query words.
+
 Next: [use it](usage.md).

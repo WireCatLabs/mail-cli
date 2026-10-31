@@ -12,7 +12,7 @@ support request.
 | `doctor` lists `files.problems` | Other users of the computer can read `config.json` or enter its folder. Run each `chmod` that `doctor` prints after "to make it private:". `doctor` never changes a file mode itself. |
 | "no app password for profile" | Run `mail <profile> session start`, or set `MAIL_PASSWORD` for one run. |
 | "the mail server refused the login" | The app password is wrong, or IMAP and app passwords are off. The steps for every provider are in [prepare the mailbox](providers.md). Yandex also needs 2 to 3 hours after a new app password. Then `session start` again. |
-| `rate_limited` | The server is limiting this account. Wait, then run `sync` again; mail already stored is skipped. |
+| `rate_limited` | Two causes. **The server limits the account:** the command fails with the error "the mail server is limiting this account"; wait, then run it again. **`sync` used its own request budget:** `sync` does not fail. It answers `state: partial` with `stopped: "requests"`, and `meta.issues` has `rate_limited` with the reason `budget.requests`; run `sync` again to go on, or raise `--max-pages`. Mail already stored is skipped in both cases. |
 | "could not reach the OS keyring" | The keyring is locked or no secret service runs. The password was kept in a private file instead (`credential_storage: "file"`). Unlock the keyring and run `session start` again to move it back. |
 | A write is refused | The profile's permissions or `MAIL_READ_ONLY` stop it; see [settings](configuration.md#permissions). |
 

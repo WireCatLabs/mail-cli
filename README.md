@@ -66,7 +66,7 @@ as data, never as instructions.
 - **Your mail stays on your computer.** The store is a local file; no WireCat server sees your mail.
 - **One store for every tool.** Mail sits next to Telegram, MAX and WhatsApp messages, meetings and notes, so one
   search in memo finds a person's mail and messages together.
-- **Read-only by design.** `mail` cannot send, move or delete mail, so an agent that uses it cannot either.
+- **Read-only by design.** `mail` cannot send, move or delete mail, so an agent that uses only `mail` cannot either.
 - **It works with the mailbox you have.** Yandex, Gmail, iCloud, Mail.ru, Fastmail and other servers with IMAP and
   app passwords; the server of a domain it does not know is found for you.
 
@@ -95,7 +95,8 @@ mail ya config show                            # every setting and where it came
 
 ## Limits
 
-- Read-only: no sending, moving, flagging or deleting.
+- Read-only: `mail` never sends, moves, flags or deletes mail. But memo has `memo mail delete`, which moves Gmail mail
+  to Trash, so an agent with write access to memo can change mail.
 - Text and headers only: attachments are not stored.
 - No OAuth yet, so no Outlook or Microsoft 365, and no Google Workspace domain that turns app passwords off.
 - Gmail caps IMAP downloads at 2,500 MB a day; a new Yandex app password can take 2 to 3 hours to work.
@@ -106,8 +107,9 @@ What comes next, such as OAuth sign-in, is on the
 
 ## Security
 
-- The app password is typed with no echo and kept in the OS keyring, never in a file, an argument or a log, and only
-  after the server accepted it.
+- The app password is typed with no echo, or read from `MAIL_PASSWORD` when there is no terminal. It is kept in the
+  OS keyring, only after the server accepted it. If the keyring fails, it goes to a private file (mode 600). It is
+  never an argument, never in `config.json` or a log. `mail` also reads the entry Himalaya left.
 - Every connection to the mail server uses TLS or STARTTLS; one with no encryption is refused.
 - To find the server of a new address, `session start` sends the domain, never the address, to your DNS resolver,
   `autoconfig.thunderbird.net` and `autoconfig.<domain>`. `--provider` or `--host` skips it.
