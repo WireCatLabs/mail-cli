@@ -7,7 +7,7 @@ ran it · ⛔ not tested offline, with the reason and where it is checked instea
 Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 [TESTING.md](TESTING.md) for how, and for the states and failures that cut across commands.
 
-**70 ✅ · 6 ⛔ · 0 ❌** — 26 commands, 50 options.
+**74 ✅ · 17 ⛔ · 0 ❌** — 29 commands, 62 options.
 
 | Command | Option | | Note |
 |---|---|---|---|
@@ -40,15 +40,30 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `skill install` | `--for` | ✅ |  |
 | `skill status` |  | ✅ |  |
 | `mcp serve` |  | ✅ |  |
+| `mcp serve` | `--permission` | ✅ |  |
+| `mcp serve` | `--profiles` | ⛔ | starts an HTTP server or a background process that runs until stopped; cli-core's appMcpCommand; its app-mcp-command and mcp-server-command tests drive it, and src/mcp.test.ts and src/mcp-http.test.ts run mail's own server, config, revoke and refusals |
 | `mcp serve` | `--http` | ✅ |  |
-| `mcp serve` | `--port` | ✅ |  |
-| `mcp serve` | `--public-url` | ✅ |  |
+| `mcp serve` | `--port` | ⛔ | starts an HTTP server or a background process that runs until stopped; cli-core's appMcpCommand; its app-mcp-command and mcp-server-command tests drive it, and src/mcp.test.ts and src/mcp-http.test.ts run mail's own server, config, revoke and refusals |
+| `mcp serve` | `--public-url` | ⛔ | starts an HTTP server or a background process that runs until stopped; cli-core's appMcpCommand; its app-mcp-command and mcp-server-command tests drive it, and src/mcp.test.ts and src/mcp-http.test.ts run mail's own server, config, revoke and refusals |
 | `mcp revoke` |  | ✅ |  |
-| `mcp server start` |  | ⛔ | starts a detached `mcp serve --http` from the built entry; cli-core tests mcpServerCommand, and the background run was checked by hand against dist/ |
-| `mcp server start` | `--port` | ⛔ | starts a detached `mcp serve --http` from the built entry; cli-core tests mcpServerCommand, and the background run was checked by hand against dist/ |
-| `mcp server start` | `--public-url` | ⛔ | starts a detached `mcp serve --http` from the built entry; cli-core tests mcpServerCommand, and the background run was checked by hand against dist/ |
-| `mcp server stop` |  | ⛔ | starts a detached `mcp serve --http` from the built entry; cli-core tests mcpServerCommand, and the background run was checked by hand against dist/ |
+| `mcp revoke` | `--profiles` | ✅ |  |
+| `mcp server start` |  | ⛔ | starts an HTTP server or a background process that runs until stopped; cli-core's appMcpCommand; its app-mcp-command and mcp-server-command tests drive it, and src/mcp.test.ts and src/mcp-http.test.ts run mail's own server, config, revoke and refusals |
+| `mcp server start` | `--port` | ⛔ | starts an HTTP server or a background process that runs until stopped; cli-core's appMcpCommand; its app-mcp-command and mcp-server-command tests drive it, and src/mcp.test.ts and src/mcp-http.test.ts run mail's own server, config, revoke and refusals |
+| `mcp server start` | `--public-url` | ⛔ | starts an HTTP server or a background process that runs until stopped; cli-core's appMcpCommand; its app-mcp-command and mcp-server-command tests drive it, and src/mcp.test.ts and src/mcp-http.test.ts run mail's own server, config, revoke and refusals |
+| `mcp server start` | `--permission` | ⛔ | starts an HTTP server or a background process that runs until stopped; cli-core's appMcpCommand; its app-mcp-command and mcp-server-command tests drive it, and src/mcp.test.ts and src/mcp-http.test.ts run mail's own server, config, revoke and refusals |
+| `mcp server start` | `--profiles` | ⛔ | starts an HTTP server or a background process that runs until stopped; cli-core's appMcpCommand; its app-mcp-command and mcp-server-command tests drive it, and src/mcp.test.ts and src/mcp-http.test.ts run mail's own server, config, revoke and refusals |
+| `mcp server stop` |  | ⛔ | starts an HTTP server or a background process that runs until stopped; cli-core's appMcpCommand; its app-mcp-command and mcp-server-command tests drive it, and src/mcp.test.ts and src/mcp-http.test.ts run mail's own server, config, revoke and refusals |
+| `mcp server stop` | `--profiles` | ⛔ | starts an HTTP server or a background process that runs until stopped; cli-core's appMcpCommand; its app-mcp-command and mcp-server-command tests drive it, and src/mcp.test.ts and src/mcp-http.test.ts run mail's own server, config, revoke and refusals |
 | `mcp server status` |  | ✅ |  |
+| `mcp server status` | `--profiles` | ✅ |  |
+| `mcp config` |  | ✅ |  |
+| `mcp config` | `--permission` | ✅ |  |
+| `mcp config` | `--profiles` | ✅ |  |
+| `mcp add` |  | ⛔ | writes Codex's or Claude Code's own MCP settings; cli-core's appMcpCommand; its app-mcp-command and mcp-server-command tests drive it, and src/mcp.test.ts and src/mcp-http.test.ts run mail's own server, config, revoke and refusals |
+| `mcp add` | `--allow-writes` | ⛔ | writes Codex's or Claude Code's own MCP settings; cli-core's appMcpCommand; its app-mcp-command and mcp-server-command tests drive it, and src/mcp.test.ts and src/mcp-http.test.ts run mail's own server, config, revoke and refusals |
+| `mcp add` | `--permission` | ⛔ | writes Codex's or Claude Code's own MCP settings; cli-core's appMcpCommand; its app-mcp-command and mcp-server-command tests drive it, and src/mcp.test.ts and src/mcp-http.test.ts run mail's own server, config, revoke and refusals |
+| `mcp check` |  | ⛔ | starts the installed mail as a child process, as the agent would; cli-core's appMcpCommand; its app-mcp-command and mcp-server-command tests drive it, and src/mcp.test.ts and src/mcp-http.test.ts run mail's own server, config, revoke and refusals |
+| `mcp check` | `--permission` | ⛔ | starts the installed mail as a child process, as the agent would; cli-core's appMcpCommand; its app-mcp-command and mcp-server-command tests drive it, and src/mcp.test.ts and src/mcp-http.test.ts run mail's own server, config, revoke and refusals |
 | `upgrade` |  | ✅ |  |
 | `upgrade` | `--check` | ✅ |  |
 | `config show` |  | ✅ |  |

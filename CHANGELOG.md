@@ -17,6 +17,14 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 - `account check`, `folders list` and `sync` (`--since-time`, `--limit`, `--max-pages`, `--folder`) over IMAP with imapflow, into the
   shared store.
 
+### Changed — may break callers
+
+- `mcp` and `doctor` are cli-core's shared commands (WC-CMD-25). `mcp serve`, `mcp revoke` and
+  `mcp server start|stop|status` take `--profiles <names|all>`; `mcp serve` and `mcp server start` take
+  `--permission <key=level>`, which only tightens; `mcp config`, `mcp add` and `mcp check` are new. Permission keys are
+  command paths (`sync=deny`). `doctor` also reports the shared store's path and the profile lock.
+- `mcp serve` over stdio no longer refuses `--json`.
+
 ### Fixed
 
 - `sync` no longer stops for good on a message Yandex can never read. Yandex refuses the whole body FETCH with

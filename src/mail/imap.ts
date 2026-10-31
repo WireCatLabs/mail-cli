@@ -467,11 +467,11 @@ export const imapSource = (endpoint: ImapEndpoint, password: string, tuning: Ima
       const parts = await listing(batches)
       const messages: FetchMessageObject[] = []
       for (const [index, part] of parts.entries()) {
-        if (!(part instanceof Error)) messages.push(...part)
+        if (!(part instanceof Error)) for (const message of part) messages.push(message)
         // Yandex refuses even the headers of a message it can never read, and with it the whole FETCH.
         else if ((batches[index] as string[]).length > 1)
           for (const single of await listing((batches[index] as string[]).map((uid) => [uid])))
-            if (!(single instanceof Error)) messages.push(...single)
+            if (!(single instanceof Error)) for (const message of single) messages.push(message)
       }
       return messages.map((message) => listedOf(message, folder, validity))
     },

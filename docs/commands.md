@@ -178,13 +178,13 @@ mail status
 
 ## `mail doctor`
 
-check this installation: version, paths, config, profiles; no keyring or network
+check this installation: version, paths, config, profiles, store; no keyring or network
 
 ```sh
 mail doctor
 ```
 
-**Returns:** check this installation: version, paths, config, profiles; no keyring or network
+**Returns:** check this installation: version, paths, config, profiles, store; no keyring…
 
 **Example:** `mail doctor`, `mail doctor --json`
 
@@ -194,7 +194,7 @@ the instructions an agent is given for this tool
 
 ### `mail skill show`
 
-print SKILL.md — `mail skill install` puts it where Claude Code, Codex and Gemini CLI look for it; --for prints the copy already there
+print SKILL.md — `mail skill install` puts it where Claude Code, Codex, Gemini CLI and OpenClaw look for it, and where Hermes does on request; --for prints the copy already there
 
 ```sh
 mail skill show [options]
@@ -240,11 +240,11 @@ mail skill status
 
 ## `mail mcp`
 
-serve this profile's commands to an agent over MCP — `claude mcp add mail -- mail personal mcp serve`
+serve this profile to an agent over MCP and set it up — `claude mcp add mail -- mail <profile> mcp serve`
 
 ### `mail mcp serve`
 
-serve this profile's commands to an agent over MCP, on stdin and stdout, writes included; the profile's permissions decide — `claude mcp add mail -- mail personal mcp serve`
+serve this profile to an agent over MCP, on stdin and stdout — `claude mcp add mail -- mail <profile> mcp serve`; `mail mcp serve --profiles a,b` or `--profiles all` serves those profiles from one server and each tool asks which
 
 **Changes something in the service.**
 
@@ -254,27 +254,33 @@ mail mcp serve [options]
 
 | Option | What it does |
 |---|---|
+| `--permission <key=level>` | make a permission stricter for this server only, like sync=deny; it never loosens the profile; repeat for more keys. |
+| `--profiles <names\|all>` | serve several profiles from one server instead of one: names, comma-separated, or all for every profile. |
 | `--http` | serve over HTTP on 127.0.0.1 for ChatGPT and Claude in the browser, behind your tunnel; the profile's permissions decide. |
 | `--port <port>` | the local port for --http (default 8765). |
-| `--public-url <url>` | the tunnel's https address the browser apps use, e.g. https://<name>.ts.net. |
+| `--public-url <url>` | the tunnel's https address the browser apps use, e.g. https://<name>.ts.net or https://<name>.ts.net/tg. |
 
 **Returns:** serve this profile's commands to an AI agent
 
-**Example:** `mail personal mcp serve`, `mail personal mcp serve --http --public-url https://laptop.example.ts.net`
+**Example:** `mail personal mcp serve`, `mail mcp serve --profiles work,personal`, `mail personal mcp serve --http --public-url https://laptop.example.ts.net`
 
 ### `mail mcp revoke`
 
-forget every login `mcp serve --http` gave a browser app; each must log in again
+forget every login `mcp serve --http` gave a browser app, of this profile or of the server `--profiles` names; each app must log in again
 
 **Changes something on this computer only.**
 
 ```sh
-mail mcp revoke
+mail mcp revoke [options]
 ```
+
+| Option | What it does |
+|---|---|
+| `--profiles <names\|all>` | serve several profiles from one server instead of one: names, comma-separated, or all for every profile. |
 
 **Returns:** forget every login given to a browser app
 
-**Example:** `mail personal mcp revoke`
+**Example:** `mail personal mcp revoke`, `mail mcp revoke --profiles all`
 
 ### `mail mcp server`
 
@@ -294,6 +300,8 @@ mail mcp server start [options]
 |---|---|
 | `--port <port>` | the local port (default 8765). |
 | `--public-url <url>` | the tunnel's https address the browser apps use, e.g. https://<name>.ts.net or https://<name>.ts.net/tg. |
+| `--permission <key=level>` | make a permission stricter for this server only; repeat for more keys. |
+| `--profiles <names\|all>` | the server of several profiles that `mcp serve --profiles` serves: names, comma-separated, or all. |
 
 **Returns:** start the HTTP MCP server in the background
 
@@ -306,8 +314,12 @@ stop `mcp serve --http` — only one that `mcp server start` started
 **Changes something on this computer only.**
 
 ```sh
-mail mcp server stop
+mail mcp server stop [options]
 ```
+
+| Option | What it does |
+|---|---|
+| `--profiles <names\|all>` | the server of several profiles that `mcp serve --profiles` serves: names, comma-separated, or all. |
 
 **Returns:** stop the background HTTP MCP server
 
@@ -318,12 +330,72 @@ mail mcp server stop
 whether `mcp serve --http` runs, on which port and address, the login code for a new browser app, and the apps logged in
 
 ```sh
-mail mcp server status
+mail mcp server status [options]
 ```
+
+| Option | What it does |
+|---|---|
+| `--profiles <names\|all>` | the server of several profiles that `mcp serve --profiles` serves: names, comma-separated, or all. |
 
 **Returns:** whether the HTTP MCP server runs, its login code and the apps logged in
 
 **Example:** `mail personal mcp server status --json`
+
+### `mail mcp config`
+
+print the mcpServers entry for Claude Desktop, Cursor and others, with full paths; writes nothing
+
+```sh
+mail mcp config [options]
+```
+
+| Option | What it does |
+|---|---|
+| `--permission <key=level>` | make a permission stricter for this server only, like sync=deny; it never loosens the profile; repeat for more keys. |
+| `--profiles <names\|all>` | serve several profiles from one server instead of one: names, comma-separated, or all for every profile. |
+
+**Returns:** print the local MCP configuration of this profile, or of those --profiles names
+
+**Example:** `mail personal mcp config`, `mail mcp config --profiles all`
+
+### `mail mcp add`
+
+add this profile's local MCP server to Codex or Claude Code
+
+**Changes something on this computer only.**
+
+```sh
+mail mcp add <client> [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `client` | required | codex or claude-code. |
+
+| Option | What it does |
+|---|---|
+| `--allow-writes` | acknowledge that this profile offers writing tools. |
+| `--permission <key=level>` | make a permission stricter for this server only, like sync=deny; it never loosens the profile; repeat for more keys. |
+
+**Returns:** add this profile's local MCP server to Codex or Claude Code
+
+**Example:** `mail personal mcp add codex --allow-writes`
+
+### `mail mcp check`
+
+check this profile's local MCP handshake and tool list
+
+```sh
+mail mcp check [options]
+```
+
+| Option | What it does |
+|---|---|
+| `--permission <key=level>` | make a permission stricter for this server only, like sync=deny; it never loosens the profile; repeat for more keys. |
+
+**Returns:** check this profile's local MCP handshake and tool list
+
+**Example:** `mail personal mcp check`
 
 ## `mail upgrade`
 

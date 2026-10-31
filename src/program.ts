@@ -1,6 +1,8 @@
 import { join } from "node:path"
 import { resolvePaths } from "@wirecat/cli-base"
 import {
+  appDoctorCommand,
+  appMcpCommand,
   commandsCommand,
   configCommand,
   createProgram as createSharedProgram,
@@ -16,9 +18,7 @@ import {
 import { appUpdate } from "@wirecat/cli-core/update"
 import type { Command } from "commander"
 import { accountCommand } from "./commands/account.js"
-import { doctorCommand } from "./commands/doctor.js"
 import { foldersCommand } from "./commands/folders.js"
-import { mcpCommand } from "./commands/mcp.js"
 import { sessionCommand } from "./commands/session.js"
 import { statusCommand } from "./commands/status.js"
 import { syncCommand } from "./commands/sync.js"
@@ -47,9 +47,14 @@ export const definition = (): ProgramDefinition => ({
     foldersCommand(),
     syncCommand(),
     statusCommand(),
-    doctorCommand(),
+    appDoctorCommand(IDENTITY, configuration),
     skillCommand(IDENTITY, SKILL),
-    mcpCommand(),
+    appMcpCommand(IDENTITY, configuration, {
+      name: "mail",
+      untrusted: ["subjects", "bodies", "HTML parts", "headers", "sender names", "folder names", "file names"],
+      permissionExample: "sync=deny",
+      skill: SKILL,
+    }),
     upgradeCommand(IDENTITY, PACKAGE, (command) => ({
       ...outputFor(command),
       installer: () => update.installer({}),

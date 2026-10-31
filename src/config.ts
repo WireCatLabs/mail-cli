@@ -1,4 +1,4 @@
-import { type Settings, settingsFor } from "@wirecat/cli-core/cli"
+import { commandPermissions, type Settings, settingsFor } from "@wirecat/cli-core/cli"
 import * as v from "valibot"
 import { IDENTITY } from "./identity.js"
 
@@ -21,6 +21,7 @@ export interface Mailbox {
 }
 
 export const configuration = settingsFor<{ mailbox: Mailbox }>(IDENTITY, {
+  permissions: commandPermissions(),
   profile: PROFILE_ENTRIES,
   resolve: ({ fromLayers }) => {
     const pick = <T>(key: string) => fromLayers<T | undefined>(key, undefined)
