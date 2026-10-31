@@ -2,19 +2,47 @@ import { existsSync } from "node:fs"
 import { CliError } from "@wirecat/cli-base"
 import { annotate } from "@wirecat/cli-base/commands"
 import { progressOf } from "@wirecat/cli-core/background"
-import { baseContext, itemOf, LOCAL_READ, outputFor, renderAnswer } from "@wirecat/cli-core/cli"
+import { answerEntity, baseContext, itemOf, LOCAL_READ, outputFor, renderAnswer } from "@wirecat/cli-core/cli"
 import { parsePoint, type ResumePoint, resumeKey } from "@wirecat/cli-core/mail"
 import { Command } from "commander"
+import * as v from "valibot"
 import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
 import { openMailStore } from "../store.js"
 import { contextOf } from "./context.js"
 
+const nullableNumber = v.nullable(v.number())
+
+/** cli-core's `sync_progress` with the folders it adds up; that entity is strict, so this one is mail's own. */
+const mailSyncStatus = v.strictObject({
+  job: v.string(),
+  profile: v.string(),
+  done: v.number(),
+  total: nullableNumber,
+  remaining: nullableNumber,
+  state: v.picklist(["partial", "complete"]),
+  updated_at: v.nullable(v.string()),
+  cursor_age_ms: nullableNumber,
+  folders: v.array(
+    v.strictObject({
+      folder: v.string(),
+      since: v.string(),
+      done: v.number(),
+      total: v.number(),
+      updated_at: v.string(),
+    }),
+  ),
+})
+
 export const statusCommand = (): Command =>
-  annotate(new Command("status"), {
-    effects: LOCAL_READ,
-    examples: [`${IDENTITY.command} ya status`, `${IDENTITY.command} ya status --json`],
-  })
+  answerEntity(
+    annotate(new Command("status"), {
+      effects: LOCAL_READ,
+      examples: [`${IDENTITY.command} ya status`, `${IDENTITY.command} ya status --json`],
+    }),
+    "mail_sync_status",
+    mailSyncStatus,
+  )
     .summary("how far the sync is, from what the runs saved")
     .description(
       "how many messages of the synced window are read and how many are left, per folder; it asks no server, so it answers while a sync runs",

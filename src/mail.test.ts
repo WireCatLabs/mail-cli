@@ -383,6 +383,16 @@ describe("session", () => {
     expect(item(ended.out)).toMatchObject({ ended: true })
     expect(keyring.entries.size).toBe(0)
   })
+
+  it("lists the profiles with no profile named, and where each password comes from", async () => {
+    const { mail } = await harness()
+    await profileSet(mail)
+    const before = await mail(["session", "list", "--json"])
+    expect(JSON.parse(before.out).items).toEqual([{ profile: "ya", address: ADDRESS, password_from: null }])
+    await mail(["ya", "session", "start", "--json"], typed(PASSWORD))
+    const after = await mail(["session", "list", "--json"])
+    expect(JSON.parse(after.out).items).toEqual([{ profile: "ya", address: ADDRESS, password_from: "keyring" }])
+  })
 })
 
 describe("account check, folders and sync", () => {

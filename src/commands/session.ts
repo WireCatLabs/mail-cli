@@ -1,14 +1,19 @@
 import { CliError } from "@wirecat/cli-base"
 import { annotate } from "@wirecat/cli-base/commands"
 import {
+  answerEntity,
   baseContext,
   commandWords,
+  environmentOf,
   FETCH,
   itemOf,
   LOCAL_READ,
   LOCAL_WRITE,
+  listOf,
   logsInOrOut,
   outputFor,
+  profileFree,
+  profilesHere,
   REMOTE_READ,
   refuseCommandName,
   refuseUnderReadOnly,
@@ -17,12 +22,14 @@ import {
   secretInputOf,
 } from "@wirecat/cli-core/cli"
 import { Command } from "commander"
+import * as v from "valibot"
 import { configuration } from "../config.js"
 import { PROVIDER_NAMES, prepareFor } from "../discovery.js"
 import { IDENTITY } from "../identity.js"
 import { type ImapEndpoint, imapSource } from "../mail/imap.js"
 import { profileOf, writeProfile } from "../profile.js"
 import { PROVIDERS_URL, type Prepare, prepareText } from "../providers.js"
+import { passwordStore } from "../secret.js"
 import { collect, contextOf, endpointOf, type MailEnvironment, passwordsOf, refuseOffline } from "./context.js"
 import { checkLogin } from "./login.js"
 import { chosen, type MailboxFlags, type Pick, securityOf } from "./mailbox.js"
@@ -153,11 +160,25 @@ const startCommand = () =>
       })
     })
 
+const passwordFrom = v.nullable(v.picklist(["environment", "keyring", "himalaya"]))
+
+const mailSessionStatus = v.strictObject({
+  profile: v.string(),
+  state: v.picklist(["saved", "missing"]),
+  password_from: passwordFrom,
+  address: v.nullable(v.string()),
+  verified: v.boolean(),
+})
+
 const statusCommand = () =>
-  annotate(new Command("status"), {
-    effects: REMOTE_READ,
-    examples: [`${IDENTITY.command} ya session status`, `${IDENTITY.command} ya session status --check --json`],
-  })
+  answerEntity(
+    annotate(new Command("status"), {
+      effects: REMOTE_READ,
+      examples: [`${IDENTITY.command} ya session status`, `${IDENTITY.command} ya session status --check --json`],
+    }),
+    "mail_session_status",
+    mailSessionStatus,
+  )
     .description("show where this profile's app password comes from; the password is never printed")
     .option("--check", "log in to the server to prove the password still works")
     .action(async function (this: Command, args: { check?: boolean }) {
@@ -199,9 +220,57 @@ const endCommand = () =>
       answer(this, { profile: context.profile, ended: removed, mail: "retained" })
     })
 
+const mailProfile = v.strictObject({
+  profile: v.string(),
+  address: v.nullable(v.string()),
+  password_from: passwordFrom,
+})
+
+const listCommand = () =>
+  profileFree(
+    answerEntity(
+      annotate(new Command("list"), {
+        effects: LOCAL_READ,
+        examples: [`${IDENTITY.command} session list`, `${IDENTITY.command} session list --json`],
+      }),
+      "mail_profile",
+      mailProfile,
+    ),
+  )
+    .summary("list the profiles here and whether each has an app password")
+    .description(
+      "list the profiles on this computer, each with its address and where its app password comes from; picks none and asks no server",
+    )
+    .action(async function (this: Command) {
+      const environment = environmentOf<MailEnvironment>(this)
+      const env = environment.env ?? process.env
+      const { configuredProfiles } = configuration.resolveSettings({}, { env, needsProfile: false })
+      const items = []
+      for (const profile of profilesHere(IDENTITY, configuredProfiles, env)) {
+        const settings = configuration.resolveSettings({ profile }, { env })
+        const stored = await passwordStore({
+          env,
+          profile,
+          keyring: environment.keyring,
+          himalaya: environment.himalaya,
+        }).read()
+        items.push({
+          profile,
+          address: settings.mailbox.address ?? null,
+          password_from: stored?.source ?? null,
+        })
+      }
+      renderAnswer(
+        this,
+        outputFor(this),
+        listOf("session list", { items, limit: Math.max(1, items.length), has_more: false }),
+      )
+    })
+
 export const sessionCommand = (): Command =>
   annotate(new Command("session"), { effects: LOCAL_READ })
     .description("keep this profile's app password in the OS keyring")
     .addCommand(startCommand())
     .addCommand(statusCommand())
     .addCommand(endCommand())
+    .addCommand(listCommand())

@@ -2,9 +2,19 @@ import { CliError } from "@wirecat/cli-base"
 import { annotate } from "@wirecat/cli-base/commands"
 import { timezoneOf, zonedMoment } from "@wirecat/cli-base/query"
 import type { NextStep } from "@wirecat/cli-base/standards"
-import { baseContext, environmentOf, FETCH, itemOf, outputFor, renderAnswer, runBudgetOf } from "@wirecat/cli-core/cli"
+import {
+  answerEntity,
+  baseContext,
+  environmentOf,
+  FETCH,
+  itemOf,
+  outputFor,
+  renderAnswer,
+  runBudgetOf,
+} from "@wirecat/cli-core/cli"
 import { type MailSyncResult, syncMail } from "@wirecat/cli-core/mail"
 import { Command } from "commander"
+import * as v from "valibot"
 import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
 import { openMailStore } from "../store.js"
@@ -79,18 +89,41 @@ const foldersFor = async (
   return chosen.length ? chosen : ["INBOX"]
 }
 
+const mailSync = v.strictObject({
+  address: v.string(),
+  since: v.string(),
+  timezone: v.string(),
+  folders: v.array(v.string()),
+  state: v.picklist(["partial", "complete"]),
+  stopped: v.optional(v.picklist(["requests", "deadline", "cancelled"])),
+  requests: v.number(),
+  listed: v.number(),
+  saved: v.number(),
+  already_stored: v.number(),
+  deleted: v.number(),
+  complete: v.boolean(),
+  remaining: v.number(),
+  unreadable: v.number(),
+  deletions_skipped: v.optional(v.string()),
+  hint: v.optional(v.string()),
+})
+
 export const syncCommand = (): Command =>
-  annotate(new Command("sync"), {
-    effects: FETCH,
-    // The run stops on its own before its deadline, keeps what it read and says how to go on (WC-LIFE-16).
-    cooperative: true,
-    partial: true,
-    examples: [
-      `${IDENTITY.command} ya sync`,
-      `${IDENTITY.command} ya sync --since-time 2026-10-01 --limit 200`,
-      `${IDENTITY.command} ya sync --folder INBOX`,
-    ],
-  })
+  answerEntity(
+    annotate(new Command("sync"), {
+      effects: FETCH,
+      // The run stops on its own before its deadline, keeps what it read and says how to go on (WC-LIFE-16).
+      cooperative: true,
+      partial: true,
+      examples: [
+        `${IDENTITY.command} ya sync`,
+        `${IDENTITY.command} ya sync --since-time 2026-10-01 --limit 200`,
+        `${IDENTITY.command} ya sync --folder INBOX`,
+      ],
+    }),
+    "mail_sync",
+    mailSync,
+  )
     .description("read mail from the server into the shared store; mail already stored is skipped")
     .option(
       "--since-time <time>",
