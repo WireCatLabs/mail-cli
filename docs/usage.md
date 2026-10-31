@@ -19,11 +19,11 @@ First prepare the mailbox: turn on IMAP and make an app password. [Prepare the m
 for every provider, and `session start` prints them too.
 
 ```sh
-mail ya session start --address ya@burobiz.ru # new profile: finds the server, shows the steps, asks for the app password
-mail ya session start                # an existing profile: asks for the app password again (checked, kept in the keyring)
-mail ya account check                # logs in and lists what the server supports
-mail ya folders list                 # folders with role and counts
-mail ya sync --since-time 2026-10-01 # reads new mail into the shared store; stored mail is skipped
+mail ya session start --address me@example.com # new profile: finds the server, shows the steps, asks for the app password
+mail ya session start                 # an existing profile: asks for the app password again (checked, kept in the keyring)
+mail ya account check                 # logs in and lists what the server supports
+mail ya folders list                  # folders with role and counts
+mail ya sync --since-time 2026-10-01  # reads new mail into the shared store; stored mail is skipped
 ```
 
 `session start` on a new profile looks the address up in a built-in table (Yandex, Gmail, iCloud, Mail.ru, Fastmail,

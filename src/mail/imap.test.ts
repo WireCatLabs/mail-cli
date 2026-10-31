@@ -2,10 +2,11 @@ import type { Quick, Searched } from "@wirecat/cli-core/mail"
 import { ImapFlow } from "imapflow"
 import { afterEach, expect, it, vi } from "vitest"
 import { type FakeImap, type FakeMessage, type FakeOptions, startFakeImap } from "../testing/fake-imap.js"
-import { type ImapTuning, imapSource, mapImapError } from "./imap.js"
+import { type ImapTuning, imapSource } from "./imap.js"
+import { mapImapError } from "./imap-errors.js"
 
 const raw = (id: string, subject: string, extra = "") =>
-  `Message-ID: <${id}@example.com>\r\nDate: Tue, 27 Oct 2026 10:00:00 +0000\r\nFrom: Ann <ann@example.com>\r\nTo: ya@burobiz.ru\r\nSubject: ${subject}\r\n${extra}\r\n\r\nHello ${subject}\r\n`
+  `Message-ID: <${id}@example.com>\r\nDate: Tue, 27 Oct 2026 10:00:00 +0000\r\nFrom: Ann <ann@example.com>\r\nTo: me@example.com\r\nSubject: ${subject}\r\n${extra}\r\n\r\nHello ${subject}\r\n`
 
 let fake: FakeImap | undefined
 afterEach(async () => {
@@ -16,7 +17,7 @@ afterEach(async () => {
 
 const serve = (throttleBodies = false, dropSearches = 0, extra: Partial<FakeOptions> = {}) =>
   startFakeImap({
-    login: "ya@burobiz.ru",
+    login: "me@example.com",
     password: "app-secret-1",
     throttleBodies,
     dropSearches,
@@ -34,7 +35,7 @@ const serve = (throttleBodies = false, dropSearches = 0, extra: Partial<FakeOpti
   })
 
 const sourceOf = (port: number, password = "app-secret-1", tuning: ImapTuning = {}) =>
-  imapSource({ host: "127.0.0.1", port, security: "plain", login: "ya@burobiz.ru" }, password, {
+  imapSource({ host: "127.0.0.1", port, security: "plain", login: "me@example.com" }, password, {
     sleep: async () => {},
     ...tuning,
   })
@@ -90,7 +91,9 @@ it("reads UIDVALIDITY on open, lists envelopes and never asks for a body without
     bulk: true,
   })
   expect(listed[1]?.headers?.bulk).toBe(false)
-  expect(Buffer.from(raws[0] as Uint8Array).toString()).toContain("Hello first")
+  const first = raws[0]
+  if (!(first instanceof Uint8Array)) throw new Error("the first message was not read")
+  expect(Buffer.from(first).toString()).toContain("Hello first")
   const fetches = fake.commands.filter((command) => command.startsWith("UID FETCH"))
   expect(fetches.length).toBeGreaterThan(0)
   for (const fetch of fetches) {
@@ -343,7 +346,7 @@ it("lists a server with no message ids quickly: UID, flags, date and size, with 
 
 const serveMessages = (messages: FakeMessage[]) =>
   startFakeImap({
-    login: "ya@burobiz.ru",
+    login: "me@example.com",
     password: "app-secret-1",
     folders: [{ name: "INBOX", messages }],
   })

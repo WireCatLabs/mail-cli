@@ -19,7 +19,7 @@ exist, and whether other users of the computer can read the settings.
 Then connect a mailbox. You choose the profile name, the first word of every command:
 
 ```sh
-mail ya session start --address ya@burobiz.ru
+mail ya session start --address me@example.com
 mail ya account check
 ```
 

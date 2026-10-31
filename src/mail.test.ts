@@ -20,7 +20,7 @@ import { run } from "./program.js"
 import { type FakeImap, type FakeOptions, startFakeImap } from "./testing/fake-imap.js"
 
 const PASSWORD = "fixture-app-password-4Rt9"
-const ADDRESS = "ya@burobiz.ru"
+const ADDRESS = "me@example.com"
 
 const raw = (id: string, subject: string, body: string, extra = "") =>
   `Message-ID: <${id}@example.com>\r\nDate: Tue, 27 Oct 2026 10:00:00 +0000\r\nFrom: Ann <ann@example.com>\r\n` +
@@ -421,6 +421,16 @@ describe("session", () => {
     expect(keyring.entries.size).toBe(0)
   })
 
+  it("lists the profiles with no profile named, and where each password comes from", async () => {
+    const { mail } = await harness()
+    await profileSet(mail)
+    const before = await mail(["session", "list", "--json"])
+    expect(JSON.parse(before.out).items).toEqual([{ profile: "ya", address: ADDRESS, password_from: null }])
+    await mail(["ya", "session", "start", "--json"], typed(PASSWORD))
+    const after = await mail(["session", "list", "--json"])
+    expect(JSON.parse(after.out).items).toEqual([{ profile: "ya", address: ADDRESS, password_from: "keyring" }])
+  })
+
   describe("with only HOME moved, against the system keyring (WC-SECR-24)", () => {
     afterEach(() => vi.restoreAllMocks())
 
@@ -605,6 +615,10 @@ describe("account check, folders and sync", () => {
     })
     const body = JSON.parse(first.out)
     expect(body.meta.complete).toBe(false)
+    expect(body.meta.issues).toEqual([
+      { code: "outcome_unknown", reason: "mail.deletions-skipped", source: "sync" },
+      { code: "rate_limited", reason: "budget.requests", source: "sync" },
+    ])
     expect(body.next[0]).toMatchObject({
       step: "mail.sync",
       command: "sync",
@@ -644,6 +658,21 @@ describe("account check, folders and sync", () => {
     const { mail } = await ready({ fake: { dropFetches: 2 } })
     const synced = await mail(["ya", "sync", "--since-time", "2026-10-01", "--folder", "INBOX", "--json"])
     expect(item(synced.out)).toMatchObject({ saved: 2, state: "complete" })
+  })
+
+  it("reads a --since-time date as local midnight and gives the zone and the UTC window", async () => {
+    const { mail } = await ready()
+    const zone = process.env.TZ
+    process.env.TZ = "Asia/Vladivostok"
+    try {
+      const synced = await mail(["ya", "sync", "--since-time", "2026-09-01", "--folder", "INBOX", "--json"])
+      const body = JSON.parse(synced.out)
+      expect(body.meta).toMatchObject({ timezone: "Asia/Vladivostok", window: { since: "2026-08-31T14:00:00.000Z" } })
+      expect(body.item.timezone).toBe("Asia/Vladivostok")
+    } finally {
+      if (zone === undefined) delete process.env.TZ
+      else process.env.TZ = zone
+    }
   })
 
   it("refuses a --since-time in the future", async () => {

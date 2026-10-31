@@ -61,6 +61,7 @@ try {
   const run = (args: string[]) =>
     execFileSync(process.execPath, [bin, ...args], { cwd: temp, env, encoding: "utf8", timeout: 20000 })
   assert.equal(run(["--version"]).trim(), version)
+  assert.deepEqual(JSON.parse(run(["--wcat-describe"])).name, "mail")
   assert.match(run(["--help"]), /Usage: mail/)
   const tree: unknown = JSON.parse(run(["commands", "--json"]))
   const names =

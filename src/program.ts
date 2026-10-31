@@ -47,7 +47,7 @@ export const definition = (): ProgramDefinition => ({
     foldersCommand(),
     syncCommand(),
     statusCommand(),
-    appDoctorCommand(IDENTITY, configuration),
+    appDoctorCommand(IDENTITY, configuration, { packageName: PACKAGE }),
     skillCommand(IDENTITY, SKILL),
     appMcpCommand(IDENTITY, configuration, {
       name: "mail",

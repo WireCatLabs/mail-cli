@@ -101,11 +101,15 @@ const BY_MX: [RegExp, ProviderKey][] = [
 export const ADDRESS = /^[^\s@<>()[\]\\,;:"]+@([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)$/
 
 export const domainOf = (address: string): string => {
-  const match = ADDRESS.exec(address.trim())
-  if (!match)
+  const domain = ADDRESS.exec(address.trim())?.[1]
+  if (!domain)
     throw new CliError("validation_error", "give a full mail address, such as name@example.com", { param: "address" })
-  return (match[1] as string).toLowerCase()
+  return domain.toLowerCase()
 }
+
+const isProviderKey = (name: string): name is ProviderKey => Object.hasOwn(KNOWN, name)
+
+const KEYS: ProviderKey[] = Object.keys(KNOWN).filter(isProviderKey)
 
 const found = (address: string, key: ProviderKey, found_by: Discovery["found_by"]): Discovery => {
   const known = KNOWN[key]
@@ -125,7 +129,7 @@ const found = (address: string, key: ProviderKey, found_by: Discovery["found_by"
 /** The steps for a saved profile: its address domain first, then its server host (a domain of its own on Yandex). */
 export const prepareFor = (address: string, host: string): { provider: string; prepare: Prepare } => {
   const domain = address.split("@")[1]?.toLowerCase() ?? ""
-  const key = BY_DOMAIN[domain] ?? (Object.keys(KNOWN) as ProviderKey[]).find((name) => KNOWN[name].imap.host === host)
+  const key = BY_DOMAIN[domain] ?? KEYS.find((name) => KNOWN[name].imap.host === host)
   return key
     ? { provider: KNOWN[key].provider, prepare: PROVIDER_PREPARE[key] }
     : { provider: domain || "this", prepare: GENERIC_PREPARE }
@@ -134,15 +138,13 @@ export const prepareFor = (address: string, host: string): { provider: string; p
 const slug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, "")
 
 /** The names `--provider` and the interactive choice accept, in table order. */
-export const PROVIDER_NAMES: string[] = (Object.keys(KNOWN) as ProviderKey[]).map((key) => KNOWN[key].provider)
+export const PROVIDER_NAMES: string[] = KEYS.map((key) => KNOWN[key].provider)
 
 /** A built-in provider picked by name, for an address whose own domain says nothing about its host. */
 export const discoverByName = (input: string, name: string): Discovery => {
   const address = input.trim().toLowerCase()
   domainOf(address)
-  const key = (Object.keys(KNOWN) as ProviderKey[]).find(
-    (candidate) => slug(candidate) === slug(name) || slug(KNOWN[candidate].provider) === slug(name),
-  )
+  const key = KEYS.find((candidate) => slug(candidate) === slug(name) || slug(KNOWN[candidate].provider) === slug(name))
   if (!key)
     throw new CliError("validation_error", `unknown provider ${name}; choose one of ${PROVIDER_NAMES.join(", ")}`, {
       param: "provider",
@@ -176,7 +178,7 @@ export const parseAutoconfig = (
     const security: Security | undefined = socket === "SSL" ? "tls" : socket === "STARTTLS" ? "starttls" : undefined
     if (!security) continue
     const user = attribute(block, "username") ?? "%EMAILADDRESS%"
-    const local = address.split("@")[0] as string
+    const local = address.split("@")[0] ?? ""
     const login = user.replace("%EMAILADDRESS%", address).replace("%EMAILLOCALPART%", local)
     return { address, imap: { host, port, security }, login }
   }

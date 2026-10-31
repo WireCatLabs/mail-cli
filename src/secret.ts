@@ -26,11 +26,13 @@ export interface PasswordOptions {
 
 /**
  * The app password of one profile: the keyring, or a private file when the keyring fails or the owner chose it
- * (WC-SECR-4). cli-base reads the file first, so a password kept there never waits on a locked keyring.
+ * (WC-SECR-4); cli-base reads the file first and warns once per run.
  */
 export const passwordStore = ({ env, profile, keyring = systemKeyring, himalaya }: PasswordOptions) => {
   // cli-base gives a moved run a temporary entry only with the system keyring; this check must agree with it.
   const moved = keyring === systemKeyring && isMovedRun({ appName: IDENTITY.appName, prefix: IDENTITY.envPrefix, env })
+  // A moved run must not reach the owner's real Himalaya entry either (WC-SECR-24).
+  const lookupHimalaya = himalaya ?? (moved ? undefined : secretToolLookup)
   const options = {
     configDir: resolvePaths({ appName: IDENTITY.appName, prefix: IDENTITY.envPrefix, env }).config,
     service: IDENTITY.appName,
@@ -40,23 +42,21 @@ export const passwordStore = ({ env, profile, keyring = systemKeyring, himalaya 
     env,
   }
   const credentials = new Credentials(options)
-  const file = new Credentials({ ...options, storage: "file" })
   const saved = () => credentials.read(profile)
   return {
     read: async (): Promise<{ secret: string; source: PasswordSource } | undefined> => {
       const found = saved()
       if (found) return found
-      const old = await (himalaya ?? secretToolLookup)(profile)
+      const old = await lookupHimalaya?.(profile)
       return old ? { secret: old, source: "himalaya" } : undefined
     },
-    /** Where the password went; a password kept in the keyring drops a copy in the file. */
+    /** Where the password went. */
     write: (secret: string, storage: "keyring" | "file" = "keyring"): "keyring" | "file" => {
       if (storage === "file") {
-        file.write(profile, secret)
+        new Credentials({ ...options, storage: "file" }).write(profile, secret)
         return "file"
       }
-      const where = credentials.write(profile, secret, { signIn: true })
-      return where === "keyring" ? "keyring" : "file"
+      return credentials.write(profile, secret, { signIn: true }) === "keyring" ? "keyring" : "file"
     },
     /**
      * A run with moved folders holding the owner's own password, which it may use but never remove (WC-SECR-24).

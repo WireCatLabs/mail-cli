@@ -1,23 +1,29 @@
+# Secret scanning. The default rules catch the well-known shapes (AWS, GitHub, Stripe, private
+# keys); the rule below catches the one secret only this project handles.
+#
+#   gitleaks git --redact .              the whole history
+#   gitleaks git --staged --redact .     what is about to be committed — the pre-commit hook
+#
+# `--redact` matters: without it a finding prints the secret it found into your terminal and your
+# CI log, which is a second leak on top of the first.
+
 [extend]
 useDefault = true
 
+[[rules]]
+id = "mail-app-password"
+description = "IMAP app password — reads the whole mailbox it was made for"
+# Providers print app passwords as 16 or more letters, some in groups of four (abcd efgh ijkl mnop)
+# or with dashes. Matched near its key name rather than by shape alone, because 16 plain letters
+# are also an ordinary word run in prose and fixtures.
+regex = '''(?i)(?:app[_ -]?password|MAIL_PASSWORD|imap[_-]?pass(?:word)?)["'\s:=]{1,10}([A-Za-z0-9]{4}(?:[ -]?[A-Za-z0-9]{4}){3,})'''
+secretGroup = 1
+tags = ["mail", "password"]
+
 [allowlist]
+description = "Synthetic values used by tests and documentation"
+regexTarget = "match"
+regexes = [
+  '''fixture-app-password-[A-Za-z0-9]+''',
+]
 paths = ['''pnpm-lock\.yaml''']
-
-# gitleaks' own rules know Google API keys (AIza…) only. Google calls its OAuth tokens opaque, so these prefixes are
-# the observed format, not a promised one: ya29. in Apigee's sample access token, 1// in the sample refresh token of
-# the web-server OAuth guide.
-[[rules]]
-id = "google-oauth-access-token"
-description = "Google OAuth 2.0 access token"
-regex = '''\b(ya29\.[A-Za-z0-9._-]{20,})'''
-secretGroup = 1
-keywords = ["ya29."]
-
-[[rules]]
-id = "google-oauth-refresh-token"
-description = "Google OAuth 2.0 refresh token"
-regex = '''(?:^|[^A-Za-z0-9/])(1//[A-Za-z0-9_-]{30,})'''
-secretGroup = 1
-entropy = 3.5
-keywords = ["1//"]

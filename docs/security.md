@@ -3,8 +3,14 @@
 What WireCat CLIs share — the keyring, permissions, MCP and what never reaches a log — is on the
 [shared security page](https://wirecat.dev/en/docs/security). This page keeps only what is particular to `mail`.
 
-`mail` keeps its settings in `config.json` and its state in the folders `mail doctor` shows. It talks only to the
-IMAP server of each profile, over TLS or STARTTLS; a connection with no encryption is refused. It cannot send mail.
+`mail` keeps its settings in `config.json` and its state in the folders `mail doctor` shows. It reads mail only from
+the IMAP server of each profile, over TLS or STARTTLS; a connection with no encryption is refused. It cannot send mail.
+
+`session start` on a new profile looks for the server of an address whose domain is not in its built-in table
+(Yandex, Gmail, iCloud, Mail.ru, Fastmail, Outlook). It sends the domain, never the full address, to three places:
+your DNS resolver, for the domain's MX record; Thunderbird's ISPDB at `https://autoconfig.thunderbird.net`; and
+`https://autoconfig.<domain>`, the domain's own server. It stops at the first answer. `--provider` (a name in the
+table) or `--host` skips every lookup, and nothing leaves the computer before the login to that server.
 
 The app password is typed at a terminal with no echo, or piped on stdin, and goes to the OS keyring (service
 `mail-cli`, account the profile name) only after the server accepted it. It is never an argument, never part of a

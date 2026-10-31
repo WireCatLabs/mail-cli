@@ -1,8 +1,0 @@
-[
-  {
-    "name": "mail-shared",
-    "members": ["tg", "max", "memo", "drive", "zm", "wa", "mail"],
-    "covers": ["commands", "upgrade", "notes", "meetings"],
-    "differences": []
-  }
-]

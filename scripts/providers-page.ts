@@ -9,6 +9,8 @@ const NAMES: Record<keyof typeof PROVIDER_PREPARE, string> = {
   outlook: "Outlook",
 }
 
+const isProvider = (key: string): key is keyof typeof PROVIDER_PREPARE => Object.hasOwn(PROVIDER_PREPARE, key)
+
 const section = (name: string, key: keyof typeof PROVIDER_PREPARE): string => {
   const { steps, notes, sources } = PROVIDER_PREPARE[key]
   return [
@@ -37,12 +39,15 @@ export const providersPage = (): string =>
     "named under every provider. Labels are quoted in the language of the provider's interface. A provider can change",
     "its screens; the help page is the source of truth.",
     "",
-    ...(Object.keys(NAMES) as (keyof typeof NAMES)[]).map((key) => section(NAMES[key], key)),
+    ...Object.keys(NAMES)
+      .filter(isProvider)
+      .map((key) => section(NAMES[key], key)),
     "## Any other provider",
     "",
     GENERIC_PREPARE.notes.join(" "),
     "",
     "`session start` finds the server of a new profile through the MX record, Thunderbird's ISPDB and the domain's autoconfig file. If it finds",
-    "none, pass `--host`, `--port` and `--security` yourself. See [use it](usage.md).",
+    "none, pass `--host`, `--port` and `--security` yourself. See [use it](usage.md). Those lookups send the domain of the address, never the",
+    "address itself, to your DNS resolver, to `autoconfig.thunderbird.net` and to `autoconfig.<domain>`; `--provider` or `--host` skips them.",
     "",
   ].join("\n")

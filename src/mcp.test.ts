@@ -1,5 +1,9 @@
+import { describeProgram } from "@wirecat/cli-base/commands"
+import { changesAuthorityAt, fetchesOnlyAt } from "@wirecat/cli-core/cli"
+import { toolsFromCommands } from "@wirecat/cli-core/mcp"
 import { expect, it } from "vitest"
-import { run } from "./program.js"
+import { configuration } from "./config.js"
+import { createProgram, run } from "./program.js"
 import { mcpClient } from "./testing/mcp.js"
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -50,4 +54,18 @@ it("mcp serve refuses a --permission that names no command", async () => {
   })
   expect(code).toBe(2)
   expect(err.join("")).toContain("nope.list")
+})
+
+it("pins the commands an agent can find, and whether each reads or writes", async () => {
+  const program = createProgram()
+  const tools = toolsFromCommands(describeProgram(program), {
+    includeUnavailable: true,
+    exclude: [["mcp"]],
+    authority: changesAuthorityAt(program),
+    fetchOnly: fetchesOnlyAt(program),
+    permissions: configuration.permissions,
+  })
+  const catalogue = Object.fromEntries(tools.map((tool) => [tool.command, tool.writes ? "write" : "read"]))
+  await expect(`${JSON.stringify(catalogue, null, 2)}\n`).toMatchFileSnapshot("../contracts/mcp-catalogue.json")
+  expect(catalogue).not.toHaveProperty("session start")
 })

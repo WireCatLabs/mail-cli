@@ -5,11 +5,6 @@ const LONG_RUNNING = `starts an HTTP server or a background process that runs un
 
 export const UNTESTED: { command: string; option?: string; reason: string }[] = [
   {
-    command: "doctor",
-    option: "--online",
-    reason: "connects to the mail server and npm; cli-core's app-mcp-command tests drive --online",
-  },
-  {
     command: "",
     option: "--help-all",
     reason: "Commander answers before any command runs, so the trace never sees it; contracts/help.snap covers help",

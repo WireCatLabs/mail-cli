@@ -6,12 +6,13 @@ import { configuration } from "./config.js"
 import { IDENTITY } from "./identity.js"
 import { createProgram, run } from "./program.js"
 
-const ran = async (argv: string[]) => {
+const ran = async (argv: string[], fetch?: typeof globalThis.fetch) => {
   const out: string[] = []
   const err: string[] = []
   const code = await run(argv, {
     streams: { data: (text) => out.push(text), diagnostic: (text) => err.push(text) },
     tty: false,
+    ...(fetch ? { fetch } : {}),
   })
   return { code, out: out.join("\n"), err: err.join("\n") }
 }
@@ -36,6 +37,16 @@ it("doctor answers without a config file", async () => {
   const { code, out } = await ran(["doctor", "--json"])
   expect(code).toBe(0)
   expect(json(out).item).toMatchObject({ config: { found: false, issues: [] }, profiles: [], read_only: null })
+})
+
+it("doctor --online says whether a newer version is published, and does not log in", async () => {
+  const published = (async () => Response.json({ version: "99.0.0" })) as unknown as typeof fetch
+  const { code, out } = await ran(["doctor", "--online", "--json"], published)
+  expect(code).toBe(0)
+  expect(json(out).item.online).toMatchObject({
+    ok: true,
+    version: { current: IDENTITY.version, latest: "99.0.0", newer: true },
+  })
 })
 
 const withConfig = async (text: string, check: (config: unknown) => void) => {
