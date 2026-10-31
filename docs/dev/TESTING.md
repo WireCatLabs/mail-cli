@@ -7,6 +7,8 @@ How the tests run, and what they never touch. The rules are the handbook's
   keyring that throws and no network, and points this CLI's config, state, cache and the shared store into that
   folder. `src/testing/sandbox.ts` names the config folder, which tests write into by name.
 - `pnpm test:coverage` adds the coverage floor in `vitest.config.ts`.
+- `pnpm test:slow` lists the 20 slowest tests and the 10 slowest files. No test waits for real time (`WC-TEST-5`):
+  waits go through an injected sleep, and `fakeClock()` from `@wirecat/cli-base/testing` records them.
 - Each run logs the command lines the tests drove (`coverage/argv.jsonl`). `pnpm test:matrix` turns that log into
   [test-matrix.md](test-matrix.md); a command or option no test drives needs a reason in
   `scripts/test-matrix-untested.ts`.
