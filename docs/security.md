@@ -14,8 +14,14 @@ table) or `--host` skips every lookup, and nothing leaves the computer before th
 
 The app password is typed at a terminal with no echo, or piped on stdin, and goes to the OS keyring (service
 `mail-cli`, account the profile name) only after the server accepted it. It is never an argument, never part of a
-URL, never written to `config.json`, a log or a run record, and no file is used when the keyring fails. `session end`
-forgets it. `mail` can read the old Himalaya entry; it never writes it.
+URL, never written to `config.json`, a log or a run record. When the keyring fails, it goes to `credentials.json` in
+`mail`'s config folder instead, mode 600, and `mail` says so once on stderr; `--credential-storage file` chooses that
+file outright, which we do not recommend. `session end` forgets it. `mail` can read the old Himalaya entry; it never writes it.
+
+A run with moved folders (`MAIL_CONFIG_DIR` and its neighbours, or a `HOME` or XDG folder away from your own) reads
+your `mail-cli` entry but never replaces or removes it; a password it stores goes to a temporary entry of its own.
+`session end` there removes only that temporary entry; on your password it removes nothing and answers
+`"kept": "owners-sign-in"`.
 
 Everything in a message is written by someone else: the subject, the body, the headers, the sender's name, folder
 names and file names. `sync` stores it as text and never follows a link or runs anything in it. Attachment bytes are

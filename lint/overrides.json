@@ -40,5 +40,12 @@
     "reason": "Lists the few profiles on this computer, every one at once by design (WC-ACCT-12), as gcal's session list does; a filter would let a caller narrow it to one and read that as the only profile. Review if a computer commonly holds more profiles than fit one screen.",
     "owner": "@WireCatLabs",
     "review_after": "2027-01-31"
+  },
+  {
+    "rule": "option-role",
+    "target": "session start --credential-storage",
+    "reason": "The sign-in flag of WC-SECR-4: keyring, which falls back to a private file by itself, or file. cli-base adds it to the vocabulary (WireCatLabs/cli-base#419); remove this when this CLI is on that cli-base.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-31"
   }
 ]

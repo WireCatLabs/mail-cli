@@ -36,7 +36,8 @@ password is a validation error, and the password is read from `MAIL_PASSWORD`. O
 `config set` or a new profile name.
 
 `session start` takes the password from the terminal or `MAIL_PASSWORD`, never from an option or a URL. It is stored only after the
-server accepted it. When the keyring has none, `mail` reads the entry Himalaya left (`secret-tool` service
+server accepted it, in the keyring; where the keyring fails, in a private file, said once on stderr, never asked
+(`--credential-storage file` chooses the file, not recommended). When neither has it, `mail` reads the entry Himalaya left (`secret-tool` service
 `himalaya`, account the profile name), so an existing setup needs no new password.
 
 `sync` reads INBOX and the Sent folder unless `--folder` or the profile's `folders` says otherwise, newest first,

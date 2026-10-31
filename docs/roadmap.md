@@ -17,9 +17,4 @@ AI agents the same commands. Every command is in the [command reference](command
 - **OAuth sign-in for Outlook, Microsoft 365 and Google Workspace.** Microsoft accepts only OAuth for IMAP, so these
   mailboxes cannot be added yet, and a Workspace domain that turns app passwords off needs it too.
 
-## Later
-
-- **`--wcat-describe`**, a machine-readable description of the tool for WireCat's shared tooling. It needs cli-base
-  0.66, and cli-core, which `mail` is built on, does not support that version yet.
-
 What each released version changed is in the [changelog](../CHANGELOG.md).

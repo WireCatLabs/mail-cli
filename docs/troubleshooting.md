@@ -13,7 +13,7 @@ support request.
 | "no app password for profile" | Run `mail <profile> session start`, or set `MAIL_PASSWORD` for one run. |
 | "the mail server refused the login" | The app password is wrong, or IMAP and app passwords are off. The steps for every provider are in [prepare the mailbox](providers.md). Yandex also needs 2 to 3 hours after a new app password. Then `session start` again. |
 | `rate_limited` | The server is limiting this account. Wait, then run `sync` again; mail already stored is skipped. |
-| "the OS keyring is not available" | The keyring is locked or no secret service runs. Unlock it and try again; the password is never stored in a file. |
+| "could not reach the OS keyring" | The keyring is locked or no secret service runs. The password was kept in a private file instead (`credential_storage: "file"`). Unlock the keyring and run `session start` again to move it back. |
 | A write is refused | The profile's permissions or `MAIL_READ_ONLY` stop it; see [settings](configuration.md#permissions). |
 
 Never paste a token, a password or private content into a support request.

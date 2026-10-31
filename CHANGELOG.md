@@ -37,4 +37,13 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   agent over stdio, or over HTTP behind your own tunnel with `--http`; the profile's permissions decide what runs, and
   `--permission` only tightens them. `mail skill install` installs the tool's instructions for Claude Code, Codex,
   Gemini CLI and OpenClaw, and for Hermes with `--for hermes`.
+- **The app password falls back to a private file when the keyring fails, and is never asked about.** `session start`
+  keeps the password in `credentials.json` (mode 600) in the config folder, says so once on stderr, and answers
+  `credential_storage`. `--credential-storage file` chooses the file outright, not recommended. `session status` can
+  answer `password_from: "file"`.
+- **A run with moved folders never removes the owner's app password from the OS keyring.** Such a run reads the owner's
+  password but never replaces or removes it, and stores a new one in a temporary entry. `session end` on the owner's
+  password removes nothing and answers `kept: "owners-sign-in"`.
+- **`wcat mail` runs the tool, and `wcat --help` lists it.** The package installs `wcat-mail` beside `mail`, and
+  `wcat-mail --wcat-describe` prints the tool's name, version and description for `wcat`.
 - **The commands every WireCat tool shares:** `doctor`, `commands`, `config`, `skill`, `runs` and `upgrade`.

@@ -31,8 +31,10 @@ Languages: ru, en.
   Gmail's X-GM-MSGID), else a hash of the Message-ID header. On a server with neither (Yandex) a listing asks only for
   UID, flags, date and size (`quick`) and the hash is taken from the Message-ID of the raw message (`identify`), which
   must equal imapflow's ENVELOPE value (the trimmed first header) or stored mail would get a second id.
-- **Password:** OS keyring only (service `mail-cli`, account the profile); `MAIL_PASSWORD` for a run with no keyring;
-  read-only fallback to Himalaya's `secret-tool` entry. No file fallback.
+- **Password:** OS keyring (service `mail-cli`, account the profile); when it fails, a 0600 `credentials.json` in the
+  config folder without asking (WC-SECR-4, owner 2026-10-31, which replaces "no file fallback");
+  `--credential-storage file` chooses the file. `MAIL_PASSWORD` first; read-only fallback to Himalaya's `secret-tool`
+  entry.
 - **imapflow, checked against 2.9.1:** a header or body fetch uses `BODY.PEEK` (read in `fetch.js`; the test asserts
   the commands sent to a fake server). It opens a folder with `getMailboxLock` and reports `uidValidity` as a bigint.
   A Gmail style `NO [THROTTLED]` surfaces as a plain error with `responseStatus` NO and the code only in the parsed

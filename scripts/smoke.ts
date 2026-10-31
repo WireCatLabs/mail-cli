@@ -54,12 +54,14 @@ try {
     WIRECAT_STATE_DIR: join(temp, "wirecat"),
     MESSAGING_STORE: join(temp, "never-owner.db"),
     MAIL_NO_UPDATE_CHECK: "1",
+    // A moved run still reads the owner's keyring entry; `disabled:`, since an unset variable falls back to the bus.
     DBUS_SESSION_BUS_ADDRESS: "disabled:",
   }
   const bin = join(installed, "node_modules", name, "dist/bin/mail.js")
   const run = (args: string[]) =>
     execFileSync(process.execPath, [bin, ...args], { cwd: temp, env, encoding: "utf8", timeout: 20000 })
   assert.equal(run(["--version"]).trim(), version)
+  assert.deepEqual(JSON.parse(run(["--wcat-describe"])).name, "mail")
   assert.match(run(["--help"]), /Usage: mail/)
   const tree: unknown = JSON.parse(run(["commands", "--json"]))
   const names =

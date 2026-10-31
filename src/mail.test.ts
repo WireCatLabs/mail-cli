@@ -2,9 +2,17 @@ import { EventEmitter } from "node:events"
 import { mkdtempSync, readFileSync, statSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { brokenKeyring, memoryKeyring } from "@wirecat/cli-base"
+import {
+  brokenKeyring,
+  isMovedRun,
+  memoryKeyring,
+  movedRunService,
+  pathsAreOverridden,
+  resolvePaths,
+  systemKeyring,
+} from "@wirecat/cli-base"
 import { openStore, storePath } from "@wirecat/cli-core/store"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
 import { discover } from "./discovery.js"
 import { type ImapEndpoint, type ImapTuning, imapSource } from "./mail/imap.js"
@@ -171,7 +179,12 @@ describe("session start of a new profile", () => {
 
     const started = await mail(["ya", "session", "start", "--address", ADDRESS, "--json"], typed(PASSWORD))
     expect(started.code).toBe(0)
-    expect(item(started.out)).toMatchObject({ profile: "ya", signed_in: true, created: true, stored_in: "keyring" })
+    expect(item(started.out)).toMatchObject({
+      profile: "ya",
+      signed_in: true,
+      created: true,
+      credential_storage: "keyring",
+    })
     expect(JSON.parse(readFileSync(config(env), "utf8")).profiles.ya).toEqual({
       address: ADDRESS,
       imap_host: "imap.yandex.com",
@@ -329,13 +342,32 @@ describe("session start of a new profile", () => {
 })
 
 describe("session", () => {
-  it("does not store a password when the keyring is not available", async () => {
-    const { mail, everything } = await harness()
+  it("keeps the password in a private file without asking when the keyring is not available", async () => {
+    const { mail, env, everything } = await harness()
     await profileSet(mail)
-    const failed = await mail(["ya", "session", "start", "--json"], { ...typed(PASSWORD), keyring: brokenKeyring() })
-    expect(failed.code).not.toBe(0)
-    expect(failed.err).toContain("keyring")
-    expect(everything([failed])).not.toContain(PASSWORD)
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true)
+    const started = await mail(["ya", "session", "start", "--json"], { ...typed(PASSWORD), keyring: brokenKeyring() })
+    const status = await mail(["ya", "session", "status", "--json"], { keyring: brokenKeyring() })
+    const warnings = stderr.mock.calls.filter(([text]) => String(text).includes("could not reach the OS keyring"))
+    stderr.mockRestore()
+    expect(started.code).toBe(0)
+    expect(item(started.out)).toMatchObject({ signed_in: true, credential_storage: "file" })
+    expect(warnings).toHaveLength(1)
+    expect(item(status.out)).toMatchObject({ state: "saved", password_from: "file" })
+    const file = join(env.MAIL_CONFIG_DIR ?? "", "credentials.json")
+    if (process.platform !== "win32") expect(statSync(file).mode & 0o777).toBe(0o600)
+    expect(everything([started, status])).not.toContain(PASSWORD)
+  })
+
+  it("keeps the password in the file when asked, and moves it back on the next keyring sign-in", async () => {
+    const { mail, keyring } = await harness()
+    await profileSet(mail)
+    const inFile = await mail(["ya", "session", "start", "--credential-storage", "file", "--json"], typed(PASSWORD))
+    expect(item(inFile.out)).toMatchObject({ credential_storage: "file" })
+    expect(keyring.entries.size).toBe(0)
+    const back = await mail(["ya", "session", "start", "--json"], typed(PASSWORD))
+    expect(item(back.out)).toMatchObject({ credential_storage: "keyring" })
+    expect(item((await mail(["ya", "session", "status", "--json"])).out)).toMatchObject({ password_from: "keyring" })
   })
 
   it("refuses an empty password", async () => {
@@ -354,7 +386,12 @@ describe("session", () => {
 
     const started = await mail(["ya", "session", "start", "--json"], typed(PASSWORD))
     expect(started.code).toBe(0)
-    expect(item(started.out)).toMatchObject({ profile: "ya", signed_in: true, stored_in: "keyring", login: ADDRESS })
+    expect(item(started.out)).toMatchObject({
+      profile: "ya",
+      signed_in: true,
+      credential_storage: "keyring",
+      login: ADDRESS,
+    })
     const [key, secret] = [...keyring.entries][0] ?? []
     expect(key).toMatch(/^mail-cli[^:]*:/)
     expect(key).toContain(":ya")
@@ -392,6 +429,57 @@ describe("session", () => {
     await mail(["ya", "session", "start", "--json"], typed(PASSWORD))
     const after = await mail(["session", "list", "--json"])
     expect(JSON.parse(after.out).items).toEqual([{ profile: "ya", address: ADDRESS, password_from: "keyring" }])
+  })
+
+  describe("with only HOME moved, against the system keyring (WC-SECR-24)", () => {
+    afterEach(() => vi.restoreAllMocks())
+
+    const movedHome = async () => {
+      const h = await harness()
+      const env: NodeJS.ProcessEnv = { ...h.env, HOME: mkdtempSync(join(tmpdir(), "home-")) }
+      for (const kind of ["CONFIG", "STATE", "CACHE"]) delete env[`MAIL_${kind}_DIR`]
+      const paths = { appName: "mail-cli", prefix: "MAIL", env }
+      expect(pathsAreOverridden(paths)).toBe(false)
+      expect(isMovedRun(paths)).toBe(true)
+      const entries = new Map<string, string>([["mail-cli\u0000ya", "owners-password"]])
+      const key = (service: string, account: string) => `${service}\u0000${account}`
+      vi.spyOn(systemKeyring, "get").mockImplementation(
+        (service, account) => entries.get(key(service, account)) ?? null,
+      )
+      vi.spyOn(systemKeyring, "set").mockImplementation((service, account, secret) => {
+        entries.set(key(service, account), secret)
+      })
+      const deleted = vi
+        .spyOn(systemKeyring, "delete")
+        .mockImplementation((service, account) => entries.delete(key(service, account)))
+      const end = () => h.mail(["ya", "session", "end", "--json"], { env, keyring: systemKeyring })
+      const temporary = key(movedRunService("mail-cli", resolvePaths(paths).config), "ya")
+      return { end, entries, deleted, temporary }
+    }
+
+    it("keeps the owner's password, removes nothing, and the answer says so", async () => {
+      const { end, entries, deleted } = await movedHome()
+
+      const ended = await end()
+
+      expect(ended.code).toBe(0)
+      expect(item(ended.out)).toEqual({ profile: "ya", ended: false, mail: "retained", kept: "owners-sign-in" })
+      expect(ended.err).toContain("owner's password")
+      expect(deleted).not.toHaveBeenCalled()
+      expect(entries.get("mail-cli\u0000ya")).toBe("owners-password")
+    })
+
+    it("ends a sign-in the run made itself, and removes only its temporary entry", async () => {
+      const { end, entries, deleted, temporary } = await movedHome()
+      entries.set(temporary, "own-password")
+
+      const ended = await end()
+
+      expect(item(ended.out)).toEqual({ profile: "ya", ended: true, mail: "retained" })
+      expect(deleted.mock.calls.map(([service]) => service)).not.toContain("mail-cli")
+      expect(entries.has(temporary)).toBe(false)
+      expect(entries.get("mail-cli\u0000ya")).toBe("owners-password")
+    })
   })
 })
 
