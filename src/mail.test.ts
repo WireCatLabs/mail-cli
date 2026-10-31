@@ -179,7 +179,12 @@ describe("session start of a new profile", () => {
 
     const started = await mail(["ya", "session", "start", "--address", ADDRESS, "--json"], typed(PASSWORD))
     expect(started.code).toBe(0)
-    expect(item(started.out)).toMatchObject({ profile: "ya", signed_in: true, created: true, stored_in: "keyring" })
+    expect(item(started.out)).toMatchObject({
+      profile: "ya",
+      signed_in: true,
+      created: true,
+      credential_storage: "keyring",
+    })
     expect(JSON.parse(readFileSync(config(env), "utf8")).profiles.ya).toEqual({
       address: ADDRESS,
       imap_host: "imap.yandex.com",
@@ -337,13 +342,32 @@ describe("session start of a new profile", () => {
 })
 
 describe("session", () => {
-  it("does not store a password when the keyring is not available", async () => {
-    const { mail, everything } = await harness()
+  it("keeps the password in a private file without asking when the keyring is not available", async () => {
+    const { mail, env, everything } = await harness()
     await profileSet(mail)
-    const failed = await mail(["ya", "session", "start", "--json"], { ...typed(PASSWORD), keyring: brokenKeyring() })
-    expect(failed.code).not.toBe(0)
-    expect(failed.err).toContain("keyring")
-    expect(everything([failed])).not.toContain(PASSWORD)
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true)
+    const started = await mail(["ya", "session", "start", "--json"], { ...typed(PASSWORD), keyring: brokenKeyring() })
+    const status = await mail(["ya", "session", "status", "--json"], { keyring: brokenKeyring() })
+    const warnings = stderr.mock.calls.filter(([text]) => String(text).includes("could not reach the OS keyring"))
+    stderr.mockRestore()
+    expect(started.code).toBe(0)
+    expect(item(started.out)).toMatchObject({ signed_in: true, credential_storage: "file" })
+    expect(warnings).toHaveLength(1)
+    expect(item(status.out)).toMatchObject({ state: "saved", password_from: "file" })
+    const file = join(env.MAIL_CONFIG_DIR ?? "", "credentials.json")
+    if (process.platform !== "win32") expect(statSync(file).mode & 0o777).toBe(0o600)
+    expect(everything([started, status])).not.toContain(PASSWORD)
+  })
+
+  it("keeps the password in the file when asked, and moves it back on the next keyring sign-in", async () => {
+    const { mail, keyring } = await harness()
+    await profileSet(mail)
+    const inFile = await mail(["ya", "session", "start", "--credential-storage", "file", "--json"], typed(PASSWORD))
+    expect(item(inFile.out)).toMatchObject({ credential_storage: "file" })
+    expect(keyring.entries.size).toBe(0)
+    const back = await mail(["ya", "session", "start", "--json"], typed(PASSWORD))
+    expect(item(back.out)).toMatchObject({ credential_storage: "keyring" })
+    expect(item((await mail(["ya", "session", "status", "--json"])).out)).toMatchObject({ password_from: "keyring" })
   })
 
   it("refuses an empty password", async () => {
@@ -362,7 +386,12 @@ describe("session", () => {
 
     const started = await mail(["ya", "session", "start", "--json"], typed(PASSWORD))
     expect(started.code).toBe(0)
-    expect(item(started.out)).toMatchObject({ profile: "ya", signed_in: true, stored_in: "keyring", login: ADDRESS })
+    expect(item(started.out)).toMatchObject({
+      profile: "ya",
+      signed_in: true,
+      credential_storage: "keyring",
+      login: ADDRESS,
+    })
     const [key, secret] = [...keyring.entries][0] ?? []
     expect(key).toMatch(/^mail-cli[^:]*:/)
     expect(key).toContain(":ya")
