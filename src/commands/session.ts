@@ -62,10 +62,21 @@ const startCommand = () =>
     .option("--security <mode>", "tls or starttls (default tls)", securityOf)
     .option("--login <login>", "the login name, when it is not the full address")
     .option("--folder <folder>", "sync only this folder; repeat it for more", collect)
-    .action(async function (this: Command, flags: MailboxFlags & { address?: string }) {
+    .option(
+      "--credential-storage <storage>",
+      "where the password is kept: keyring (the default, which falls back to a private file by itself when no " +
+        "keyring works), or file, not recommended",
+      "keyring",
+    )
+    .action(async function (this: Command, flags: MailboxFlags & { address?: string; credentialStorage: string }) {
       const context = contextOf(this)
       const { environment, env } = context
       refuseCommandName(context.profile, commandWords(rootOf(this)), IDENTITY.command)
+      const storage = flags.credentialStorage
+      if (storage !== "keyring" && storage !== "file")
+        throw new CliError("validation_error", "--credential-storage takes keyring or file", {
+          param: "credential-storage",
+        })
       refuseOffline(context.flags)
       refuseUnderReadOnly(this, "session start")
       const output = outputFor(this)
@@ -142,12 +153,12 @@ const startCommand = () =>
       )
       // Stored only after the server accepted it (WC-SECR-5), the profile with it.
       const config = created?.()
-      passwordsOf(context).write(typed)
+      const stored = passwordsOf(context).write(typed, storage)
       answer(this, {
         profile: context.profile,
         signed_in: true,
         login: endpoint.login,
-        stored_in: "keyring",
+        credential_storage: stored,
         folders: result.folders,
         ...(config ? { created: true, config } : {}),
       })

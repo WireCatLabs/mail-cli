@@ -24,6 +24,11 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   `--permission <key=level>`, which only tightens; `mcp config`, `mcp add` and `mcp check` are new. Permission keys are
   command paths (`sync=deny`). `doctor` also reports the shared store's path and the profile lock.
 - `mcp serve` over stdio no longer refuses `--json`.
+- **The app password falls back to a private file when the keyring fails, and is never asked about.** `session start`
+  used to fail with "the OS keyring is not available". Now it keeps the password in `credentials.json` (mode 600) in
+  the config folder, says so once on stderr, and answers `credential_storage` (was `stored_in`).
+  `--credential-storage file` chooses the file outright, not recommended. `session status` can answer
+  `password_from: "file"`.
 
 ### Fixed
 

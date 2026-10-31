@@ -75,6 +75,7 @@ mail session start [options]
 | `--security <mode>` | tls or starttls (default tls). |
 | `--login <login>` | the login name, when it is not the full address. |
 | `--folder <folder>` | sync only this folder; repeat it for more. |
+| `--credential-storage <storage>` | where the password is kept: keyring (the default, which falls back to a private file by itself when no keyring works), or file, not recommended. Default: `keyring`. |
 
 **Returns:** sign in; a new profile is created first
 
