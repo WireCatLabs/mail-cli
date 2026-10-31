@@ -46,4 +46,5 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   password removes nothing and answers `kept: "owners-sign-in"`.
 - **`wcat mail` runs the tool, and `wcat --help` lists it.** The package installs `wcat-mail` beside `mail`, and
   `wcat-mail --wcat-describe` prints the tool's name, version and description for `wcat`.
+- **`doctor --online` says whether a newer version is published.** It makes no call to the mail server.
 - **The commands every WireCat tool shares:** `doctor`, `commands`, `config`, `skill`, `runs` and `upgrade`.
