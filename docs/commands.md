@@ -179,13 +179,17 @@ mail status
 
 ## `mail doctor`
 
-check this installation: version, paths, config, profiles, store; no keyring or network
+the state this installation is in, without connecting unless --online
 
 ```sh
-mail doctor
+mail doctor [options]
 ```
 
-**Returns:** check this installation: version, paths, config, profiles, store; no keyring…
+| Option | What it does |
+|---|---|
+| `--online` | also connect once and read the account; sends nothing. |
+
+**Returns:** the state this installation is in, without connecting unless --online
 
 **Example:** `mail doctor`, `mail doctor --json`
 
@@ -425,12 +429,8 @@ the settings in force, and where each one came from
 the profile, the profiles that exist, and each setting with where it came from
 
 ```sh
-mail config show [options]
+mail config show
 ```
-
-| Option | What it does |
-|---|---|
-| `--bot` | the settings a bot command on this profile gets, rather than the personal account's. |
 
 **Returns:** the profile, the profiles that exist, and each setting with where it came from
 
@@ -454,8 +454,6 @@ mail config set <setting> <value> [options]
 | Option | What it does |
 |---|---|
 | `--defaults` | change what every profile gets, rather than this profile. |
-| `--personal` | only for personal accounts — the personal section of the file. |
-| `--bot` | only for bots — the bot section of the file. |
 
 **Returns:** save a setting to the configuration file
 
@@ -478,8 +476,6 @@ mail config unset <setting> [options]
 | Option | What it does |
 |---|---|
 | `--defaults` | change what every profile gets, rather than this profile. |
-| `--personal` | only for personal accounts — the personal section of the file. |
-| `--bot` | only for bots — the bot section of the file. |
 
 **Returns:** remove a setting from the configuration file
 

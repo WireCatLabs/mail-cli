@@ -29,6 +29,11 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   the config folder, says so once on stderr, and answers `credential_storage` (was `stored_in`).
   `--credential-storage file` chooses the file outright, not recommended. `session status` can answer
   `password_from: "file"`.
+- `doctor --online` (cli-core 0.507.0) also connects once and reads the account, sending nothing; without the flag
+  `doctor` connects to nothing, as before. Answers with a page may carry `page.total` (cli-base 0.67.0).
+- The password file fallback now comes from cli-base 0.68.0 (`@wirecat/cli-base` 0.68.0, `@wirecat/cli-core`
+  0.507.0): a password in the file is read from there, and `session start` that reaches the keyring removes the file
+  copy. Answers are unchanged; the keyring warning still comes once per run.
 
 ### Fixed
 

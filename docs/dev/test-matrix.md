@@ -7,7 +7,7 @@ ran it · ⛔ not tested offline, with the reason and where it is checked instea
 Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 [TESTING.md](TESTING.md) for how, and for the states and failures that cut across commands.
 
-**75 ✅ · 17 ⛔ · 0 ❌** — 29 commands, 63 options.
+**75 ✅ · 18 ⛔ · 0 ❌** — 29 commands, 64 options.
 
 | Command | Option | | Note |
 |---|---|---|---|
@@ -35,6 +35,7 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `sync` | `--rescan` | ✅ |  |
 | `status` |  | ✅ |  |
 | `doctor` |  | ✅ |  |
+| `doctor` | `--online` | ⛔ | connects to the mail server and npm; cli-core's app-mcp-command tests drive --online |
 | `skill show` |  | ✅ |  |
 | `skill show` | `--for` | ✅ |  |
 | `skill install` |  | ✅ |  |
