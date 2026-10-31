@@ -1,0 +1,21 @@
+{
+  "commands": "read",
+  "commands info": "read",
+  "session status": "read",
+  "session list": "read",
+  "account check": "read",
+  "folders list": "read",
+  "sync": "read",
+  "status": "read",
+  "doctor": "read",
+  "skill show": "read",
+  "skill install": "write",
+  "skill status": "read",
+  "upgrade": "write",
+  "config show": "read",
+  "config set": "write",
+  "config unset": "write",
+  "runs list": "read",
+  "runs show": "read",
+  "runs path": "read"
+}
