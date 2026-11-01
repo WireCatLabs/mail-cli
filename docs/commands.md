@@ -423,6 +423,34 @@ mail messages show <message> [options]
 
 **Example:** `mail ya messages show 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E'`, `mail ya messages show 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E' --before-n 2`
 
+### `mail messages export`
+
+copy the original messages of stored mail that match a query into mbox files (one per folder) or a Maildir++ tree, for backup or for mu and notmuch. The store keeps text, not the original source, so each message is read from the server again; the destination folder is private (mode 700, files 600)
+
+**Changes something on this computer only.**
+
+```sh
+mail messages export [query] [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `query` | optional | which stored mail: the same query as `search messages`; all of it if left out. |
+
+| Option | What it does |
+|---|---|
+| `--format <format>` | mbox files or a Maildir++ tree. One of: `mbox`, `maildir`. Default: `mbox`. |
+| `--output <file>` | the folder to write the export into (not one file); made private if it does not exist. |
+| `--folder <folder>` | only mail filed in this folder; repeat it for more (default: the folders sync reads). |
+| `--limit <n>` | write at most this many messages in this run, newest first. |
+| `--max-pages <pages>` | at most this many requests to the mail server in this run; as many as fit the deadline if not given. |
+| `--resume` | go on with the export already in the folder, skipping what it holds. |
+| `--replace` | write into a folder that has something in it, over files of the same name. |
+
+**Returns:** mail export — address, format, destination, folders, state, matched, exported, already_exported, and 5 more; every field: mail commands info messages export
+
+**Example:** `mail ya messages export 'from:ann@example.com' --output ~/mail-backup`, `mail ya messages export --folder INBOX --format maildir --output ~/Maildir`, `mail ya messages export 'date>30d' --limit 500 --output ~/mail-backup --resume`
+
 ### `mail messages mark-read`
 
 mark messages read; on the server first, then in the store, so search shows it at once
@@ -796,6 +824,199 @@ mail attachments download <message> [number] [options]
 
 **Example:** `mail ya attachments download 'msg:email/me%40example.com/thread-1/1001' --output-dir ./invoices`, `mail ya attachments download 'msg:email/me%40example.com/thread-1/1001' 2 --output-dir ./invoices`
 
+## `mail stats`
+
+counts over the mail sync stored
+
+### `mail stats messages`
+
+counts of stored emails
+
+#### `mail stats messages top`
+
+group this profile's stored mail by sender, mailing list (List-Id) or sender domain, the biggest group first; unread and size help decide what to unsubscribe from or clean up
+
+```sh
+mail stats messages top [options]
+```
+
+| Option | What it does |
+|---|---|
+| `--by <group>` | what to group by. One of: `sender`, `list`, `domain`. Default: `sender`. |
+| `--limit <n>` | how many groups, at most 200. Default: `20`. |
+
+**Returns:** mail group — group, emails, unread, bytes, last_email_at, untrusted; every field: mail commands info stats messages top
+
+**Example:** `mail ya stats messages top`, `mail ya stats messages top --by list --limit 10`
+
+## `mail drafts`
+
+drafts in the mailbox's Drafts folder: an agent writes them, the owner checks and sends them
+
+### `mail drafts list`
+
+the drafts in the mailbox's Drafts folder, newest first, read from the server
+
+```sh
+mail drafts list [options]
+```
+
+| Option | What it does |
+|---|---|
+| `--limit <n>` | at most this many (default 50, at most 500). |
+
+**Returns:** mail draft — id, uid, subject, from, to, cc, bcc, date, and 3 more; every field: mail commands info drafts list
+
+**Example:** `mail ya drafts list`, `mail ya drafts list --limit 5 --json`
+
+### `mail drafts create`
+
+save a new message in the Drafts folder; nothing is sent, and the owner sends it from any mail app. --reply-to answers a stored message in its thread
+
+**Changes something in the service.**
+
+```sh
+mail drafts create [text] [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `text` | optional | the text; - reads it from stdin. |
+
+| Option | What it does |
+|---|---|
+| `--to <address>` | who it goes to; repeat it for more. |
+| `--cc <address>` | a copy to; repeat it for more. |
+| `--bcc <address>` | a blind copy to; repeat it for more. |
+| `--subject <text>` | the subject line. |
+| `--dry-run` | build the draft and show it; store nothing. |
+| `--reply-to <message>` | answer this stored message: its sender, its subject with Re:, in its thread. |
+| `--reply-all` | with --reply-to, also everyone it went to, but you. |
+
+**Returns:** mail draft change — action, applied, id, folder, uid, replaced_uid, subject, to, and 2 more; every field: mail commands info drafts create
+
+**Example:** `mail ya drafts create --to anna@example.com --subject 'Monday' 'Shall we meet at ten?'`, `mail ya drafts create --reply-to msg:email/me%40example.com/t1/m1 --reply-all 'Thanks, agreed.'`
+
+### `mail drafts update`
+
+replace a draft with a new version under the same id: each given field replaces the old one (a --to list replaces the whole To), the rest, the thread and the attachments stay; the old version is removed after
+
+**Changes something in the service.**
+
+```sh
+mail drafts update <draft> [text] [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `draft` | required | the draft's id, as drafts list shows it. |
+| `text` | optional | the new text; - reads it from stdin. |
+
+| Option | What it does |
+|---|---|
+| `--to <address>` | who it goes to; repeat it for more. |
+| `--cc <address>` | a copy to; repeat it for more. |
+| `--bcc <address>` | a blind copy to; repeat it for more. |
+| `--subject <text>` | the subject line. |
+| `--dry-run` | build the draft and show it; store nothing. |
+
+**Returns:** mail draft change — action, applied, id, folder, uid, replaced_uid, subject, to, and 2 more; every field: mail commands info drafts update
+
+**Example:** `mail ya drafts update 5b0e1c2a@example.com 'New text, the rest kept'`, `mail ya drafts update 5b0e1c2a@example.com --to anna@example.com --to boris@example.com`
+
+### `mail drafts delete`
+
+delete a draft from the Drafts folder for good, with no restore; a preview without --yes
+
+**Changes something in the service.**
+
+```sh
+mail drafts delete <draft> [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `draft` | required | the draft's id, as drafts list shows it. |
+
+| Option | What it does |
+|---|---|
+| `--yes` | delete it; without it, only a preview. |
+| `--dry-run` | only preview, even with --yes. |
+
+**Returns:** mail draft change — action, applied, id, folder, uid, replaced_uid, subject, to, and 2 more; every field: mail commands info drafts delete
+
+**Example:** `mail ya drafts delete 5b0e1c2a@example.com --yes`
+
+## `mail tags`
+
+your own tags on stored mail, kept in the local store and shared with memo; never sent to the server
+
+### `mail tags add`
+
+put your own tags on one stored email or conversation; they stay in the local store, never on the server
+
+**Changes something on this computer only.**
+
+```sh
+mail tags add <tag> [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `tag` | required | one or more tags: 1–32 letters a–z, digits and hyphens; upper case is lowered. |
+
+| Option | What it does |
+|---|---|
+| `--message <message>` | the email: its msg:email/… reference, as search messages shows it. |
+| `--chat <chat>` | the conversation: its chat:email/… reference, as conversations list shows it. |
+
+**Returns:** mail tag change — target, unchanged, added, removed; every field: mail commands info tags add
+
+**Example:** `mail ya tags add invoices --message msg:email/me%40example.com/t1/m1`
+
+### `mail tags remove`
+
+take your own tags off one stored email or conversation
+
+**Changes something on this computer only.**
+
+```sh
+mail tags remove <tag> [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `tag` | required | one or more tags: 1–32 letters a–z, digits and hyphens; upper case is lowered. |
+
+| Option | What it does |
+|---|---|
+| `--message <message>` | the email: its msg:email/… reference, as search messages shows it. |
+| `--chat <chat>` | the conversation: its chat:email/… reference, as conversations list shows it. |
+
+**Returns:** mail tag change — target, unchanged, added, removed; every field: mail commands info tags remove
+
+**Example:** `mail ya tags remove invoices --message msg:email/me%40example.com/t1/m1`
+
+### `mail tags list`
+
+the emails and conversations of this mailbox you tagged; search messages tag:<tag> finds them too
+
+```sh
+mail tags list [query] [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `query` | optional | field:value terms that narrow the list — the fields are below. |
+
+| Option | What it does |
+|---|---|
+| `--limit <n>` | at most this many (default 100, at most 1000). |
+
+**Returns:** mail tag — tag, type, target, name, created_at; every field: mail commands info tags list
+
+**Example:** `mail ya tags list`, `mail ya tags list tag:invoices`
+
 ## `mail doctor`
 
 the state this installation is in, without connecting unless --online
@@ -1067,7 +1288,7 @@ mail config set <setting> <value> [options]
 
 | Argument | | What it is |
 |---|---|---|
-| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, runs_size_limit_mb, permissions, requests_per_minute, speech_model, picture_search, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, smtp_host, smtp_port, smtp_security, auth, folders, update_check, skill_hint, search_stemmers.cyrillic, search_stemmers.latin. |
+| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, runs_size_limit_mb, permissions, sends_per_hour, requests_per_minute, speech_model, picture_search, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, smtp_host, smtp_port, smtp_security, auth, folders, update_check, skill_hint, search_stemmers.cyrillic, search_stemmers.latin. |
 | `value` | required | a number, true or false; for a group tg:work,max:Alice,email:me@x. |
 
 | Option | What it does |
@@ -1090,7 +1311,7 @@ mail config unset <setting> [options]
 
 | Argument | | What it is |
 |---|---|---|
-| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, runs_size_limit_mb, permissions, requests_per_minute, speech_model, picture_search, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, smtp_host, smtp_port, smtp_security, auth, folders, update_check, skill_hint, search_stemmers.cyrillic, search_stemmers.latin. |
+| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, runs_size_limit_mb, permissions, sends_per_hour, requests_per_minute, speech_model, picture_search, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, smtp_host, smtp_port, smtp_security, auth, folders, update_check, skill_hint, search_stemmers.cyrillic, search_stemmers.latin. |
 
 | Option | What it does |
 |---|---|

@@ -82,8 +82,8 @@ export interface MailWrites {
   copy(folder: string, validity: string, uids: readonly number[], to: string): Promise<Moved>
   /** `\Deleted` and UID EXPUNGE of exactly these UIDs: gone for good. Only undoing a copy calls it. */
   expunge(folder: string, validity: string, uids: readonly number[]): Promise<void>
-  /** W3 drafts: stores a message the tool built, with its flags; the new UID and UIDVALIDITY where the server says (APPENDUID). */
-  append?(folder: string, raw: Uint8Array, flags: readonly string[]): Promise<{ uid?: number; validity?: string }>
+  /** Stores a message the tool built, with its flags; the new UID and UIDVALIDITY where the server says (APPENDUID). */
+  append(folder: string, raw: Uint8Array, flags: readonly string[]): Promise<{ uid?: number; validity?: string }>
   createFolder(path: string): Promise<void>
   renameFolder(path: string, to: string): Promise<void>
   deleteFolder(path: string): Promise<void>

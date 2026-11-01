@@ -63,16 +63,65 @@
     "review_after": "2027-02-01"
   },
   {
+    "rule": "unknown-resource",
+    "target": "drafts",
+    "reason": "E-mails in the mailbox's Drafts folder, written by an agent and sent by the owner; cli-core already has drafts as a permission resource. cli-base PR #435 adds the word; drop this when mail can take a cli-base with it (cli-core still pins cli-base below 0.69).",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
+    "rule": "option-role",
+    "target": "drafts create --cc",
+    "reason": "An e-mail address that gets a copy. cli-base PR #435 adds the word; drop this when mail can take a cli-base with it (cli-core still pins cli-base below 0.69).",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
+    "rule": "option-role",
+    "target": "drafts create --bcc",
+    "reason": "An e-mail address that gets a blind copy. cli-base PR #435 adds the word; drop this when mail can take a cli-base with it (cli-core still pins cli-base below 0.69).",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
+    "rule": "option-role",
+    "target": "drafts update --cc",
+    "reason": "An e-mail address that gets a copy. cli-base PR #435 adds the word; drop this when mail can take a cli-base with it (cli-core still pins cli-base below 0.69).",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
+    "rule": "option-role",
+    "target": "drafts update --bcc",
+    "reason": "An e-mail address that gets a blind copy. cli-base PR #435 adds the word; drop this when mail can take a cli-base with it (cli-core still pins cli-base below 0.69).",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
+    "rule": "option-role",
+    "target": "drafts create --reply-all",
+    "reason": "With --reply-to, the reply also goes to everyone the message went to, as in messages send. cli-base PR #435 adds the word; drop this when mail can take a cli-base with it (cli-core still pins cli-base below 0.69).",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
     "rule": "flag-two-meanings",
     "target": "--to",
-    "reason": "The vocabulary's --to is <chat>, where a messenger sends; a mail recipient is an address, and one --to for both is what every mail tool and the plan (§2.1) use. Review when cli-base decides whether --to names a chat or any recipient.",
+    "reason": "Mail sends to an e-mail address, a messenger to a chat; the same word as messages send uses. Whether --to may carry both meanings is the owner's decision (NEED-2113).",
     "owner": "@WireCatLabs",
     "review_after": "2027-01-28"
   },
   {
     "rule": "flag-two-meanings",
     "target": "--subject",
-    "reason": "The vocabulary's --subject is <ref>, memo's topic reference; an email's Subject is free text and every mail tool calls it --subject. Review when cli-base gives mail's subject a word.",
+    "reason": "A mail subject line is text, not a reference as memo's --subject; the same word as messages send uses. Whether --subject may carry both meanings is the owner's decision (NEED-2113).",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
+    "rule": "list-without-query",
+    "target": "drafts list",
+    "reason": "Reads the server's Drafts folder, a short list read whole; once Drafts is synced, search messages mailbox:drafts filters it. Review if drafts outgrow one screen.",
     "owner": "@WireCatLabs",
     "review_after": "2027-01-28"
   },

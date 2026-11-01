@@ -40,6 +40,7 @@ export const configuration = settingsFor<{ mailbox: Mailbox }>(IDENTITY, {
       "messages.delete": "ask",
       "folders.delete": "ask",
       "messages.bulk": "ask",
+      "drafts.delete": "ask",
       [SEND_OTHERS_KEY]: "ask",
     },
   }),

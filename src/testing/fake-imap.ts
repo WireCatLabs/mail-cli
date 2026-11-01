@@ -216,7 +216,6 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
     socket.on("close", () => sockets.delete(socket))
     socket.on("error", () => {})
     let buffer = Buffer.alloc(0)
-    let literals: Buffer[] = []
     let selected: FakeFolder | undefined
     const send = (text: string) => socket.write(`${text}\r\n`)
     send(`* OK [CAPABILITY ${capabilities.join(" ")}] fake ready`)
@@ -449,15 +448,6 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
             )
           return send(`${tag} OK done`)
         }
-        case "APPEND": {
-          const words = tokens(tail)
-          const folder = folderNamed(words[0] ?? "")
-          if (!folder) return send(`${tag} NO [TRYCREATE] no such folder`)
-          const { values } = words[1] === "(" ? listOf(words, 1) : { values: [] }
-          const uid = nextUid(folder)
-          folder.messages.push({ uid, raw: Buffer.concat(literals).toString("utf8"), flags: values })
-          return send(`${tag} OK [APPENDUID ${folder.uidValidity ?? 777} ${uid}] appended`)
-        }
         case "CREATE": {
           const [name = ""] = tokens(tail)
           if (folderNamed(name)) return send(`${tag} NO [ALREADYEXISTS] exists`)
@@ -487,34 +477,43 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
       }
     }
 
-    // A command line that ends in `{n}` goes on with n bytes after the server's `+`, as APPEND sends a message.
-    let partial: { line: string; literal: Buffer[] } | undefined
-    let literalLeft = 0
+    /** APPEND's message comes as a literal after its line: `{n}`, a `+` from us, then n bytes. */
+    const append = (tag: string, line: string, raw: string) => {
+      commands.push(`APPEND ${line}`)
+      const words = tokens(line)
+      const folder = folderNamed(words[0] ?? "")
+      if (!folder) return send(`${tag} NO [TRYCREATE] no such folder`)
+      const { values } = words[1] === "(" ? listOf(words, 1) : { values: [] }
+      const message: FakeMessage = { uid: nextUid(folder), raw, flags: values }
+      folder.messages.push(message)
+      return send(`${tag} OK [APPENDUID ${folder.uidValidity ?? 777} ${message.uid}] appended`)
+    }
+    let appending: { tag: string; line: string; size: number } | undefined
+
     socket.on("data", (chunk) => {
       buffer = Buffer.concat([buffer, chunk])
       for (;;) {
-        if (literalLeft > 0) {
-          if (buffer.length < literalLeft) return
-          partial?.literal.push(buffer.subarray(0, literalLeft))
-          buffer = buffer.subarray(literalLeft)
-          literalLeft = 0
+        if (appending) {
+          if (buffer.length < appending.size + 2) return
+          const raw = buffer.subarray(0, appending.size).toString("utf8")
+          buffer = buffer.subarray(buffer.indexOf("\r\n", appending.size) + 2)
+          const { tag, line } = appending
+          appending = undefined
+          append(tag, line, raw)
+          continue
         }
         const end = buffer.indexOf("\r\n")
         if (end === -1) return
         const text = buffer.subarray(0, end).toString("utf8")
         buffer = buffer.subarray(end + 2)
-        const literal = /\{(\d+)\+?\}$/.exec(text)
-        if (literal) {
-          partial = { line: `${partial?.line ?? ""}${text.slice(0, literal.index)}`, literal: partial?.literal ?? [] }
-          literalLeft = Number(literal[1])
-          if (!text.endsWith("+}")) send("+ go ahead")
+        const [tag = "", verb = "", ...words] = text.split(" ")
+        const size = /\{(\d+)(\+?)\}$/.exec(text)
+        if (verb.toUpperCase() === "APPEND" && size) {
+          appending = { tag, line: words.join(" ").replace(/\s*\{\d+\+?\}$/, ""), size: Number(size[1]) }
+          if (!size[2]) send("+ go ahead")
           continue
         }
-        const whole = partial ? `${partial.line}${text}` : text
-        literals = partial?.literal ?? []
-        partial = undefined
-        const [tag = "", ...words] = whole.split(" ")
-        if (tag) handle(tag, words.join(" "))
+        if (tag) handle(tag, [verb, ...words].join(" "))
       }
     })
   }

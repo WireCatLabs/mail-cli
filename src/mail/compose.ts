@@ -126,6 +126,8 @@ export interface Draft {
   inReplyTo?: string
   references?: string[]
   files: { name: string; path: string; bytes: number }[]
+  /** Attachments already in memory: those of a draft that is being replaced. */
+  parts?: { name: string; mime: string | null; bytes: Uint8Array }[]
   /** A forwarded message, attached whole as `message/rfc822`. */
   message?: { name: string; raw: Uint8Array }
 }
@@ -150,6 +152,11 @@ export const build = async (draft: Draft): Promise<{ raw: Uint8Array; copy: Uint
     ...(draft.references?.length ? { references: draft.references } : {}),
     attachments: [
       ...draft.files.map(({ name, path }) => ({ filename: name, path })),
+      ...(draft.parts ?? []).map(({ name, mime, bytes }) => ({
+        filename: name,
+        content: Buffer.from(bytes),
+        ...(mime ? { contentType: mime } : {}),
+      })),
       ...(draft.message
         ? [
             {

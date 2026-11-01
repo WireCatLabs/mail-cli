@@ -47,7 +47,7 @@
     "version:check": "cli-dev version && node --experimental-strip-types scripts/version-level.ts",
     "version:sync": "cli-dev version --sync",
     "standards:check": "node config/wirecat/check.mjs",
-    "lint:commands": "pnpm build && cli-dev lint --cli dist/bin/mail.js --budget 17",
+    "lint:commands": "pnpm build && cli-dev lint --cli dist/bin/mail.js --budget 24",
     "audit:commands": "pnpm build && bash scripts/audit.sh",
     "ci:quick": "pnpm typecheck && pnpm build && pnpm lint:commands",
     "release:check": "pnpm standards:check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm lint:commands && pnpm audit:commands && pnpm contracts:check && pnpm test:matrix:check && pnpm docs:check && pnpm generate:check && pnpm version:check && pnpm security:no-leak && pnpm package:check",

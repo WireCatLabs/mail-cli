@@ -66,7 +66,7 @@ const issuesOf = (report: MailSyncResult) => [
     : []),
 ]
 
-const wholeNumberFor =
+export const wholeNumberFor =
   (flag: string) =>
   (value: string): number => {
     if (!/^\d+$/.test(value.trim()) || Number(value) < 1)
