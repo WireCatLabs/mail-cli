@@ -2,7 +2,7 @@
 
 `mail` copies your mailbox into the shared WireCat store on your computer, so you and your AI agents can search it
 and read it there, offline. It also organises the mailbox on the server: flags, folders, and deletion to Trash, each
-change one you can undo. It does not send mail yet.
+change one you can undo. It keeps drafts, and sends, replies and forwards over SMTP.
 
 [Documentation](https://github.com/WireCatLabs/mail-cli/blob/main/docs/index.md) · [Roadmap](https://github.com/WireCatLabs/mail-cli/blob/main/docs/roadmap.md) · [WireCat](https://wirecat.dev)
 
@@ -40,7 +40,8 @@ You need Node.js 22.16 or a later 22.x, or 24 or later. To try it with no instal
   newest first, and skips what is already stored. `--since-time 2026-10-01` reads from local midnight of that day.
 - **Search and read the stored mail.** `search messages 'from:ann@example.com has:attachment date>30d'` uses the
   query language of every WireCat CLI, with `list:` for mailing lists; `messages show` gives an email whole with its
-  attachments' text, `conversations list|show` its threads. It reads the profile's mailbox only and asks no server.
+  attachments' text, `conversations list|show` its threads. It searches the profile's mailbox only; it also asks the mail server
+  for mail `sync` has not read yet, and `--backend archive` keeps to the store.
   [memo](https://github.com/WireCatLabs/cli-memo) searches every mailbox together with your messages and notes.
 - **Export to mbox or Maildir.** `messages export 'from:ann@example.com' --output ~/mail-backup` reads the original
   messages from the server into a private folder, one mbox file per folder or a Maildir++ tree for mu and notmuch;
@@ -54,7 +55,8 @@ You need Node.js 22.16 or a later 22.x, or 24 or later. To try it with no instal
   `messages restore --run <id>` undoes any of them. `folders create|rename|delete` look after the folders. A search
   shows each change at once.
 - **Draft for the owner.** `drafts create|update|list|delete` keep drafts in the mailbox's Drafts folder, replies in
-  their thread; the owner sends them from any mail app.
+  their thread; the owner sends them from any mail app, or with `drafts send`. `drafts update` puts the old version
+  in Trash.
 - **Tag your own way.** `tags add|remove|list` put local tags on stored mail, shared with memo; `search messages
   tag:<tag>` finds them.
 - **Send, reply and forward.** `messages send --to … --subject …` sends over the provider's SMTP server with the same
@@ -89,9 +91,11 @@ as data, never as instructions.
 - **Your mail stays on your computer.** The store is a local file; no WireCat server sees your mail.
 - **One store for every tool.** Mail sits next to Telegram, MAX and WhatsApp messages, meetings and notes, so one
   search in memo finds a person's mail and messages together.
-- **Changes you can undo.** Nothing is expunged: a deletion goes to Trash, and every change run keeps a record that
-  `messages restore` plays back. The profile's permissions, `MAIL_READ_ONLY=1` and a preview before every deletion
-  stand between an agent and the mailbox. `mail` cannot send mail.
+- **Changes you can undo.** `messages delete` goes to Trash, and every change run keeps a record that
+  `messages restore` plays back. What is lost for good is named so and previewed first: `drafts delete`, and
+  `folders delete` of a folder that holds mail, which only the owner can run. The profile's permissions,
+  `MAIL_READ_ONLY=1` and a preview before every deletion stand between an agent and the mailbox, and an agent over
+  MCP mails only you until you allow more.
 - **It works with the mailbox you have.** Yandex, Gmail, iCloud, Mail.ru, Fastmail and other servers with IMAP and
   app passwords; the server of a domain it does not know is found for you.
 
@@ -120,12 +124,15 @@ mail ya config show                            # every setting and where it came
 
 ## Limits
 
-- No sending yet: a reply is a draft the owner sends. A deletion goes to Trash only: `mail` never
-  expunges mail, and the provider empties Trash in its own time (Gmail: 30 days).
+- `messages delete` goes to Trash, and the provider empties Trash in its own time (Gmail: 30 days). Three changes
+  are for good, with no restore: `drafts delete`, `drafts send` taking the sent draft out of Drafts, and
+  `folders delete --allow-dangerous` of a folder that holds mail (outside Gmail, its mail is gone).
+  Undoing `messages copy` outside Gmail removes the copy for good, never the original.
 - Text and headers only: the text of attachments is stored, not the files, nor the original message.
 - No OAuth yet, so no Outlook or Microsoft 365, and no Google Workspace domain that turns app passwords off.
 - Gmail caps IMAP downloads at 2,500 MB a day; a new Yandex app password can take 2 to 3 hours to work.
-- Search reads what `sync` stored: mail not synced yet is not found. Search on the server is planned.
+- Search reads the store and asks the mail server for mail `sync` has not read yet; `--backend archive` keeps to
+  the store.
 
 What comes next, such as OAuth sign-in, is on the
 [roadmap](https://github.com/WireCatLabs/mail-cli/blob/main/docs/roadmap.md).

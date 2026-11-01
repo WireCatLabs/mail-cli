@@ -15,6 +15,10 @@ app password too) and `folders` (the folders `sync` reads). `smtp_host`, `smtp_p
 server `messages send` submits to; set them only for a provider the [built-in list](providers.md) does not know. The app password is not
 a setting: it lives in the keyring, or in `MAIL_PASSWORD` for a run that has no keyring.
 
+An agent over MCP that holds `mcp.authority` may change settings with `config set`, but never these: the mailbox
+settings above, which decide where the app password goes, and `permissions.messages.send.others`, which lets an agent
+mail other people. Only you change them, at a terminal.
+
 `config show` lists each setting and where it came from: the file, a variable or the default.
 
 `config set` also lists settings for search, speech and embeddings (`embedding_*`, `speech_model`, `picture_search`

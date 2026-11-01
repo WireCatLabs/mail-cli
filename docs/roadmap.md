@@ -7,7 +7,9 @@ an [issue on GitHub](https://github.com/WireCatLabs/mail-cli/issues).
 ## What works today
 
 `mail` reads a mailbox over IMAP into the shared WireCat store, and organises it on the server: flags, moves,
-copies, deletion to Trash and folders, each change one `messages restore` undoes. The owner's mail rules and the
+copies, deletion to Trash and folders, each change one `messages restore` undoes. It keeps drafts on the server,
+sends, replies and forwards over SMTP behind a recipient check and an hourly limit, and lists and downloads
+attachments. The owner's mail rules and the
 envelope cleanup moved here from memo. It finds the server of
 a new address by itself: a built-in table, the MX record, Thunderbird's ISPDB and the domain's autoconfig file. It
 signs in with an app password kept in the OS keyring, which works for Yandex, Gmail, iCloud, Mail.ru, Fastmail and
@@ -17,8 +19,6 @@ AI agents the same commands. Every command is in the [command reference](command
 
 ## Next
 
-- **Sending**: send, reply, forward and attachments over SMTP with the same app password, behind a recipient list
-  and an hourly limit; then drafts, and tags of the server and of the owner.
 - **OAuth sign-in for Outlook, Microsoft 365 and Google Workspace.** Microsoft accepts only OAuth for IMAP, so these
   mailboxes cannot be added yet, and a Workspace domain that turns app passwords off needs it too.
 
