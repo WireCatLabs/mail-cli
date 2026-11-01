@@ -49,6 +49,5 @@ export const UNTESTED: { command: string; option?: string; reason: string }[] = 
     { command: "schedule agent", option: "--at-time" },
     { command: "schedule run" },
     { command: "schedule remove" },
-    { command: "schedule exec" },
   ].map((entry) => ({ ...entry, reason: SHARED_SCHEDULE })),
 ]

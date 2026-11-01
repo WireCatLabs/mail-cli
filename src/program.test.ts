@@ -1,5 +1,6 @@
 import { chmodSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
+import { resolvePaths } from "@wirecat/cli-base"
 import { appDoctorReport } from "@wirecat/cli-core/cli"
 import { expect, it } from "vitest"
 import { configuration } from "./config.js"
@@ -201,4 +202,51 @@ it("schedules a profile's sync on a timer and lists it", async () => {
   out.length = 0
   expect(await run(["ya", "schedule", "list", "--json"], options)).toBe(0)
   expect(JSON.parse(out.join("")).items).toEqual([{ name: "mail-ya", kind: "command", when: "every 5m", last: null }])
+})
+
+it("runs the argv of a generated unit with no profile named", async () => {
+  const entry = [process.execPath, "-e", "console.log(process.env.MAIL_PROFILE)"]
+  const system = {
+    platform: "linux" as const,
+    uid: 1000,
+    entry,
+    run: async () => ({ code: 0, stdout: "", stderr: "" }),
+    spawn: () => 0,
+    pause: async () => {},
+  }
+  const streams = { data: () => {}, diagnostic: () => {} }
+  const options = { streams, tty: false, system }
+  expect(await run(["ya", "schedule", "command", "mail-ya", "--every", "5m", "--", "sync"], options)).toBe(0)
+
+  const unit = readFileSync(
+    join(process.env.XDG_CONFIG_HOME ?? "", "systemd", "user", "mail-schedule-mail-ya.service"),
+    "utf8",
+  )
+  const execStart =
+    unit
+      .split("\n")
+      .find((line) => line.startsWith("ExecStart="))
+      ?.slice("ExecStart=".length) ?? ""
+  const argv = execStart.slice(1, -1).split('" "')
+  expect(argv.slice(0, entry.length)).toEqual(entry)
+
+  delete process.env.MAIL_PROFILE
+  const err: string[] = []
+  const code = await run(argv.slice(entry.length), {
+    ...options,
+    streams: { ...streams, diagnostic: (t) => err.push(t) },
+  })
+  expect(code, err.join("")).toBe(0)
+  const last = JSON.parse(
+    readFileSync(
+      join(
+        resolvePaths({ appName: IDENTITY.appName, prefix: IDENTITY.envPrefix, env: process.env }).state,
+        "schedules",
+        "mail-ya",
+        "last.json",
+      ),
+      "utf8",
+    ),
+  )
+  expect(last.exitCode).toBe(0)
 })

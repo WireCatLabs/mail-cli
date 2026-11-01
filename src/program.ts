@@ -69,8 +69,10 @@ export const definition = (): ProgramDefinition => ({
     runsCommand(IDENTITY),
     scheduleCommandFor({
       app: IDENTITY,
-      context: (command) => {
-        const base = baseContext(command, configuration.resolveSettings)
+      context: (command, resolving) => {
+        const base = baseContext(command, (flags, options) =>
+          configuration.resolveSettings(flags, { ...options, ...resolving }),
+        )
         return { ...base, profile: base.settings.profile }
       },
     }),
