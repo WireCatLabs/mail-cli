@@ -57,7 +57,7 @@
   },
   "dependencies": {
     "@wirecat/cli-base": "0.71.0",
-    "@wirecat/cli-core": "0.529.0",
+    "@wirecat/cli-core": "0.530.0",
     "commander": "15.0.0",
     "imapflow": "2.9.1",
     "nodemailer": "10.1.7",
