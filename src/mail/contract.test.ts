@@ -18,6 +18,8 @@ const serve = async (): Promise<FakeImap> => {
   const fake = await startFakeImap({
     login: LOGIN,
     password: "app-secret-1",
+    // The contract's mail carries server ids, which only Gmail's are taken as they are.
+    gmail: true,
     folders: [
       {
         name: GMAIL_ALL_MAIL,

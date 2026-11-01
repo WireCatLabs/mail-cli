@@ -1,7 +1,7 @@
 import { CliError } from "@wirecat/cli-base"
 import { parseReference } from "@wirecat/cli-core"
 import type { AppIdentity } from "@wirecat/cli-core/cli"
-import { ENVELOPE, labelName, searchMail } from "@wirecat/cli-core/mail"
+import { decodedLabelName, ENVELOPE, searchMail } from "@wirecat/cli-core/mail"
 import { type GuardRequest, guardedWrite, newOperationId, type SendGuard } from "@wirecat/cli-core/sends"
 import type { AccountKey, MessageStore } from "@wirecat/cli-core/store"
 import type { Organise } from "../providers.js"
@@ -101,7 +101,7 @@ interface Located {
   items: ChangedItem[]
 }
 
-/** Gmail and OBJECTID servers search by their own id; the hash of a Message-ID is found through the stored UIDs. */
+/** Gmail searches by its own id; the hash of a Message-ID is found through the stored UIDs. */
 const serverId = (id: string) => !id.startsWith("imap:")
 
 /**
@@ -230,7 +230,7 @@ export const targetOf = async (mailbox: Mailbox, given: string, copy: boolean): 
 
 const storeBox = (folder: string) => ({ externalId: folder, name: folder, kind: null })
 const labelBox = (raw: string) => {
-  const name = labelName(raw)
+  const name = decodedLabelName(raw)
   return { externalId: `label:${name}`, name, kind: "label" }
 }
 

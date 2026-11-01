@@ -54,7 +54,7 @@ export interface Moved {
  */
 export interface MailWrites {
   /**
-   * The folder's UIDVALIDITY, and the UID there of each Gmail id or OBJECTID (`emailIds`) or Message-ID (`messageIds`)
+   * The folder's UIDVALIDITY, and the UID there of each Gmail id (`emailIds`) or Message-ID (`messageIds`)
    * asked for, keyed by what was asked; one not there is left out.
    */
   locate(

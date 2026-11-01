@@ -12,7 +12,7 @@ import {
   renderAnswer,
   runBudgetOf,
 } from "@wirecat/cli-core/cli"
-import { type MailSyncResult, storedMailRules, syncMail } from "@wirecat/cli-core/mail"
+import { type MailSyncResult, storedMailRuleSet, syncMail } from "@wirecat/cli-core/mail"
 import { Command } from "commander"
 import * as v from "valibot"
 import { configuration } from "../config.js"
@@ -107,6 +107,10 @@ const mailSync = v.strictObject({
   /** With --rescan: stored emails moved to the thread their References name. */
   rethreaded: v.optional(v.number()),
   unreadable: v.number(),
+  /** Stored rules this build cannot read, left out of the run; a newer mail or memo may read them and decide otherwise. */
+  rules_unread: v.optional(v.number()),
+  /** What it does not know of them, such as `condition label`. */
+  rules_unread_why: v.optional(v.array(v.string())),
   deletions_skipped: v.optional(v.string()),
   hint: v.optional(v.string()),
 })
@@ -159,34 +163,41 @@ export const syncCommand = (): Command =>
       // A retry is a request of the budget; openMail keeps it from ending after the deadline.
       const { backend } = await openMail(context, { canRetry: () => budget.take() === null })
       try {
-        const { report, rethreaded } = await baseContext(this, configuration.resolveSettings).run(async () => {
-          const { mailbox } = context.settings
-          const defaults = providerFor(address, mailbox.host)?.sync ?? DEFAULT_SYNC
-          const folders = await foldersFor(args.folder, mailbox.folders, defaults, () => backend.folderList())
-          const store = await openMailStore(context.env)
-          environmentOf(this).trackCloseable?.(store)
-          try {
-            // The stored rules, as memo passes them: the saved position holds their fingerprint, so both must agree.
-            const rules = await storedMailRules(store, { address })
-            const report = await syncMail(backend, store, {
-              account: { address, mode: defaults.mode ?? "imap", folders, rules },
-              since,
-              budget,
-              ...(args.limit === undefined ? {} : { max: args.limit }),
-              ...(args.rescan ? { rescan: true } : {}),
-              ...(signal ? { signal } : {}),
-            })
-            const key = { provider: "email", account: address.toLowerCase() }
-            const rethreaded =
-              args.rescan && !report.stopped
-                ? await rethreadStored(backend, store, key, folders, since, () => budget.take() === null)
-                : undefined
-            return { report, rethreaded }
-          } finally {
-            await store.close()
-          }
-        })
-        const issues = issuesOf(report)
+        const { report, rethreaded, unreadable } = await baseContext(this, configuration.resolveSettings).run(
+          async () => {
+            const { mailbox } = context.settings
+            const defaults = providerFor(address, mailbox.host)?.sync ?? DEFAULT_SYNC
+            const folders = await foldersFor(args.folder, mailbox.folders, defaults, () => backend.folderList())
+            const store = await openMailStore(context.env)
+            environmentOf(this).trackCloseable?.(store)
+            try {
+              // The stored rules, as memo passes them: the saved position holds their fingerprint, so both must agree.
+              const { rules, unreadable } = await storedMailRuleSet(store, { address })
+              const report = await syncMail(backend, store, {
+                account: { address, mode: defaults.mode ?? "imap", folders, rules },
+                since,
+                budget,
+                ...(args.limit === undefined ? {} : { max: args.limit }),
+                ...(args.rescan ? { rescan: true } : {}),
+                ...(signal ? { signal } : {}),
+              })
+              const key = { provider: "email", account: address.toLowerCase() }
+              const rethreaded =
+                args.rescan && !report.stopped
+                  ? await rethreadStored(backend, store, key, folders, since, () => budget.take() === null)
+                  : undefined
+              return { report, rethreaded, unreadable }
+            } finally {
+              await store.close()
+            }
+          },
+        )
+        const issues = [
+          ...issuesOf(report),
+          ...(unreadable.length
+            ? [{ code: "configuration_error" as const, reason: "mail.rules-unreadable", source: "rules" }]
+            : []),
+        ]
         // cli-core reports a run its `max` cut short as incomplete with what it left, but with no reason.
         const limited = args.limit !== undefined && !report.complete && !report.stopped && report.saved >= args.limit
         const stopped = report.stopped ?? (limited ? "limit" : undefined)
@@ -248,6 +259,12 @@ export const syncCommand = (): Command =>
               remaining: report.remaining ?? 0,
               ...(rethreaded ? { rethreaded: rethreaded.moved } : {}),
               unreadable: report.unreadable?.length ?? 0,
+              ...(unreadable.length
+                ? {
+                    rules_unread: unreadable.length,
+                    rules_unread_why: [...new Set(unreadable.map(({ why }) => why))],
+                  }
+                : {}),
               ...(report.deletionsSkipped ? { deletions_skipped: report.deletionsSkipped } : {}),
               ...(hint ? { hint } : {}),
             },

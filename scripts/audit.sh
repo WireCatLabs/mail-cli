@@ -28,16 +28,18 @@ node -e 'const info = JSON.parse(require("fs").readFileSync(process.argv[1], "ut
 require("fs").writeFileSync(process.argv[2], JSON.stringify(info.schemas))
 require("fs").writeFileSync(process.argv[3], JSON.stringify(info.reasons))' \
   "$scratch/info.json" "$scratch/schemas.json" "$scratch/reasons.json"
-# --complete reads each CLI's contract references, so a divergence that comes from cli-core's shared commands (mail's
-# `search messages` beside the messengers') is accepted as inherited. It also reports gaps in the other CLIs'
-# published evidence; those are theirs to fix and do not fail this build.
+# --complete reads each CLI's contract references, so a CLI on an older cli-core does not fail this build for a
+# shared command it has not caught up with. It also takes mail's `search messages`, another command than the
+# messengers', as inherited until cli-base's mail-shared group (cli-base#436), which leaves `search` out, is in the
+# cli-base mail pins. --complete also reports gaps in the other CLIs' published evidence; those are theirs to fix and
+# do not fail this build.
 status=0
 "$root/node_modules/.bin/cli-dev" audit --complete --cli "$root/dist/bin/$command.js" "${others[@]}" --for "$command" \
   --lint "$command=$root/lint" --schemas "$command=$scratch/schemas.json" --reasons "$command=$scratch/reasons.json" \
   >"$scratch/scorecard.txt" 2>"$scratch/problems.txt" || status=$?
 theirs="^($(IFS='|'; echo "${names[*]}")): complete audit "
 if [ "$status" -ne 0 ] && { ! grep -q " 0 new that block" "$scratch/problems.txt" ||
-  grep -Ev "$theirs|^audit: |^review the rule " "$scratch/problems.txt" | grep -q .; }; then
+  grep -Ev "$theirs|^audit: [0-9]+ CLIs, [0-9]+ findings, 0 new that block|^review the rule " "$scratch/problems.txt" | grep -q .; }; then
   cat "$scratch/scorecard.txt" "$scratch/problems.txt"
   exit 1
 fi
