@@ -232,7 +232,7 @@ mail sync [options]
 | `--folder <folder>` | a folder to read; repeat it for more (default: the profile's folders, else INBOX and Sent; All Mail on Gmail). |
 | `--rescan` | list the whole window again; also moves stored replies into their thread where the server has no thread ids. |
 
-**Returns:** mail sync — address, since, timezone, folders, state, requests, listed, saved, and 9 more; every field: mail commands info sync
+**Returns:** mail sync — address, since, timezone, folders, state, requests, listed, saved, and 11 more; every field: mail commands info sync
 
 **Example:** `mail ya sync`, `mail ya sync --since-time 2026-10-01 --limit 200`, `mail ya sync --folder INBOX`
 

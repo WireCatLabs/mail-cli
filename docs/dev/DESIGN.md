@@ -30,13 +30,16 @@ Languages: ru, en.
 - **Port and adapter:** every command opens the mailbox through `openMail` (`src/commands/context.ts`), which hands
   it a `MailBackend` (`src/mail/backend.ts`): cli-core's `MailSource` plus `folderList`, `check` and `close`. The IMAP
   adapter in `src/mail/imap/` on imapflow is the only implementation: `connection.ts` (connections, deadlines,
-  retries), `read.ts` (what the sync reads), `account.ts` (folders and capabilities), `messages.ts` (ids and headers). A message id is the server's email id when it gives one (OBJECTID or
-  Gmail's X-GM-MSGID), else a hash of the Message-ID header. On a server with neither (Yandex) a listing asks only for
-  UID, flags, date and size (`quick`) and the hash is taken from the Message-ID of the raw message (`identify`), which
-  must equal imapflow's ENVELOPE value (the trimmed first header) or stored mail would get a second id.
-  The thread id is the server's (Gmail's X-GM-THRID, OBJECTID's THREADID), else a hash of the first Message-ID in
-  References, else of In-Reply-To, else of the message's own Message-ID: a reply then shares its first email's thread
-  on Yandex and Mail.ru too. Gmail's ids stay the server's, since stored Gmail mail is keyed on them.
+  retries), `read.ts` (what the sync reads), `account.ts` (folders and capabilities), `messages.ts` (ids and headers).
+  Ids come from cli-core's `mailIds`, which memo uses too, so both give one email one id. On Gmail the ids are its
+  X-GM-MSGID and X-GM-THRID, since stored Gmail mail is keyed on them; a Gmail that also announced OBJECTID is refused,
+  since imapflow would then fetch EMAILID instead. Anywhere else the id is a hash of the Message-ID header, and
+  OBJECTID's EMAILID is not used: a server that turns OBJECTID on keeps its ids. Off Gmail a listing asks only for UID,
+  flags, date and size (`quick`) and the hash is taken from the Message-ID of the raw message (`identify`), which must
+  equal imapflow's ENVELOPE value (the trimmed first header) or stored mail would get a second id. The thread id is a
+  hash of the first Message-ID in References, else of In-Reply-To, else of the message's own Message-ID: a reply then
+  shares its first email's thread on Yandex and Mail.ru too. Gmail labels arrive decoded from imapflow and are not
+  decoded again (`decodedLabelName`).
 - **Password:** OS keyring (service `mail-cli`, account the profile); when it fails, a 0600 `credentials.json` in the
   config folder without asking (WC-SECR-4, owner 2026-10-31, which replaces "no file fallback");
   `--credential-storage file` chooses the file. `MAIL_PASSWORD` first; read-only fallback to Himalaya's `secret-tool`

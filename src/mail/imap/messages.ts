@@ -1,17 +1,15 @@
-import { createHash } from "node:crypto"
 import {
+  decodedLabelName,
   headersOf,
   type Listed,
-  labelName,
   HEADER_FIELDS as MAIL_HEADER_FIELDS,
+  mailIds,
   type Quick,
 } from "@wirecat/cli-core/mail"
 import type { FetchMessageObject, ListResponse } from "imapflow"
 
 /** cli-core's fields for the owner's rules and the probe, and the two that tie a reply to its thread. */
 export const HEADER_FIELDS = [...MAIL_HEADER_FIELDS.split(" "), "IN-REPLY-TO", "REFERENCES"]
-
-const digest = (id: string) => `imap:${createHash("sha256").update(id).digest("hex")}`
 
 const headTextOf = (raw: Uint8Array): string => {
   const bytes = Buffer.from(raw.buffer, raw.byteOffset, raw.byteLength)
@@ -21,20 +19,12 @@ const headTextOf = (raw: Uint8Array): string => {
   return bytes.subarray(0, end).toString("utf8")
 }
 
-const fieldOf = (head: string, name: string): string | undefined =>
-  new RegExp(`^${name}:[ \\t]*(.*)$`, "im").exec(head.replace(/\r?\n[ \t]+/g, " "))?.[1]?.trim()
-
 /**
- * The first Message-ID of References is the thread's first email (RFC 5322 §3.6.4); a reply with only In-Reply-To
- * names its parent. A server without thread ids (Yandex, Mail.ru) then still keeps a conversation together.
+ * As memo names them, so the store's `label:Inbox` mailboxes keep matching; a flagged message is Starred anywhere.
+ * imapflow has decoded them already.
  */
-const threadRootOf = (head: string): string | undefined =>
-  /<[^<>\s]+>/.exec(fieldOf(head, "references") ?? "")?.[0] ??
-  /<[^<>\s]+>/.exec(fieldOf(head, "in-reply-to") ?? "")?.[0]
-
-/** As memo names them, so the store's `label:Inbox` mailboxes keep matching; a flagged message is Starred anywhere. */
 const labelsOf = (raw: Set<string> | undefined, flagged: boolean): string[] => {
-  const names = new Set([...(raw ?? [])].map(labelName))
+  const names = new Set([...(raw ?? [])].map(decodedLabelName))
   if (flagged) names.add("Starred")
   return [...names].sort()
 }
@@ -53,28 +43,21 @@ export const quickOf = (message: FetchMessageObject, folder: string): Quick => {
   }
 }
 
-/** Without a stable id the Message-ID is the identity; without that, the UID, which means nothing without UIDVALIDITY. */
-export const idsOf = (messageId: string | undefined, folder: string, validity: string, uid: string, root?: string) => {
-  const identity = messageId ?? `uid:${folder}:${validity}:${uid}`
-  return { messageId: digest(identity), threadId: digest(root ?? identity) }
-}
-
 /** The ids of a message read as bytes, worked out as `listedOf` works them out from a listing. */
-export const rawIdsOf = (raw: Uint8Array, folder: string, validity: string, uid: string) => {
-  const head = headTextOf(raw)
-  return idsOf(fieldOf(head, "message-id") || undefined, folder, validity, uid, threadRootOf(head))
-}
+export const rawIdsOf = (raw: Uint8Array, folder: string, validity: string, uid: string) =>
+  mailIds({ head: headTextOf(raw), folder, validity, uid })
 
-export const listedOf = (message: FetchMessageObject, folder: string, validity: string): Listed => {
+/**
+ * `gmail`: the connection is Gmail's, so imapflow's emailId and threadId are X-GM-MSGID and X-GM-THRID, which stored
+ * Gmail mail is keyed on. Anywhere else the Message-ID is the id, as memo makes it.
+ */
+export const listedOf = (message: FetchMessageObject, folder: string, validity: string, gmail: boolean): Listed => {
   const head = message.headers ? message.headers.toString("utf8") : ""
-  const ids = idsOf(message.envelope?.messageId, folder, validity, String(message.uid), threadRootOf(head))
-  return {
-    ...quickOf(message, folder),
-    // Gmail's X-GM-MSGID and X-GM-THRID, or OBJECTID's: stored Gmail mail is keyed on them.
-    ...(message.emailId ? { messageId: String(message.emailId) } : { messageId: ids.messageId }),
-    threadId: message.threadId ? String(message.threadId) : ids.threadId,
-    headers: headersOf(head),
-  }
+  const ids =
+    gmail && message.emailId && message.threadId
+      ? { messageId: String(message.emailId), threadId: String(message.threadId) }
+      : mailIds({ messageId: message.envelope?.messageId, head, folder, validity, uid: String(message.uid) })
+  return { ...quickOf(message, folder), ...ids, headers: headersOf(head) }
 }
 
 export const roleOf = (entry: ListResponse): string | null => {

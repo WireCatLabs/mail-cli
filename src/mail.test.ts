@@ -11,13 +11,13 @@ import {
   resolvePaths,
   systemKeyring,
 } from "@wirecat/cli-base"
+import { mailIds } from "@wirecat/cli-core/mail"
 import { openStore, storePath } from "@wirecat/cli-core/store"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
 import { discover } from "./discovery.js"
 import type { AccountCheck, MailBackend, MailEndpoint, RunBounds } from "./mail/backend.js"
 import { type ImapTuning, imapBackend } from "./mail/imap/index.js"
-import { idsOf } from "./mail/imap/messages.js"
 import { run } from "./program.js"
 import { type FakeImap, type FakeOptions, startFakeImap } from "./testing/fake-imap.js"
 
@@ -685,6 +685,35 @@ describe("account check, folders and sync", () => {
     expect(item(synced.out)).toMatchObject({ saved: 1 })
   })
 
+  it("says how many stored rules it could not read and why, rather than drop them silently", async () => {
+    const { mail, env } = await ready()
+    const store = await openStore({ path: storePath(env), env, command: "mail" })
+    try {
+      const accountId = await store.accounts.saveAccount({ provider: "email", account: ADDRESS }, { name: ADDRESS })
+      await store.mail.rules.upsert(
+        accountId,
+        {
+          conditions: { subject: "Ignore", sent_by_robot: true },
+          actions: { store: "skip" },
+          source: "owner",
+          decidedAt: Date.now(),
+        },
+        Date.now(),
+      )
+    } finally {
+      await store.close()
+    }
+    const synced = await mail(["ya", "sync", "--since-time", "2026-10-01", "--folder", "INBOX", "--json"])
+    const body = JSON.parse(synced.out)
+    expect(body.item).toMatchObject({ saved: 2, rules_unread: 1, rules_unread_why: ["condition sent_by_robot"] })
+    expect(body.meta).toMatchObject({ complete: false })
+    expect(body.meta.issues).toContainEqual({
+      code: "configuration_error",
+      reason: "mail.rules-unreadable",
+      source: "rules",
+    })
+  })
+
   it("moves stored replies into their first email's thread on --rescan, and only once", async () => {
     const reply = raw("reply", "Re: Заявка", "Thanks", "In-Reply-To: <root@example.com>\r\n")
     const { mail, env } = await ready({
@@ -719,7 +748,8 @@ describe("account check, folders and sync", () => {
       if (!stored) throw new Error("the reply was not stored")
       await before.store.mail.saveThread({
         accountId: before.accountId,
-        externalId: idsOf("<reply@example.com>", "INBOX", "", "2").messageId,
+        externalId: mailIds({ messageId: "<reply@example.com>", head: "", folder: "INBOX", validity: "", uid: "2" })
+          .messageId,
         now: Date.now(),
         emails: [
           {
