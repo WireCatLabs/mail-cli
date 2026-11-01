@@ -21,7 +21,15 @@ import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
 import { oauthStorage, recordSignIn, signInRecords } from "../oauth.js"
 import { PASSWORD_SOURCES, passwordStore } from "../secret.js"
-import { contextOf, type MailEnvironment, oauthKindOf, openMail, passwordsOf, refuseOffline } from "./context.js"
+import {
+  contextOf,
+  type MailEnvironment,
+  oauthKeeperOf,
+  oauthKindOf,
+  openMail,
+  passwordsOf,
+  refuseOffline,
+} from "./context.js"
 import { sessionStartCommand } from "./session-start.js"
 
 const answer = (command: Command, item: unknown) => renderAnswer(command, outputFor(command), itemOf(item))
@@ -119,24 +127,31 @@ const endCommand = () =>
     }),
   )
     .description("forget this profile's app password or OAuth sign-in on this computer; synced mail stays")
-    .action(async function (this: Command) {
+    .option(
+      "--revoke",
+      "Gmail over OAuth: also ask Google to revoke the sign-in, which ends every sign-in of that Google project",
+    )
+    .action(async function (this: Command, args: { revoke?: boolean }) {
       const context = contextOf(this)
       refuseUnderReadOnly(this, "session end")
       const kind = context.settings.mailbox.auth === "oauth" ? oauthKindOf(context.settings.mailbox) : undefined
       if (kind) {
-        const removed = oauthStorage({
-          env: context.env,
-          profile: context.profile,
-          kind,
-          keyring: context.environment.keyring,
-        }).remove()
+        const revoke = args.revoke === true && kind === "google"
+        if (revoke) refuseOffline(context.flags)
+        const { revoked, removed } = await oauthKeeperOf(context, kind).signOut({ revoke })
         await recordSignIn(context.env, context.profile, undefined)
-        answer(this, { profile: context.profile, ended: removed.length > 0, mail: "retained" })
+        answer(this, { profile: context.profile, ended: removed.length > 0, revoked, mail: "retained" })
+        const note = (text: string) => outputFor(this).renderer.note(text)
         // https://learn.microsoft.com/en-us/entra/identity-platform/refresh-tokens: no revoke a public client can call.
-        outputFor(this).renderer.note(
-          "Microsoft still lists mail's access until you remove it: https://account.live.com/consent/Manage for a " +
-            "personal account, https://myapps.microsoft.com for a work or school account",
-        )
+        if (kind === "microsoft")
+          note(
+            "Microsoft still lists mail's access until you remove it: https://account.live.com/consent/Manage for a " +
+              "personal account, https://myapps.microsoft.com for a work or school account",
+          )
+        // https://developers.google.com/identity/protocols/oauth2/native-app: a revoke ends the whole project's grants.
+        else if (revoked)
+          note("Google revoked every sign-in of this Google project, including other tools that use the same project")
+        else note("Google still lists the app until you remove it at https://myaccount.google.com/connections")
         return
       }
       const passwords = passwordsOf(context)

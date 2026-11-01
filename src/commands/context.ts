@@ -69,7 +69,7 @@ export const passwordsOf = (context: ReturnType<typeof contextOf>) =>
     himalaya: context.environment.himalaya,
   })
 
-/** The OAuth provider a profile signs in with, from its provider in the registry: Outlook and Microsoft 365. */
+/** The OAuth provider a profile signs in with, from its provider in the registry. */
 export const oauthKindOf = (mailbox: ReturnType<typeof contextOf>["settings"]["mailbox"]): OAuthKind | undefined =>
   mailbox.address ? providerFor(mailbox.address, mailbox.host)?.oauth : undefined
 
@@ -78,7 +78,7 @@ export const oauthKeeperOf = (context: ReturnType<typeof contextOf>, kind: OAuth
   const { mailbox } = context.settings
   let client: { clientId: string }
   try {
-    client = microsoftClient(mailbox).client
+    client = kind === "microsoft" ? microsoftClient(mailbox).client : { clientId: "" }
   } catch {
     // A saved sign-in refreshes with the app it was made with, which the entry records.
     client = { clientId: "" }
@@ -104,7 +104,7 @@ export const credentialOf = async (
     if (!kind)
       throw new CliError(
         "configuration_error",
-        `profile ${context.profile} signs in with OAuth, which mail can do for Outlook and Microsoft 365 only`,
+        `profile ${context.profile} signs in with OAuth, which mail can do for Outlook, Microsoft 365 and Gmail only`,
       )
     return { credential: oauthCredential(oauthKeeperOf(context, kind), kind, context.profile) }
   }

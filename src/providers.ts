@@ -66,7 +66,7 @@ export interface Provider {
   smtp: Smtp
   auth: "app-password" | "oauth"
   /** Signs in with this OAuth provider: only way when `auth` is `oauth`, else with `session start --auth oauth`. */
-  oauth?: "microsoft"
+  oauth?: "microsoft" | "google"
   note?: string
   sync?: SyncFolders
   search?: ServerSearch
@@ -133,6 +133,7 @@ const TABLE = {
       ],
     },
     auth: "app-password",
+    oauth: "google",
     note: "needs 2-step verification and an app password; IMAP downloads are capped at 2500 MB a day",
     // Archived mail leaves INBOX; read from INBOX alone it would look deleted.
     sync: { mode: "gmail", roles: ["all"], otherwise: GMAIL_ALL_MAIL },

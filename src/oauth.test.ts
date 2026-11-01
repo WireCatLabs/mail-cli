@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync } from "node:fs"
+import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Readable } from "node:stream"
@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
 import type { MailCredential, MailEndpoint, RunBounds } from "./mail/backend.js"
 import { imapBackend } from "./mail/imap/index.js"
-import { MICROSOFT_IMAP_SCOPE, MICROSOFT_SMTP_SCOPE } from "./oauth.js"
+import { GOOGLE_MAIL_SCOPE, MICROSOFT_IMAP_SCOPE, MICROSOFT_SMTP_SCOPE } from "./oauth.js"
 import { run } from "./program.js"
 import { providerFor } from "./providers.js"
 import { type FakeImap, startFakeImap } from "./testing/fake-imap.js"
@@ -28,8 +28,15 @@ const message = (address: string) =>
   `Message-ID: <hello@example.com>\r\nDate: Tue, 27 Oct 2026 10:00:00 +0000\r\nFrom: Ann <ann@example.com>\r\n` +
   `To: ${address}\r\nSubject: Hello\r\n\r\nHi there\r\n`
 
-/** Fake Microsoft: a token endpoint, a browser that consents at once, and IMAP and SMTP that take only its tokens. */
-const harness = async (address = "me@outlook.com", mx = "mx.example.net") => {
+/**
+ * A fake provider: a token endpoint (with Google's userinfo and revoke), a browser that consents at once, and IMAP and
+ * SMTP that take only its tokens.
+ */
+const harness = async (
+  address = "me@outlook.com",
+  mx = "mx.example.net",
+  granted = `${MICROSOFT_IMAP_SCOPE} ${MICROSOFT_SMTP_SCOPE}`,
+) => {
   const accepted: string[] = []
   const sendable: string[] = []
   imap = await startFakeImap({
@@ -52,9 +59,14 @@ const harness = async (address = "me@outlook.com", mx = "mx.example.net") => {
     MESSAGING_STORE: join(mkdtempSync(join(tmpdir(), "store-")), "wirecat.db"),
   }
   delete env.CI
-  const server = { accepts: true, sends: true, issued: 0 }
+  const server = { accepts: true, sends: true, issued: 0, account: address, revoked: 0 }
   const tokenCalls: URLSearchParams[] = []
-  const fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
+  const fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+    if (String(url).includes("/userinfo")) return Response.json({ email: server.account, email_verified: true })
+    if (String(url).includes("/revoke")) {
+      server.revoked += 1
+      return new Response("", { status: 200 })
+    }
     const body = new URLSearchParams(String(init?.body))
     tokenCalls.push(body)
     server.issued += 1
@@ -65,7 +77,7 @@ const harness = async (address = "me@outlook.com", mx = "mx.example.net") => {
       access_token: access,
       refresh_token: `synthetic-refresh-${server.issued}`,
       expires_in: 3600,
-      scope: `${MICROSOFT_IMAP_SCOPE} ${MICROSOFT_SMTP_SCOPE}`,
+      scope: granted,
       token_type: "Bearer",
     })
   }) as typeof globalThis.fetch
@@ -111,7 +123,7 @@ const harness = async (address = "me@outlook.com", mx = "mx.example.net") => {
     return { code, out: out.join("\n"), err: err.join("\n") }
   }
   const config = () => JSON.parse(readFileSync(join(env.MAIL_CONFIG_DIR as string, "config.json"), "utf8"))
-  const entry = () => keyring.get("mail-cli", "oauth:microsoft:work")
+  const entry = (kind = "microsoft") => keyring.get("mail-cli", `oauth:${kind}:work`)
   const leaked = () => streams.join("\n").match(/synthetic-(access|refresh)/)
   return { mail, env, config, entry, leaked, server, accepted, sendable, tokenCalls, authorizeUrls, keyring }
 }
@@ -212,7 +224,7 @@ describe("Microsoft sign-in", { timeout: 20_000 }, () => {
 
     const doctor = await mail(["doctor", "--json"])
     expect(item(doctor.out).oauth).toEqual([
-      { profile: "work", client: "own", signed_in_at: expect.any(String), sends: true },
+      { profile: "work", provider: "microsoft", client: "own", signed_in_at: expect.any(String), sends: true },
     ])
 
     const ended = await mail(["work", "session", "end", "--json"])
@@ -239,5 +251,66 @@ describe("Microsoft 365", { timeout: 20_000 }, () => {
     const sent = await mail(["work", "messages", "send", "--to", "me@contoso.example", "--subject", "S", "x", "--json"])
     expect(sent.code).not.toBe(0)
     expect(JSON.parse(sent.err).error).toMatchObject({ reason: "mail.smtp-auth-disabled" })
+  })
+})
+
+describe("Gmail with your own Google app", { timeout: 20_000 }, () => {
+  const gmail = () => harness("me@gmail.com", "aspmx.l.google.com", `openid email ${GOOGLE_MAIL_SCOPE}`)
+  const clientFile = (mode = 0o600) => {
+    const file = join(mkdtempSync(join(tmpdir(), "client-")), "client.json")
+    writeFileSync(file, JSON.stringify({ installed: { client_id: "own-client", client_secret: "own-public-secret" } }))
+    chmodSync(file, mode)
+    return file
+  }
+  const start = ["work", "session", "start", "--address", "me@gmail.com", "--auth", "oauth", "--json"]
+
+  it("signs in with the client file, keeps its secret to refresh, and checks the account", async () => {
+    const { mail, entry, accepted, tokenCalls, config, leaked } = await gmail()
+    const started = await mail([...start, "--client-file", clientFile()])
+    expect(started.code, started.err).toBe(0)
+    expect(item(started.out)).toMatchObject({ provider: "google", client: "own" })
+    expect(config().profiles.work).toMatchObject({ imap_host: "imap.gmail.com", auth: "oauth" })
+    expect(JSON.parse(entry("google") ?? "{}")).toMatchObject({
+      clientId: "own-client",
+      clientSecret: "own-public-secret",
+    })
+    accepted.splice(0)
+    const synced = await mail(["work", "sync", "--since-time", "2026-01-01", "--json"])
+    expect(synced.code, synced.err).toBe(0)
+    expect(tokenCalls[1]?.get("client_secret")).toBe("own-public-secret")
+    expect(leaked()).toBeNull()
+  })
+
+  it("refuses another Google account, an open client file, and no client at all, keeping nothing", async () => {
+    const { mail, entry, server } = await gmail()
+    expect(JSON.parse((await mail(start)).err).error).toMatchObject({ reason: "mail.oauth-no-client" })
+    if (process.platform !== "win32")
+      expect(JSON.parse((await mail([...start, "--client-file", clientFile(0o644)])).err).error).toMatchObject({
+        reason: "sign-in.client-file-open",
+      })
+    server.account = "someone.else@gmail.com"
+    const wrong = await mail([...start, "--client-file", clientFile()])
+    expect(JSON.parse(wrong.err).error).toMatchObject({ reason: "profile.wrong-account" })
+    expect(entry("google")).toBeNull()
+    expect(JSON.parse((await mail(["session", "list", "--json"])).out).items).toEqual([])
+  })
+
+  it("doctor warns from day 6 about a Testing app, and session end --revoke asks Google once", async () => {
+    const { mail, env, entry, server } = await gmail()
+    expect((await mail([...start, "--client-file", clientFile()])).code).toBe(0)
+    expect((await mail(["doctor", "--json"])).err).not.toContain("Testing")
+    const records = join(env.MAIL_STATE_DIR as string, "sign-ins.json")
+    const saved = JSON.parse(readFileSync(records, "utf8"))
+    saved.work.signed_in_at = new Date(Date.now() - 6.5 * 86_400_000).toISOString()
+    writeFileSync(records, JSON.stringify(saved))
+    const doctor = await mail(["doctor", "--json"])
+    expect(item(doctor.out).oauth[0]).toMatchObject({ provider: "google", testing_expiry_risk: true })
+    expect(doctor.err).toContain("Testing")
+
+    const ended = await mail(["work", "session", "end", "--revoke", "--json"])
+    expect(item(ended.out)).toMatchObject({ ended: true, revoked: true })
+    expect(ended.err).toContain("every sign-in of this Google project")
+    expect(server.revoked).toBe(1)
+    expect(entry("google")).toBeNull()
   })
 })

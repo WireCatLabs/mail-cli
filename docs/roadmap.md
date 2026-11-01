@@ -19,7 +19,7 @@ AI agents the same commands. Every command is in the [command reference](command
 
 ## Next
 
-- **OAuth sign-in for Gmail and Google Workspace** with your own Google app, for a domain that turns app passwords off.
-  Outlook.com and Microsoft 365 sign in with OAuth already.
+- **WireCat's own Microsoft app**, so Outlook.com and Microsoft 365 sign in without registering one; then publisher
+  verification, which some organisations require.
 
 What each released version changed is in the [changelog](../CHANGELOG.md).

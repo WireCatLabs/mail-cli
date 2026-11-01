@@ -16,7 +16,13 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 - **`microsoft_client_id`**: the Microsoft app to sign in with, set by you once (`config set --defaults`); an agent
   over MCP cannot change it. WireCat's own app is not registered yet, so for now this is required;
   [register a Microsoft app](docs/oauth-microsoft.md) gives the steps.
-- **`mail doctor` lists each OAuth profile** with its app and last sign-in, from disk only.
+- **Gmail over OAuth with your own Google app**: `session start --auth oauth --client-file <Desktop client JSON>`
+  (or `MAIL_GOOGLE_CLIENT_ID`/`MAIL_GOOGLE_CLIENT_SECRET`), for an account that cannot make an app password. The
+  signed-in address must match the profile's. Gmail profiles keep app passwords unless switched.
+  [Gmail with your own Google app](docs/oauth-google.md) gives the steps: a Google project just for mail, published
+  without verification. `session end --revoke` asks Google to revoke it, which ends every sign-in of that project.
+- **`mail doctor` lists each OAuth profile** with its app and last sign-in, from disk only, and warns from day 6 that
+  a Google app left in Testing ends its sign-ins on day 7.
 
 ### Changed
 

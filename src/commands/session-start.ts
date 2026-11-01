@@ -20,13 +20,16 @@ import { IDENTITY } from "../identity.js"
 import { type MailEndpoint, passwordCredential } from "../mail/backend.js"
 import {
   type CredentialStorage,
-  MICROSOFT_SCOPES,
-  MICROSOFT_SMTP_SCOPE,
+  googleAddress,
+  googleClient,
   microsoftClient,
+  OAUTH_NAMES,
   type OAuthKind,
   oauthKeeper,
   recordSignIn,
   SCOPE_WORDS,
+  scopesOf,
+  sendScopeOf,
   systemBrowser,
   tokenCredential,
 } from "../oauth.js"
@@ -70,6 +73,7 @@ interface OAuthSignIn {
   prepare: Prepare
   storage: CredentialStorage
   browser: boolean
+  clientFile: string | undefined
   created: (() => string) | undefined
 }
 
@@ -80,11 +84,16 @@ interface OAuthSignIn {
 const signInWithOAuth = async (command: Command, context: ReturnType<typeof contextOf>, given: OAuthSignIn) => {
   const { env, environment } = context
   const output = outputFor(command)
-  const { client, source } = microsoftClient(context.settings.mailbox)
+  const name = OAUTH_NAMES[given.kind]
+  const { client, source } =
+    given.kind === "google"
+      ? { client: googleClient(env, given.clientFile), source: "own" as const }
+      : microsoftClient(context.settings.mailbox)
+  const scopesAsked = scopesOf(given.kind)
   output.renderer.note(
     [
-      `Microsoft will ask you to let ${IDENTITY.command} (app ${source === "own" ? "of your own" : "of WireCat"}):`,
-      ...MICROSOFT_SCOPES.map((scope) => `  - ${SCOPE_WORDS[scope] ?? scope}`),
+      `${name} will ask you to let ${IDENTITY.command} (app ${source === "own" ? "of your own" : "of WireCat"}):`,
+      ...scopesAsked.map((scope) => `  - ${SCOPE_WORDS[scope] ?? scope}`),
     ].join("\n"),
   )
   const keeper = oauthKeeper({
@@ -102,11 +111,24 @@ const signInWithOAuth = async (command: Command, context: ReturnType<typeof cont
   let config: string | undefined
   const { scopes } = await baseContext(command, configuration.resolveSettings).run(() =>
     keeper.signIn({
-      scopes: MICROSOFT_SCOPES,
+      scopes: scopesAsked,
       openBrowser: given.browser ? (environment.openBrowser ?? systemBrowser) : async () => {},
-      showUrl: (url) => output.streams.diagnostic(`Open Microsoft sign-in: ${url}\n`),
+      showUrl: (url) => output.streams.diagnostic(`Open ${name} sign-in: ${url}\n`),
       accept: async (tokens) => {
-        if (!tokens.accessToken) throw new CliError("authentication_error", "Microsoft returned no access token")
+        if (!tokens.accessToken) throw new CliError("authentication_error", `${name} returned no access token`)
+        if (given.kind === "google") {
+          const signedIn = await googleAddress(
+            tokens.accessToken,
+            environment.fetch ?? globalThis.fetch,
+            environment.signal,
+          )
+          if (signedIn !== given.address.toLowerCase())
+            throw new CliError(
+              "authentication_error",
+              `Google signed in ${signedIn}, not ${given.address}; sign in again and choose ${given.address}`,
+              { reason: "profile.wrong-account" },
+            )
+        }
         const { backend } = await openMail(context, {
           endpoint: given.endpoint,
           credential: tokenCredential(tokens.accessToken, given.kind),
@@ -123,8 +145,8 @@ const signInWithOAuth = async (command: Command, context: ReturnType<typeof cont
     signed_in_at: new Date().toISOString(),
     scopes,
   })
-  if (!scopes.includes(MICROSOFT_SMTP_SCOPE))
-    output.renderer.note("Microsoft did not grant sending, so `messages send` will be refused; reading works")
+  if (!scopes.includes(sendScopeOf(given.kind)))
+    output.renderer.note(`${name} did not grant sending, so \`messages send\` will be refused`)
   answer(command, {
     profile: context.profile,
     signed_in: true,
@@ -149,12 +171,13 @@ export const sessionStartCommand = () =>
         `${IDENTITY.command} ya session start`,
         `${IDENTITY.command} me session start --address me@example.com --host imap.example.com --security tls`,
         `${IDENTITY.command} work session start --address me@outlook.com`,
+        `${IDENTITY.command} gm session start --address me@gmail.com --auth oauth --client-file ~/client.json`,
       ],
     }),
   )
     .summary("sign in; a new profile is created first")
     .description(
-      `sign this profile in. A new profile needs its mailbox: --address, or it is asked at a terminal; the server is found (built-in providers, the MX record, ISPDB, the domain's autoconfig; all providers: ${PROVIDERS_URL}); for a domain the built-in table does not know, the domain, never the address, goes to the DNS resolver, autoconfig.thunderbird.net and autoconfig.<domain>, and --provider or --host skips those lookups; the steps to prepare the mailbox are shown, the app password is asked (hidden) or read from ${IDENTITY.envPrefix}_PASSWORD, checked against the server, and only then the profile and the keyring entry are saved. Outlook.com and Microsoft 365 sign in with OAuth instead: the browser opens Microsoft's page, and the token is checked against the server before it is kept. An existing profile only asks for the password, or signs in, again. Without a terminal nothing is asked: a missing --address or password is a validation error`,
+      `sign this profile in. A new profile needs its mailbox: --address, or it is asked at a terminal; the server is found (built-in providers, the MX record, ISPDB, the domain's autoconfig; all providers: ${PROVIDERS_URL}); for a domain the built-in table does not know, the domain, never the address, goes to the DNS resolver, autoconfig.thunderbird.net and autoconfig.<domain>, and --provider or --host skips those lookups; the steps to prepare the mailbox are shown, the app password is asked (hidden) or read from ${IDENTITY.envPrefix}_PASSWORD, checked against the server, and only then the profile and the keyring entry are saved. Outlook.com and Microsoft 365 sign in with OAuth instead, and Gmail with --auth oauth and your own Google app (--client-file): the browser opens the provider's page, and the token is checked against the server before it is kept. An existing profile only asks for the password, or signs in, again. Without a terminal nothing is asked: a missing --address or password is a validation error`,
     )
     .option("--address <email>", "the full mail address of a new profile, also the login for most providers")
     .option("--provider <provider>", `skip discovery and use a built-in provider: ${PROVIDER_NAMES.join(", ")}`)
@@ -165,6 +188,7 @@ export const sessionStartCommand = () =>
     .option("--folder <folder>", "sync only this folder; repeat it for more", collect)
     .option("--auth <method>", "app-password or oauth; the default is what the provider takes", authOf)
     .option("--no-browser", "OAuth: print the sign-in link instead of opening the browser")
+    .option("--client-file <file>", "Gmail over OAuth: your own Google Desktop app client JSON (chmod 600)")
     .option(
       "--credential-storage <storage>",
       "where the password is kept: keyring (the default, which falls back to a private file by itself when no " +
@@ -173,7 +197,13 @@ export const sessionStartCommand = () =>
     )
     .action(async function (
       this: Command,
-      flags: MailboxFlags & { address?: string; credentialStorage: string; auth?: Auth; browser: boolean },
+      flags: MailboxFlags & {
+        address?: string
+        credentialStorage: string
+        auth?: Auth
+        browser: boolean
+        clientFile?: string
+      },
     ) {
       const context = contextOf(this)
       const { environment, env } = context
@@ -254,7 +284,7 @@ export const sessionStartCommand = () =>
         if (!kind)
           throw new CliError(
             "validation_error",
-            `${provider} has no OAuth sign-in in ${IDENTITY.command}; it works for Outlook and Microsoft 365`,
+            `${provider} has no OAuth sign-in in ${IDENTITY.command}; it works for Outlook, Microsoft 365 and Gmail`,
             { param: "auth" },
           )
         output.renderer.note(
@@ -268,6 +298,7 @@ export const sessionStartCommand = () =>
           prepare,
           storage,
           browser: flags.browser,
+          clientFile: flags.clientFile,
           created,
         })
       }

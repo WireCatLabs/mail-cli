@@ -8,6 +8,7 @@
     "usage",
     "providers",
     "oauth-microsoft",
+    "oauth-google",
     "---Reference---",
     "commands",
     "configuration",

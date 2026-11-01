@@ -1,6 +1,7 @@
 import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
-import { MICROSOFT_SMTP_SCOPE, microsoftClient, OAUTH_GUIDE, signInRecords } from "../oauth.js"
+import { GOOGLE_GUIDE, microsoftClient, OAUTH_GUIDE, sendScopeOf, signInRecords } from "../oauth.js"
+import { providerFor } from "../providers.js"
 import { runSummaries } from "./changes.js"
 
 const DAY_MS = 86_400_000
@@ -52,32 +53,46 @@ export const changesCheck = (env: NodeJS.ProcessEnv, now = Date.now()) => {
  * Each OAuth profile from disk alone: the app it signs in with and what its last sign-in allowed. The tokens are in
  * the keyring, which doctor never opens; `session status --check` proves one still works.
  */
-export const oauthCheck = (env: NodeJS.ProcessEnv) => {
+/** A Google app left in Testing ends its sign-ins after 7 days; from day 6 doctor says so. */
+const TESTING_WARN_DAYS = 6
+
+export const oauthCheck = (env: NodeJS.ProcessEnv, now = Date.now()) => {
   const { configuredProfiles } = configuration.resolveSettings({}, { env, needsProfile: false })
   const records = signInRecords(env)
   const profiles = configuredProfiles.flatMap((profile) => {
     const { mailbox } = configuration.resolveSettings({ profile }, { env })
-    if (mailbox.auth !== "oauth") return []
-    let client: "wirecat" | "own" | null
-    try {
-      client = microsoftClient(mailbox).source
-    } catch {
-      client = null
-    }
+    const kind = mailbox.address ? providerFor(mailbox.address, mailbox.host)?.oauth : undefined
+    if (mailbox.auth !== "oauth" || !kind) return []
+    let client: "wirecat" | "own" | null = "own"
+    if (kind === "microsoft")
+      try {
+        client = microsoftClient(mailbox).source
+      } catch {
+        client = null
+      }
     const record = records[profile]
+    const days = record ? Math.floor((now - Date.parse(record.signed_in_at)) / DAY_MS) : null
     return [
       {
         profile,
+        provider: kind,
         client,
         signed_in_at: record?.signed_in_at ?? null,
-        sends: record ? record.scopes.includes(MICROSOFT_SMTP_SCOPE) : null,
+        sends: record ? record.scopes.includes(sendScopeOf(kind)) : null,
+        ...(kind === "google" ? { testing_expiry_risk: days !== null && days >= TESTING_WARN_DAYS } : {}),
       },
     ]
   })
   const sign = (profile: string) => `\`${IDENTITY.command} ${profile} session start\``
   return {
     fields: { oauth: profiles },
-    notes: profiles.flatMap(({ profile, client, signed_in_at, sends }) => [
+    notes: profiles.flatMap(({ profile, client, signed_in_at, sends, ...rest }) => [
+      ...("testing_expiry_risk" in rest && rest.testing_expiry_risk
+        ? [
+            `profile ${profile} signed in to Google ${TESTING_WARN_DAYS}+ days ago: if your Google app is still in ` +
+              `Testing, Google ends the sign-in on day 7. Publish the app (${GOOGLE_GUIDE}), then ${sign(profile)}`,
+          ]
+        : []),
       ...(client === null
         ? [
             `profile ${profile} has no Microsoft app to sign in with again: set one with ` +

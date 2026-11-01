@@ -19,6 +19,7 @@ support request.
 | "refused the OAuth token even after a refresh" | The sign-in was revoked (a password change, sessions signed out, or the app removed). Run `mail <profile> session start` again. |
 | Microsoft says an admin must approve the app | Your organisation allows only approved apps. Ask an admin to grant consent, or to register the organisation's own app ([steps](oauth-microsoft.md)) and give you its id. |
 | "Microsoft refused the OAuth login for sending" | Reading works but sending does not: "Authenticated SMTP" is off for the Microsoft 365 mailbox, often through security defaults. An admin turns it on per mailbox. |
+| Gmail over OAuth stops working after a week | The Google app is still in Testing, where Google ends sign-ins after 7 days. Publish it ([steps](oauth-google.md#4-publish-the-app-production-without-verification)), then `session start` again. `mail doctor` warns from day 6. |
 | A write is refused | The profile's permissions or `MAIL_READ_ONLY` stop it; see [settings](configuration.md#permissions). |
 
 Never paste a token, a password or private content into a support request.
