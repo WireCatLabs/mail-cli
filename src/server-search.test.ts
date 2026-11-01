@@ -192,6 +192,30 @@ describe("search messages --backend", () => {
     expect(await leftOpen(fake)).toBe(0)
   })
 
+  it("answers a timeout, not a failure, when reading the finds outlasts --server-time", async () => {
+    const server: Partial<FakeOptions> = {}
+    const inbox: FakeFolder = { name: "INBOX", messages: [] }
+    const { mail, fake } = await harness("me@example.com", [inbox], [], server)
+    expect((await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])).code).toBe(0)
+    inbox.messages.push({ uid: 3, raw: raw("big", "Invoice", "Invoice."), flags: [] })
+    server.hangFetches = true
+    const answer = await mail([
+      "ya",
+      "search",
+      "messages",
+      "invoice",
+      "--backend",
+      "server",
+      "--server-time",
+      "1s",
+      "--json",
+    ])
+    expect(answer.code, answer.err).toBe(0)
+    const { meta } = JSON.parse(answer.out)
+    expect(meta.issues).toEqual([{ code: "timeout", reason: "search.server-timeout", source: "server" }])
+    expect(await leftOpen(fake)).toBe(0)
+  })
+
   it("counts a folder whose SEARCH is refused as failed, not as empty", async () => {
     const server: Partial<FakeOptions> = {}
     const { mail, fake } = await harness(
