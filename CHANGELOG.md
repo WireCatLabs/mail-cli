@@ -2,6 +2,14 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Fixed
+
+- **A scheduled sync runs from its timer.** The timer starts `mail schedule exec <file>` with no profile, and mail refused it
+  with "name a profile" before reading the schedule, so no timed run worked in 0.3.0 and 0.4.0. `schedule exec` now needs
+  no profile; the schedule's own environment names it (cli-core 0.521.0).
+
 ## 0.4.0 — 01.11.2026
 
 ### Added
