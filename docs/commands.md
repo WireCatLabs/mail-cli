@@ -691,6 +691,174 @@ mail conversations show <conversation>
 
 **Example:** `mail ya conversations show 'chat:email/me%40example.com/thread-1'`, `mail ya conversations show 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E'`
 
+## `mail drafts`
+
+drafts in the mailbox's Drafts folder: an agent writes them, the owner checks and sends them
+
+### `mail drafts list`
+
+the drafts in the mailbox's Drafts folder, newest first, read from the server
+
+```sh
+mail drafts list [options]
+```
+
+| Option | What it does |
+|---|---|
+| `--limit <n>` | at most this many (default 50, at most 500). |
+
+**Returns:** mail draft — id, uid, subject, from, to, cc, bcc, date, and 3 more; every field: mail commands info drafts list
+
+**Example:** `mail ya drafts list`, `mail ya drafts list --limit 5 --json`
+
+### `mail drafts create`
+
+save a new message in the Drafts folder; nothing is sent, and the owner sends it from any mail app. --reply-to answers a stored message in its thread
+
+**Changes something in the service.**
+
+```sh
+mail drafts create [text] [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `text` | optional | the text; - reads it from stdin. |
+
+| Option | What it does |
+|---|---|
+| `--to <address>` | who it goes to; repeat it for more. |
+| `--cc <address>` | a copy to; repeat it for more. |
+| `--bcc <address>` | a blind copy to; repeat it for more. |
+| `--subject <text>` | the subject line. |
+| `--dry-run` | build the draft and show it; store nothing. |
+| `--reply-to <message>` | answer this stored message: its sender, its subject with Re:, in its thread. |
+| `--reply-all` | with --reply-to, also everyone it went to, but you. |
+
+**Returns:** mail draft change — action, applied, id, folder, uid, replaced_uid, subject, to, and 2 more; every field: mail commands info drafts create
+
+**Example:** `mail ya drafts create --to anna@example.com --subject 'Monday' 'Shall we meet at ten?'`, `mail ya drafts create --reply-to msg:email/me%40example.com/t1/m1 --reply-all 'Thanks, agreed.'`
+
+### `mail drafts update`
+
+replace a draft with a new version under the same id: each given field replaces the old one (a --to list replaces the whole To), the rest, the thread and the attachments stay; the old version is removed after
+
+**Changes something in the service.**
+
+```sh
+mail drafts update <draft> [text] [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `draft` | required | the draft's id, as drafts list shows it. |
+| `text` | optional | the new text; - reads it from stdin. |
+
+| Option | What it does |
+|---|---|
+| `--to <address>` | who it goes to; repeat it for more. |
+| `--cc <address>` | a copy to; repeat it for more. |
+| `--bcc <address>` | a blind copy to; repeat it for more. |
+| `--subject <text>` | the subject line. |
+| `--dry-run` | build the draft and show it; store nothing. |
+
+**Returns:** mail draft change — action, applied, id, folder, uid, replaced_uid, subject, to, and 2 more; every field: mail commands info drafts update
+
+**Example:** `mail ya drafts update 5b0e1c2a@example.com 'New text, the rest kept'`, `mail ya drafts update 5b0e1c2a@example.com --to anna@example.com --to boris@example.com`
+
+### `mail drafts delete`
+
+delete a draft from the Drafts folder for good, with no restore; a preview without --yes
+
+**Changes something in the service.**
+
+```sh
+mail drafts delete <draft> [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `draft` | required | the draft's id, as drafts list shows it. |
+
+| Option | What it does |
+|---|---|
+| `--yes` | delete it; without it, only a preview. |
+| `--dry-run` | only preview, even with --yes. |
+
+**Returns:** mail draft change — action, applied, id, folder, uid, replaced_uid, subject, to, and 2 more; every field: mail commands info drafts delete
+
+**Example:** `mail ya drafts delete 5b0e1c2a@example.com --yes`
+
+## `mail tags`
+
+your own tags on stored mail, kept in the local store and shared with memo; never sent to the server
+
+### `mail tags add`
+
+put your own tags on one stored email or conversation; they stay in the local store, never on the server
+
+**Changes something on this computer only.**
+
+```sh
+mail tags add <tag> [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `tag` | required | one or more tags: 1–32 letters a–z, digits and hyphens; upper case is lowered. |
+
+| Option | What it does |
+|---|---|
+| `--message <message>` | the email: its msg:email/… reference, as search messages shows it. |
+| `--chat <chat>` | the conversation: its chat:email/… reference, as conversations list shows it. |
+
+**Returns:** mail tag change — target, unchanged, added, removed; every field: mail commands info tags add
+
+**Example:** `mail ya tags add invoices --message msg:email/me%40example.com/t1/m1`
+
+### `mail tags remove`
+
+take your own tags off one stored email or conversation
+
+**Changes something on this computer only.**
+
+```sh
+mail tags remove <tag> [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `tag` | required | one or more tags: 1–32 letters a–z, digits and hyphens; upper case is lowered. |
+
+| Option | What it does |
+|---|---|
+| `--message <message>` | the email: its msg:email/… reference, as search messages shows it. |
+| `--chat <chat>` | the conversation: its chat:email/… reference, as conversations list shows it. |
+
+**Returns:** mail tag change — target, unchanged, added, removed; every field: mail commands info tags remove
+
+**Example:** `mail ya tags remove invoices --message msg:email/me%40example.com/t1/m1`
+
+### `mail tags list`
+
+the emails and conversations of this mailbox you tagged; search messages tag:<tag> finds them too
+
+```sh
+mail tags list [query] [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `query` | optional | field:value terms that narrow the list — the fields are below. |
+
+| Option | What it does |
+|---|---|
+| `--limit <n>` | at most this many (default 100, at most 1000). |
+
+**Returns:** mail tag — tag, type, target, name, created_at; every field: mail commands info tags list
+
+**Example:** `mail ya tags list`, `mail ya tags list tag:invoices`
+
 ## `mail doctor`
 
 the state this installation is in, without connecting unless --online

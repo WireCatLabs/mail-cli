@@ -477,15 +477,43 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
       }
     }
 
+    /** APPEND's message comes as a literal after its line: `{n}`, a `+` from us, then n bytes. */
+    const append = (tag: string, line: string, raw: string) => {
+      commands.push(`APPEND ${line}`)
+      const words = tokens(line)
+      const folder = folderNamed(words[0] ?? "")
+      if (!folder) return send(`${tag} NO [TRYCREATE] no such folder`)
+      const { values } = words[1] === "(" ? listOf(words, 1) : { values: [] }
+      const message: FakeMessage = { uid: nextUid(folder), raw, flags: values }
+      folder.messages.push(message)
+      return send(`${tag} OK [APPENDUID ${folder.uidValidity ?? 777} ${message.uid}] appended`)
+    }
+    let appending: { tag: string; line: string; size: number } | undefined
+
     socket.on("data", (chunk) => {
       buffer = Buffer.concat([buffer, chunk])
       for (;;) {
+        if (appending) {
+          if (buffer.length < appending.size + 2) return
+          const raw = buffer.subarray(0, appending.size).toString("utf8")
+          buffer = buffer.subarray(buffer.indexOf("\r\n", appending.size) + 2)
+          const { tag, line } = appending
+          appending = undefined
+          append(tag, line, raw)
+          continue
+        }
         const end = buffer.indexOf("\r\n")
         if (end === -1) return
         const text = buffer.subarray(0, end).toString("utf8")
         buffer = buffer.subarray(end + 2)
-        const [tag = "", ...words] = text.split(" ")
-        if (tag) handle(tag, words.join(" "))
+        const [tag = "", verb = "", ...words] = text.split(" ")
+        const size = /\{(\d+)(\+?)\}$/.exec(text)
+        if (verb.toUpperCase() === "APPEND" && size) {
+          appending = { tag, line: words.join(" ").replace(/\s*\{\d+\+?\}$/, ""), size: Number(size[1]) }
+          if (!size[2]) send("+ go ahead")
+          continue
+        }
+        if (tag) handle(tag, [verb, ...words].join(" "))
       }
     })
   }
