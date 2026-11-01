@@ -40,7 +40,7 @@ import {
 } from "../mail/organise.js"
 import { DEFAULT_ORGANISE, providerFor } from "../providers.js"
 import { openMailStore } from "../store.js"
-import { collect, contextOf, openMail, refuseOffline } from "./context.js"
+import { contextOf, openMail, refuseOffline, repeatable } from "./context.js"
 
 type Action = "message-flag" | "message-move" | "message-copy" | "message-delete" | "message-restore"
 
@@ -400,8 +400,8 @@ const updateCommand = (): Command =>
       "set and unset flags (read, flagged, answered, draft) and keywords ($Forwarded, $Junk, words of your own); " +
         "--replace makes --flag each message's whole set",
     )
-    .option("--flag <flag>", "a flag or keyword to set; repeat it for more", collect)
-    .option("--unflag <flag>", "a flag or keyword to take away; repeat it for more", collect)
+    .addOption(repeatable("--flag <flag>", "a flag or keyword to set; repeat it for more"))
+    .addOption(repeatable("--unflag <flag>", "a flag or keyword to take away; repeat it for more"))
     .option("--replace", "--flag is the whole set: every other flag and keyword is taken away")
     .action(
       organiseAction("message-flag", "messages.update", async (_opened, options) => {

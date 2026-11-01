@@ -40,7 +40,7 @@ import {
 } from "../mail/drafts.js"
 import { trashOf } from "../mail/organise.js"
 import { fetchOriginal } from "../mail/send.js"
-import { collect } from "./context.js"
+import { repeatable } from "./context.js"
 import { draftSendCommand } from "./drafts-send.js"
 import { type Opened, organising } from "./messages.js"
 import { ownerOf } from "./send.js"
@@ -95,13 +95,15 @@ interface Fields {
 
 const addressing = (command: Command) =>
   command
-    .option("--to <address>", "who it goes to; repeat it for more", collect)
-    .option("--cc <address>", "a copy to; repeat it for more", collect)
-    .option("--bcc <address>", "a blind copy to; repeat it for more", collect)
+    .addOption(
+      repeatable("--to <address>", "who it goes to: an address, or several split by commas; repeat it for more"),
+    )
+    .addOption(repeatable("--cc <address>", "a copy to; repeat it for more"))
+    .addOption(repeatable("--bcc <address>", "a blind copy to; repeat it for more"))
     .option("--subject <text>", "the subject line")
     .option("--dry-run", "build the draft and show it; store nothing")
 
-const listed = (given: string[] | undefined, flag: string) => (given === undefined ? undefined : peopleOf(given, flag))
+const listed = (given: string[] | undefined, flag: string) => (given?.length ? peopleOf(given, flag) : undefined)
 const addressesOf = (people: readonly Person[]) =>
   people.map(({ address, name }) => (name ? `${name} <${address}>` : address))
 
@@ -286,9 +288,9 @@ const updateCommand = () =>
         const folder = await draftsFolder(opened)
         const found = await findDraft(opened.backend, folder, id)
         const fields: Changes = {
-          ...(options.to ? { to: peopleOf(options.to, "--to") } : {}),
-          ...(options.cc ? { cc: peopleOf(options.cc, "--cc") } : {}),
-          ...(options.bcc ? { bcc: peopleOf(options.bcc, "--bcc") } : {}),
+          ...(options.to?.length ? { to: peopleOf(options.to, "--to") } : {}),
+          ...(options.cc?.length ? { cc: peopleOf(options.cc, "--cc") } : {}),
+          ...(options.bcc?.length ? { bcc: peopleOf(options.bcc, "--bcc") } : {}),
           ...(options.subject === undefined ? {} : { subject: options.subject }),
           ...(body === undefined ? {} : { text: body }),
         }

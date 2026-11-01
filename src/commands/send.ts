@@ -32,7 +32,7 @@ import {
 } from "../mail/compose.js"
 import { everyone, fetchOriginal, type Outgoing, othersOf, type Sending, sendOut } from "../mail/send.js"
 import { DEFAULT_SYNC, providerFor } from "../providers.js"
-import { collect, contextOf, repeatable } from "./context.js"
+import { contextOf, repeatable } from "./context.js"
 import { type Opened, organising } from "./messages.js"
 import { foldersFor } from "./sync.js"
 
@@ -296,13 +296,14 @@ const readText = async (command: Command): Promise<string> => {
 
 const recipients = (command: Command) =>
   command
-    .option(
-      "--to <address>",
-      "who it goes to: an address, or several split by commas; repeat it for more (a reply: instead of its sender)",
-      collect,
+    .addOption(
+      repeatable(
+        "--to <address>",
+        "who it goes to: an address, or several split by commas; repeat it for more (a reply: instead of its sender)",
+      ),
     )
-    .option("--cc <address>", "a copy to this address; repeat it for more", collect)
-    .option("--bcc <address>", "a hidden copy to this address; repeat it for more", collect)
+    .addOption(repeatable("--cc <address>", "a copy to this address; repeat it for more"))
+    .addOption(repeatable("--bcc <address>", "a hidden copy to this address; repeat it for more"))
 
 const sending = (command: Command) =>
   command

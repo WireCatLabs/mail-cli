@@ -664,7 +664,7 @@ describe("attachments list and download", { timeout: 20_000 }, () => {
 const callSend = (client: Awaited<ReturnType<typeof mcpClient>>["client"], to: string) =>
   client.callTool({
     name: "mail_write",
-    arguments: { command: "messages send", arguments: { to, subject: "From the agent", text: "Hello" } },
+    arguments: { command: "messages send", arguments: { to: [to], subject: "From the agent", text: "Hello" } },
   }) as Promise<{ isError?: boolean; content?: { text?: string }[] }>
 
 describe("sending over MCP", { timeout: 20_000 }, () => {
@@ -723,7 +723,7 @@ describe("sending over MCP", { timeout: 20_000 }, () => {
       const send = (to: string) =>
         client.callTool({
           name: "mail_write",
-          arguments: { command: "messages send", arguments: { to, subject: "From the agent", text: "Hello" } },
+          arguments: { command: "messages send", arguments: { to: [to], subject: "From the agent", text: "Hello" } },
         })
       const refused = (await send("eve@example.com")) as { isError?: boolean; content?: { text?: string }[] }
       expect(refused.isError).toBe(true)
@@ -752,7 +752,7 @@ describe("sending over MCP", { timeout: 20_000 }, () => {
       const send = (extra: Record<string, unknown>) =>
         client.callTool({
           name: "mail_write",
-          arguments: { command: "messages send", arguments: { to: ADDRESS, subject: "Key", text: "x", ...extra } },
+          arguments: { command: "messages send", arguments: { to: [ADDRESS], subject: "Key", text: "x", ...extra } },
         }) as Promise<{ isError?: boolean; content?: { text?: string }[] }>
       const refused = await send({ file: key })
       expect(refused.isError).toBe(true)
@@ -774,7 +774,7 @@ describe("sending over MCP", { timeout: 20_000 }, () => {
         name: "mail_write",
         arguments: {
           command: "messages send",
-          arguments: { to: ADDRESS, subject: "Two", text: "x", file: [join(dir, "one.txt"), join(dir, "two.txt")] },
+          arguments: { to: [ADDRESS], subject: "Two", text: "x", file: [join(dir, "one.txt"), join(dir, "two.txt")] },
         },
       })) as { isError?: boolean }
       expect(sent.isError).toBeFalsy()
@@ -783,6 +783,41 @@ describe("sending over MCP", { timeout: 20_000 }, () => {
     }
     expect(smtp.received[0]?.raw).toContain("filename=one.txt")
     expect(smtp.received[0]?.raw).toContain("filename=two.txt")
+  })
+  it("lets an agent mail several people at once: to, cc and bcc are lists over MCP", async () => {
+    const { mail, options, smtp } = await harness()
+    expect((await mail(["ya", "config", "set", "permissions.messages.send.others", "allow"])).code).toBe(0)
+    const tools = toolsFromCommands(describeProgram(createProgram()), { permissions: configuration.permissions })
+    for (const command of ["messages send", "messages forward", "drafts create", "drafts update", "messages update"]) {
+      const entries = tools.find((tool) => tool.command === command)?.input.entries ?? {}
+      for (const name of command === "messages update" ? ["flag", "unflag"] : ["to", "cc", "bcc"])
+        expect(JSON.stringify(entries[name]), `${command} ${name}`).toContain('"array"')
+    }
+    const { client, close } = await mcpClient(options() as Parameters<typeof mcpClient>[0], [], "ya")
+    try {
+      const sent = (await client.callTool({
+        name: "mail_write",
+        arguments: {
+          command: "messages send",
+          arguments: {
+            to: ["ann@example.com", "bob@example.com"],
+            cc: ["carol@example.com"],
+            bcc: ["dave@example.com"],
+            subject: "Many",
+            text: "x",
+          },
+        },
+      })) as { isError?: boolean }
+      expect(sent.isError, JSON.stringify(sent)).toBeFalsy()
+    } finally {
+      expect(await close()).toBe(0)
+    }
+    expect(smtp.received[0]?.recipients.sort()).toEqual([
+      "ann@example.com",
+      "bob@example.com",
+      "carol@example.com",
+      "dave@example.com",
+    ])
   })
 })
 
