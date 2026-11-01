@@ -2,6 +2,7 @@ import { CliError } from "@wirecat/cli-base"
 import { annotate } from "@wirecat/cli-base/commands"
 import {
   answerEntity,
+  baseContext,
   bufferedInput,
   environmentOf,
   itemOf,
@@ -106,7 +107,16 @@ const sendingOf = (opened: Opened, command: Command): Sending => {
       return { folders, mode: defaults.mode ?? "imap" }
     },
     warn: (message) => outputFor(command).renderer.warn(message),
+    agentWithoutOthers: environmentOf(command).agent !== undefined && !othersSetInConfig(command),
   }
+}
+
+/** Only the config file opens mail to others for an agent: an `mcp serve --permission` level arrives as a flag. */
+const othersSetInConfig = (command: Command): boolean => {
+  const { settings } = baseContext(command, configuration.resolveSettings)
+  const { key } = levelFor(settings.permissions, SEND_OTHERS_KEY, configuration.permissions?.defaults ?? {})
+  const from = key ? settings.permissionSources[key] : undefined
+  return key !== undefined && key !== null && key.startsWith(SEND_OTHERS_KEY) && from !== undefined && from !== "flag"
 }
 
 export const filesOf = async (command: Command, paths: readonly string[], anyFile: boolean) => {

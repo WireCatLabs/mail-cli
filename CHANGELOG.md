@@ -80,6 +80,9 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Changed — may break callers
 
+- **An agent over MCP mails only the owner.** `messages send`, `messages forward` and `drafts send` to anyone else
+  answer `permission_error` over MCP until the owner sets `permissions.messages.send.others` in the config (`ask` or
+  `allow`); an `mcp serve --permission` cannot open it. At a terminal it still asks.
 - `mail` is no longer read-only: an MCP client with `--allow-writes` can change the mailbox through the `write` tool,
   within the profile's permissions.
 - **On a server with OBJECTID (Fastmail, Cyrus) an email's id is the hash of its Message-ID, as memo makes it**, not

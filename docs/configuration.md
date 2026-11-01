@@ -34,14 +34,14 @@ well. At a terminal
 
 Sending has two keys. `messages.send` and `messages.forward` are the commands themselves and go ahead when the mail
 goes only to you. Mail that reaches anyone else also passes `messages.send.others`, which asks by default; set it to
-`allow` to send without the question, or `readonly` to let this profile mail only you. Each recipient
-counts toward `sends_per_hour` (30 by default).
+`allow` to send without the question, or `readonly` to let this profile mail only you. An agent over MCP, where
+nobody can answer the question, mails only you until you set `messages.send.others` in the config yourself (`ask` or
+`allow`); an `mcp serve --permission` cannot open it. Each recipient counts toward `sends_per_hour` (30 by default).
 
 ```sh
 mail ya config set permissions.messages readonly      # no flag, move, deletion or send on this profile
 mail ya config set permissions.messages.bulk deny     # one message at a time only
-mail ya config set permissions.messages.send.others allow   # send to others without the question
-mail ya mcp serve --permission messages.send.others=readonly  # an agent may mail only you
+mail ya config set permissions.messages.send.others allow   # send to others without the question, agents too
 ```
 
 Every attempt to change the mailbox or send goes into the profile's send journal with its key, the count and the
