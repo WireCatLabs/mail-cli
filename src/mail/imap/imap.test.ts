@@ -265,6 +265,17 @@ it("refuses every call after close instead of opening a new connection", async (
   expect(fake.commands).toHaveLength(sent)
 })
 
+it("caps a body FETCH by bytes as well as by count, and sends a larger message alone", async () => {
+  fake = await serve()
+  const source = sourceOf(fake.port, undefined, { fetchBytes: 1 })
+  const listed = await source.list(SINCE, "INBOX")
+  const raws = await source.fetchRaw(listed)
+  await source.close()
+  expect(raws.every((one) => one instanceof Uint8Array)).toBe(true)
+  const bodies = fake.commands.filter((command) => command.startsWith("UID FETCH") && /BODY\.PEEK\[\]/i.test(command))
+  expect(bodies.map((command) => command.split(" ")[2])).toEqual(["4", "7"])
+})
+
 it("spreads a call over its connections and keeps the order", async () => {
   fake = await serve()
   const source = sourceOf(fake.port, undefined, { listSize: 1, fetchSize: 1, connections: 2 })

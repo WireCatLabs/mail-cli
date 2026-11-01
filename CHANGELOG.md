@@ -16,6 +16,9 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 - **`session start` prints the server it found before it sends the password**: host, port, security and login, so
   a wrong guess of discovery is seen before the password goes to it.
 
+- **`sync` asks for at most 20 MB of message bodies in one request**, as well as at most 15 messages, so a batch of
+  large attachments does not hold a connection for minutes or fill memory.
+
 ### Fixed
 
 - **Every command that asks the server is bound by the run's deadline and Ctrl-C.** `session start` and

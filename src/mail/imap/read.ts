@@ -11,6 +11,25 @@ const chunks = <T>(items: T[], size: number): T[][] => {
   return out
 }
 
+/** At most `count` messages and `bytes` of RFC822.SIZE per batch; a message larger than `bytes` goes alone. */
+const bodyBatches = (items: Quick[], count: number, bytes: number): Quick[][] => {
+  const out: Quick[][] = []
+  let current: Quick[] = []
+  let size = 0
+  for (const item of items) {
+    const next = item.size ?? 0
+    if (current.length > 0 && (current.length >= count || size + next > bytes)) {
+      out.push(current)
+      current = []
+      size = 0
+    }
+    current.push(item)
+    size += next
+  }
+  if (current.length > 0) out.push(current)
+  return out
+}
+
 const groupByFolder = (items: Quick[]): Map<string, Quick[]> => {
   const byFolder = new Map<string, Quick[]>()
   for (const item of items) {
@@ -27,7 +46,7 @@ type Reads = Required<Pick<MailSource, "listBatch" | "fetchBatch" | "search" | "
 
 /** The calls cli-core's sync makes to read a folder; none of them changes the mailbox. */
 export const imapReads = (pool: Connections, tuning: ImapTuning = {}): Reads => {
-  const { listSize, quickSize, fetchSize } = { ...IMAP_DEFAULTS, ...tuning }
+  const { listSize, quickSize, fetchSize, fetchBytes } = { ...IMAP_DEFAULTS, ...tuning }
   const { validities, inFolder, spread, connections } = pool
 
   const search = async (since: Date, folder: string): Promise<Searched> => {
@@ -144,7 +163,7 @@ export const imapReads = (pool: Connections, tuning: ImapTuning = {}): Reads => 
           },
         )
       for (const [folder, group] of groupByFolder(items)) {
-        const batches = chunks(group, fetchSize)
+        const batches = bodyBatches(group, fetchSize, fetchBytes)
         const answers = await bodies(folder, batches)
         for (const [index, batch] of batches.entries()) {
           let answer = answers[index]
