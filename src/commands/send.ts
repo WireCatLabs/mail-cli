@@ -32,7 +32,7 @@ import {
 } from "../mail/compose.js"
 import { everyone, fetchOriginal, type Outgoing, othersOf, type Sending, sendOut } from "../mail/send.js"
 import { DEFAULT_SYNC, providerFor } from "../providers.js"
-import { collect, contextOf } from "./context.js"
+import { collect, contextOf, repeatable } from "./context.js"
 import { type Opened, organising } from "./messages.js"
 import { foldersFor } from "./sync.js"
 
@@ -306,7 +306,7 @@ const recipients = (command: Command) =>
 
 const sending = (command: Command) =>
   command
-    .option("--file <file>", "attach this file, as named, never a pattern; repeat it for more", collect)
+    .addOption(repeatable("--file <file>", "attach this file, as named, never a pattern; repeat it for more"))
     .addOption(
       ownerOnlyOption("--allow-any-file", "attach a file even from credential folders or this CLI's own folders"),
     )

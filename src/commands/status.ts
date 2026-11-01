@@ -3,7 +3,7 @@ import { CliError } from "@wirecat/cli-base"
 import { annotate } from "@wirecat/cli-base/commands"
 import { progressOf } from "@wirecat/cli-core/background"
 import { answerEntity, baseContext, itemOf, LOCAL_READ, outputFor, renderAnswer } from "@wirecat/cli-core/cli"
-import { mailProgress } from "@wirecat/cli-core/mail"
+import { mailAccountKey, mailProgress } from "@wirecat/cli-core/mail"
 import { Command } from "commander"
 import * as v from "valibot"
 import { configuration } from "../config.js"
@@ -51,7 +51,7 @@ export const statusCommand = (): Command =>
       const context = contextOf(this)
       const address = context.settings.mailbox.address
       if (!address) throw new CliError("configuration_error", `profile ${context.profile} has no address`)
-      const key = { provider: "email", account: address.toLowerCase() }
+      const key = mailAccountKey(address)
       const report = await baseContext(this, configuration.resolveSettings).run(async () => {
         const { storePath } = await import("@wirecat/cli-core/store")
         if (!existsSync(storePath(context.env))) return []

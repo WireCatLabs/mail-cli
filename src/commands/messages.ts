@@ -100,12 +100,15 @@ const askingOnce = (ask: Asker): Asker => {
 
 /**
  * The family asks `--allow-dangerous` before a deletion, which cannot be undone in a messenger. Mail's goes to Trash
- * and `messages restore` brings it back, so `--yes` answers it; `--allow-dangerous` stays for what is lost for good.
+ * and `messages restore` brings it back, so `--yes` answers it. `--allow-dangerous` is for what is lost for good:
+ * `drafts delete`, whose key cli-core does not know as one of those (WC-PERM-9).
  */
-const trashNeedsOnlyYes =
+const askedByMailFlags =
   (command: Command, ask: Asker): Asker =>
   async (key, request) => {
-    if (key === "messages.delete" && command.optsWithGlobals<{ yes?: boolean }>().yes === true) return
+    const given = command.optsWithGlobals<{ yes?: boolean; allowDangerous?: boolean }>()
+    if (key === "messages.delete" && given.yes === true) return
+    if (key === "drafts.delete" && given.allowDangerous === true) return
     await ask(key, request)
   }
 
@@ -168,7 +171,7 @@ export const organising = async <T>(command: Command, work: (opened: Opened) => 
           { ...settings, permissionDefaults: configuration.permissions?.defaults ?? {} },
           (message) => outputFor(command).renderer.warn(message),
           context.env,
-          askingOnce(trashNeedsOnlyYes(command, terminalAsker(command))),
+          askingOnce(askedByMailFlags(command, terminalAsker(command))),
         )
         const { path, line } = commandLine(command, context.profile)
         return await work({
@@ -497,7 +500,10 @@ const deleteCommand = (): Command =>
     .description(
       "move messages to Trash, where the provider keeps them for a while (Gmail: 30 days) and messages restore brings them back; a preview unless --yes",
     )
-    .option("--rules", "the envelope mail the owner's rules let go, each decided again (memo's mail delete)")
+    .option(
+      "--rules",
+      "the envelope mail the owner's rules let go, each decided again (`memo mail delete` did this before)",
+    )
     .option("--since-time <time>", "with --rules, only mail received from this time; older mail stays")
     .addHelpText(
       "after",
@@ -622,7 +628,7 @@ const restoreCommand = (): Command =>
     .addHelpText(
       "after",
       `
-memo's mail delete runs restore here too, by their id. Mail Gmail has emptied from Trash (30 days) cannot come back.
+memo mail delete runs restore here too, by their id. Mail Gmail has emptied from Trash (30 days) cannot come back.
 Envelopes come back to search at once; mail with text is saved again by the next sync.`,
     )
     .action(async function (this: Command, options: { run: string; dryRun?: boolean }) {

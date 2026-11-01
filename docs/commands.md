@@ -655,7 +655,7 @@ mail messages delete [message] [options]
 | `--limit <n>` | with --filter, at most this many, newest first (default 5000, at most 5000). |
 | `--yes` | make the change; a deletion or a change of many is only a preview without it. |
 | `--dry-run` | only preview what would change, even with --yes. |
-| `--rules` | the envelope mail the owner's rules let go, each decided again (memo's mail delete). |
+| `--rules` | the envelope mail the owner's rules let go, each decided again (`memo mail delete` did this before). |
 | `--since-time <time>` | with --rules, only mail received from this time; older mail stays. |
 
 **Returns:** mail change — action, applied, run, selected, located, changed, missing, already_deleted, and 6 more; every field: mail commands info messages delete
@@ -701,7 +701,7 @@ mail messages send [text] [options]
 | `--to <address>` | who it goes to: an address, or several split by commas; repeat it for more (a reply: instead of its sender). |
 | `--cc <address>` | a copy to this address; repeat it for more. |
 | `--bcc <address>` | a hidden copy to this address; repeat it for more. |
-| `--file <file>` | attach this file, as named, never a pattern; repeat it for more. |
+| `--file <file>` | attach this file, as named, never a pattern; repeat it for more. Default: ``. |
 | `--allow-any-file` | attach a file even from credential folders or this CLI's own folders. |
 | `--operation-id <id>` | repeat a send whose outcome was unknown; Sent is checked first, so it goes once. |
 | `--yes` | answer the question before sending to anyone but you. |
@@ -734,7 +734,7 @@ mail messages forward <message> [text] [options]
 | `--to <address>` | who it goes to: an address, or several split by commas; repeat it for more (a reply: instead of its sender). |
 | `--cc <address>` | a copy to this address; repeat it for more. |
 | `--bcc <address>` | a hidden copy to this address; repeat it for more. |
-| `--file <file>` | attach this file, as named, never a pattern; repeat it for more. |
+| `--file <file>` | attach this file, as named, never a pattern; repeat it for more. Default: ``. |
 | `--allow-any-file` | attach a file even from credential folders or this CLI's own folders. |
 | `--operation-id <id>` | repeat a send whose outcome was unknown; Sent is checked first, so it goes once. |
 | `--yes` | answer the question before sending to anyone but you. |
@@ -930,7 +930,7 @@ mail drafts update <draft> [text] [options]
 
 ### `mail drafts delete`
 
-delete a draft from the Drafts folder for good, with no restore; a preview without --yes
+delete a draft from the Drafts folder for good, with no restore; the owner adds --allow-dangerous to do it, without it a preview
 
 **Changes something in the service.**
 
@@ -944,12 +944,12 @@ mail drafts delete <draft> [options]
 
 | Option | What it does |
 |---|---|
-| `--yes` | delete it; without it, only a preview. |
-| `--dry-run` | only preview, even with --yes. |
+| `--allow-dangerous` | delete it for good, no restore; without it, only a preview. |
+| `--dry-run` | only preview, even with --allow-dangerous. |
 
 **Returns:** mail draft change — action, applied, id, folder, uid, replaced_uid, old_version_in, subject, and 3 more; every field: mail commands info drafts delete
 
-**Example:** `mail ya drafts delete 5b0e1c2a@example.com --yes`
+**Example:** `mail ya drafts delete 5b0e1c2a@example.com --allow-dangerous`
 
 ### `mail drafts send`
 

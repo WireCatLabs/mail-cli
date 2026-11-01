@@ -1,13 +1,20 @@
 import { CliError } from "@wirecat/cli-base"
 import { annotate } from "@wirecat/cli-base/commands"
-import { answerEntity, baseContext, LOCAL_READ, listOf, outputFor, renderAnswer } from "@wirecat/cli-core/cli"
+import {
+  answerEntity,
+  baseContext,
+  LOCAL_READ,
+  listOf,
+  outputFor,
+  positiveCount,
+  renderAnswer,
+} from "@wirecat/cli-core/cli"
 import { Command, Option } from "commander"
 import * as v from "valibot"
 import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
 import { openMailStore } from "../store.js"
 import { contextOf } from "./context.js"
-import { wholeNumberFor } from "./sync.js"
 
 const GROUPS = ["sender", "list", "domain"] as const
 type Group = (typeof GROUPS)[number]
@@ -46,7 +53,7 @@ const topLeaf = (): Command =>
         "unread and size help decide what to unsubscribe from or clean up",
     )
     .addOption(new Option("--by <group>", "what to group by").choices([...GROUPS]).default("sender"))
-    .option("--limit <n>", "how many groups, at most 200", wholeNumberFor("limit"), 20)
+    .option("--limit <n>", "how many groups, at most 200", positiveCount("--limit"), 20)
     .action(async function (this: Command, args: { by: Group; limit: number }) {
       const context = contextOf(this)
       const address = context.settings.mailbox.address

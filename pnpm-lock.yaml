@@ -27,9 +27,6 @@ importers:
       nodemailer:
         specifier: 10.1.7
         version: 10.1.7
-      postal-mime:
-        specifier: 4.1.4
-        version: 4.1.4
       valibot:
         specifier: 1.5.0
         version: 1.5.0(typescript@7.0.2)

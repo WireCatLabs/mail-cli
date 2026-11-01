@@ -1,8 +1,7 @@
-import { randomUUID } from "node:crypto"
-import { closeSync, linkSync, lstatSync, mkdirSync, openSync, renameSync, rmSync, writeFileSync } from "node:fs"
-import { dirname, extname, join } from "node:path"
+import { lstatSync, mkdirSync } from "node:fs"
+import { dirname, extname } from "node:path"
 import { CliError } from "@wirecat/cli-base"
-import { safeName as plainName } from "@wirecat/cli-core/files"
+import { safeName as plainName, writeFileAtomic } from "@wirecat/cli-core/files"
 
 const exists = (path: string) =>
   new CliError("validation_error", `${path} already exists; pass --replace to overwrite it`, {
@@ -20,29 +19,14 @@ export const present = (path: string): boolean => {
   }
 }
 
-/**
- * A file only this user reads. Without `overwrite` an existing file is never touched: the bytes go to a new temporary
- * file that is then hard-linked in place, which fails if something appeared there meanwhile.
- */
-export const savePrivately = (path: string, bytes: Uint8Array, overwrite: boolean): void => {
+/** A file only this user reads. Without `overwrite` an existing file is never touched. */
+export const savePrivately = async (path: string, bytes: Uint8Array, overwrite: boolean): Promise<void> => {
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 })
-  const temp = join(dirname(path), `.${randomUUID()}.tmp`)
-  let created = false
   try {
-    const fd = openSync(temp, "wx", 0o600)
-    created = true
-    try {
-      writeFileSync(fd, bytes)
-    } finally {
-      closeSync(fd)
-    }
-    if (overwrite) renameSync(temp, path)
-    else linkSync(temp, path)
+    await writeFileAtomic(path, bytes, { overwrite })
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "EEXIST") throw exists(path)
     throw error
-  } finally {
-    if (created) rmSync(temp, { force: true })
   }
 }
 

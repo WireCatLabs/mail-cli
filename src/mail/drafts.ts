@@ -2,7 +2,7 @@ import { CliError } from "@wirecat/cli-base"
 import { parseMail } from "@wirecat/cli-core/mail"
 import type { Organise } from "../providers.js"
 import type { FolderInfo, MailBackend } from "./backend.js"
-import { type Draft as Outgoing, originalOf, type Person, peopleOf } from "./compose.js"
+import { type Draft as Outgoing, type Person, peopleOf } from "./compose.js"
 
 /** `\Seen` too: a draft is the owner's own text, and a mail app shows an unseen one as new mail. */
 export const DRAFT_FLAGS = ["\\Draft", "\\Seen"] as const
@@ -62,14 +62,14 @@ export interface ReadDraft {
 }
 
 export const readDraft = async (raw: Uint8Array, uid: number): Promise<ReadDraft> => {
-  const [parsed, original] = await Promise.all([parseMail(raw), originalOf(raw)])
+  const parsed = await parseMail(raw, undefined, Number.POSITIVE_INFINITY)
   const head =
     Buffer.from(raw)
       .toString("latin1")
       .split(/\r?\n\r?\n/)[0] ?? ""
   return {
     draft: {
-      id: (original.messageId ?? "").replace(/^<|>$/g, ""),
+      id: (parsed.messageId ?? "").replace(/^<|>$/g, ""),
       uid,
       subject: parsed.subject ?? "",
       from: parsed.from ? (shown([parsed.from])[0] as string) : null,
@@ -81,7 +81,7 @@ export const readDraft = async (raw: Uint8Array, uid: number): Promise<ReadDraft
       attachments: parsed.attachments.map(({ name, mime }) => ({ name, mime })),
       text: parsed.text,
     },
-    references: original.references,
+    references: parsed.references,
     parts: parsed.attachments.flatMap(({ name, mime, bytes }) => (bytes ? [{ name, mime, bytes }] : [])),
   }
 }
