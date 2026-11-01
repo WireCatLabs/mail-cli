@@ -22,6 +22,13 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 - **cli-core 0.520.0**, whose shared mail read commands these are.
 
+## 0.3.0 — 01.11.2026
+
+### Added
+
+- **`mail <profile> schedule`** runs a mail command on a timer through systemd, launchd or Task Scheduler, as `tg`
+  does: `mail ya schedule command mail-ya --every 5m -- sync`. `doctor` says when a scheduled run keeps failing.
+
 ## 0.2.0 — 01.11.2026
 
 ### Added

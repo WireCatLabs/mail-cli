@@ -3,6 +3,7 @@ import { resolvePaths } from "@wirecat/cli-base"
 import {
   appDoctorCommand,
   appMcpCommand,
+  baseContext,
   commandsCommand,
   configCommand,
   createProgram as createSharedProgram,
@@ -12,6 +13,7 @@ import {
   type RunOptions,
   run as runShared,
   runsCommand,
+  scheduleCommandFor,
   skillCommand,
   upgradeCommand,
 } from "@wirecat/cli-core/cli"
@@ -65,6 +67,13 @@ export const definition = (): ProgramDefinition => ({
     })),
     configCommand(IDENTITY, configuration),
     runsCommand(IDENTITY),
+    scheduleCommandFor({
+      app: IDENTITY,
+      context: (command) => {
+        const base = baseContext(command, configuration.resolveSettings)
+        return { ...base, profile: base.settings.profile }
+      },
+    }),
   ],
 })
 
