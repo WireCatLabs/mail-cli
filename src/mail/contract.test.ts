@@ -11,7 +11,7 @@ import { imapSource } from "./imap.js"
 const LOGIN = "owner@example.test"
 const cleanups: (() => Promise<void>)[] = []
 afterEach(async () => {
-  for (const cleanup of cleanups.splice(0)) await cleanup()
+  for (const cleanup of cleanups.splice(0).reverse()) await cleanup()
 })
 
 const serve = async (): Promise<FakeImap> => {
