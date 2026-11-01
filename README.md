@@ -177,6 +177,9 @@ keyring, the store, MCP) come from [cli-base](https://github.com/WireCatLabs/cli
 mail-cli is part of [WireCat](https://wirecat.dev): an open context layer for AI agents that keeps your data on your
 computer. Start with mail. Add Telegram, MAX and notes when you need them.
 
+Questions and setup help: join the [WireCat Discord](https://discord.gg/DebENqbRrJ). Bugs go to this
+repository's issues.
+
 ## Contributing and license
 
 Pull requests, bug reports and ideas: [issues](https://github.com/WireCatLabs/mail-cli/issues).
