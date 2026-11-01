@@ -171,7 +171,7 @@ mail sync [options]
 | `--limit <n>` | save at most this many new emails in this run, newest first. |
 | `--max-pages <pages>` | at most this many requests to the mail server in this run; as many as fit the deadline if not given. |
 | `--folder <folder>` | a folder to read; repeat it for more (default: the profile's folders, else INBOX and Sent; All Mail on Gmail). |
-| `--rescan` | list every message in the window again, not only those an earlier run left; on a server without thread ids it also moves stored replies into their first email's thread. |
+| `--rescan` | list the whole window again; also moves stored replies into their thread where the server has no thread ids. |
 
 **Returns:** mail sync — address, since, timezone, folders, state, requests, listed, saved, and 9 more; every field: mail commands info sync
 
