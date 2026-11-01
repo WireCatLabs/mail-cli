@@ -53,6 +53,30 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   it finds is stored, and the same query then runs on the store, so the answer means the same on both backends and
   each hit says `found_in`. The mailbox is opened read only. `permissions.messages.server-search=deny` turns it off;
   `--offline` and `MAIL_READ_ONLY` keep to the store (cli-core 0.525.0).
+- **`mail <profile> messages send --to … --subject … [text]`** sends over the provider's SMTP server with the same
+  app password; the text comes from stdin when left out. `--cc`, `--bcc`, `--file <path>` (repeat; a named path, never
+  a pattern; credential and WireCat folders refused without `--allow-any-file`). `--reply-to <ref> [--reply-all]`
+  answers a stored email: `In-Reply-To`, `References`, `Re:`, the original quoted, `\Answered` set on it.
+- **`messages forward <ref> --to … [text]`** sends the original attached whole (`message/rfc822`), `Fwd:` before its
+  subject, and sets `$Forwarded` on it.
+- **Sent and the store after a send.** Gmail files SMTP mail in Sent itself; elsewhere the copy (with its Bcc line) is
+  appended to Sent unless Sent already holds that Message-ID. The message is then read into the store as `sync` reads it,
+  so it has the server's id and never a second row.
+- **Safety for sends.** Mail to anyone but the owner asks first: new key `messages.send.others`, default `ask`, which
+  the owner may set to `allow`. The question shows from, to, cc, bcc, subject, each attachment and the first
+  lines. `MAIL_READ_ONLY=1`, `readonly` and `deny` refuse; every attempt goes into the send journal without addresses,
+  subject or text; each recipient counts toward `sends_per_hour`; sends are spaced with the shared request pace
+  (cli-core 0.523.0). An answer lost after the message left is `outcome_unknown`; `--operation-id` retries it and sends
+  nothing when Sent already has it. `--dry-run` builds the message and sends nothing. A text that says "attached" with
+  no file warns.
+- **`drafts send <id>`** sends a saved draft through the same path as `messages send` (its keys and question, the
+  hourly limit, the journal, the Sent copy), then removes it from Drafts.
+- **`attachments list <ref>`** and **`attachments download <ref> [number…] --output-dir <dir> [--replace]`**: the
+  files of one email, read from the server and numbered as the store numbers them, saved readable only by you under
+  their plain names; an existing file is kept unless `--replace`.
+- **Profile keys `smtp_host`, `smtp_port`, `smtp_security`** name the submission server for a provider the built-in
+  list does not know. The built-in servers were checked against each provider's help page; Yandex's is now
+  `smtp.yandex.ru:465`.
 
 ### Changed — may break callers
 

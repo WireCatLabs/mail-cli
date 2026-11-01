@@ -227,3 +227,34 @@ mail ya tags remove invoices --message '<ref>'
 
 A tag is 1–32 letters a–z, digits and hyphens; upper case is lowered. What the server keeps instead are keywords
 (`messages update --flag '$Work'`) and, on Gmail, labels (`messages move|copy --folder Work`).
+
+## Send, reply and forward
+
+`mail` sends over the provider's SMTP server with the profile's app password; the server comes from the
+[provider list](providers.md), or from `smtp_host`, `smtp_port` and `smtp_security` in the profile.
+
+```sh
+mail ya messages send --to ann@example.com --subject Lunch "See you at noon."
+echo "The report." | mail ya messages send --to ann@example.com --subject Report --file ./report.pdf
+mail ya messages send --reply-to '<ref>' "Paid today."                # Re:, In-Reply-To, References, the quote
+mail ya messages send --reply-to '<ref>' --reply-all "Thanks, all."   # also to the original's To and Cc, not you
+mail ya messages forward '<ref>' --to bob@example.com "FYI"           # the original attached whole
+mail ya messages send --to ann@example.com --subject Hi "Hello" --dry-run   # build it, send nothing
+mail ya drafts send '<draft id>'                                     # send a saved draft, then remove it
+```
+
+- **The question.** Mail to anyone but you asks first, and shows from, to, cc, bcc, subject, each attachment and the
+  first lines of the text; `--yes` answers it. With no terminal it answers `confirmation_required`.
+  `config set permissions.messages.send.others allow` turns the question off. Mail only to yourself never asks.
+- **Files.** `--file` takes a path as you name it; `mail` never expands a pattern. Credential folders (`.ssh`, keyrings,
+  browser profiles) and the WireCat folders are refused unless `--allow-any-file`. A text that says "attached" with no
+  file draws a warning.
+- **Sent.** Gmail files mail sent over SMTP in Sent itself. Elsewhere `mail` appends its copy, with the Bcc line, unless
+  Sent already holds that Message-ID. The message is then read into the store, so `search messages` finds it at once.
+- **A lost answer.** If the line breaks after the message left, the answer is `outcome_unknown` with an `operation_id`.
+  Run the same command with `--operation-id <id>`: when Sent holds the message, nothing is sent again. On a provider
+  that does not file sent mail itself the first try may still have gone; look in the recipient's mail before a retry.
+- **Attachments.** `attachments list '<ref>'` numbers the files of one email; `attachments download '<ref>'
+  --output-dir ./folder` saves them, readable only by you, under their plain names; `attachments download '<ref>' 2
+  --output-dir ./folder` saves only the second. The bytes come from the
+  server and never go into the store. An existing file stays unless `--replace`.

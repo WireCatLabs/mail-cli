@@ -20,11 +20,13 @@ import {
 import { appUpdate } from "@wirecat/cli-core/update"
 import type { Command } from "commander"
 import { accountCommand } from "./commands/account.js"
+import { attachmentsCommand } from "./commands/attachments.js"
 import { draftsCommand } from "./commands/drafts.js"
 import { foldersCommand } from "./commands/folders.js"
 import { messageWrites } from "./commands/messages.js"
 import { readCommands } from "./commands/read.js"
 import { rulesCommand } from "./commands/rules.js"
+import { forwardCommand, sendCommand } from "./commands/send.js"
 import { sessionCommand } from "./commands/session.js"
 import { statsCommand } from "./commands/stats.js"
 import { statusCommand } from "./commands/status.js"
@@ -49,7 +51,7 @@ const update = appUpdate({
 const withWrites = (reads: Command[]): Command[] => {
   const messages = reads.find((one) => one.name() === "messages")
   if (!messages) throw new Error("cli-core's mail reads have no messages group")
-  for (const write of messageWrites()) messages.addCommand(write)
+  for (const write of [...messageWrites(), sendCommand(), forwardCommand()]) messages.addCommand(write)
   return reads
 }
 
@@ -66,6 +68,7 @@ export const definition = (): ProgramDefinition => ({
     rulesCommand(),
     statusCommand(),
     ...withWrites(readCommands()),
+    attachmentsCommand(),
     statsCommand(),
     draftsCommand(),
     tagsCommand(),

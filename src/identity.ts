@@ -12,6 +12,7 @@ export const IDENTITY: AppIdentity = {
   version: VERSION,
   issues: "https://github.com/WireCatLabs/mail-cli/issues/new",
   messenger: false,
+  sends: true,
   // One call to the source reads 60 messages on 4 connections: 5 to 12 s on Yandex 360 (cli-testing, performance/mail).
   requestMs: 9_000,
   contentLanguages: ["ru", "en"],

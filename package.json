@@ -47,7 +47,7 @@
     "version:check": "cli-dev version && node --experimental-strip-types scripts/version-level.ts",
     "version:sync": "cli-dev version --sync",
     "standards:check": "node config/wirecat/check.mjs",
-    "lint:commands": "pnpm build && cli-dev lint --cli dist/bin/mail.js --budget 20",
+    "lint:commands": "pnpm build && cli-dev lint --cli dist/bin/mail.js --budget 24",
     "audit:commands": "pnpm build && bash scripts/audit.sh",
     "ci:quick": "pnpm typecheck && pnpm build && pnpm lint:commands",
     "release:check": "pnpm standards:check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm lint:commands && pnpm audit:commands && pnpm contracts:check && pnpm test:matrix:check && pnpm docs:check && pnpm generate:check && pnpm version:check && pnpm security:no-leak && pnpm package:check",
@@ -79,6 +79,7 @@
     "lefthook": "2.2.2",
     "markdownlint-cli2": "0.24.0",
     "rumdl": "0.3.0",
+    "smtp-server": "3.20.2",
     "typescript": "7.0.2",
     "vitest": "5.0.5"
   },

@@ -7,6 +7,8 @@ export interface MailEndpoint {
   /** `plain` is for a local test server only; no profile can ask for it. */
   security: "tls" | "starttls" | "plain"
   login: string
+  /** The submission server; without it the backend cannot send. */
+  smtp?: Pick<MailEndpoint, "host" | "port" | "security">
 }
 
 /** What the run lets a backend spend: a retry is a request of its budget, and none outlives its deadline. */
@@ -88,6 +90,27 @@ export interface MailWrites {
   deleteFolder(path: string): Promise<void>
 }
 
+/** One message to hand the submission server: the envelope says who receives it, Bcc included; `raw` has no Bcc line. */
+export interface Submission {
+  from: string
+  recipients: readonly string[]
+  raw: Uint8Array
+}
+
+export interface Submitted {
+  /** The envelope recipients the server took, and those it refused; a send with none taken fails instead. */
+  accepted: string[]
+  rejected: string[]
+}
+
+/**
+ * Sends over SMTP. Never retried: a server that took the message and then lost the line has sent it, so a failure
+ * after the message left is `outcome_unknown`, and one before it is marked `sent: false`.
+ */
+export interface MailSubmit {
+  send(message: Submission): Promise<Submitted>
+}
+
 /** Everything a command asks of one mailbox. cli-core's sync reads it as a `MailSource`. */
 export interface MailBackend extends MailSource {
   check(): Promise<AccountCheck>
@@ -96,6 +119,8 @@ export interface MailBackend extends MailSource {
   serverQuery?(criteria: MailCriteria, folder: string, syntax: SearchSyntax): Promise<Searched>
   /** Absent on a backend that cannot change the mailbox. */
   writes?: MailWrites
+  /** Absent where the profile names no submission server. */
+  submit?: MailSubmit
   /** After this, every call fails; nothing reconnects. */
   close(): Promise<void>
 }

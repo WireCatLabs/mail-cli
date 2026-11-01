@@ -160,7 +160,8 @@ export const organising = async <T>(command: Command, work: (opened: Opened) => 
           organise: providerFor(address, context.settings.mailbox.host)?.organise ?? DEFAULT_ORGANISE,
           now: Date.now,
         }
-        const settings = configuration.resolveSettings(command.optsWithGlobals(), { env: context.env })
+        // baseContext adds an MCP server's own --permission overrides, which a key checked only here would miss.
+        const { settings } = baseContext(command, configuration.resolveSettings)
         const guard = guardFor(
           IDENTITY,
           { ...settings, permissionDefaults: configuration.permissions?.defaults ?? {} },

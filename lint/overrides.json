@@ -124,5 +124,47 @@
     "reason": "Reads the server's Drafts folder, a short list read whole; once Drafts is synced, search messages mailbox:drafts filters it. Review if drafts outgrow one screen.",
     "owner": "@WireCatLabs",
     "review_after": "2027-01-28"
+  },
+  {
+    "rule": "option-role",
+    "target": "messages send --cc",
+    "reason": "cli-base's vocabulary has no mail words yet; a cli-base PR adds them, and mail can take them only when cli-core moves past cli-base 0.68. Review when cli-core depends on a cli-base that has them.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
+    "rule": "option-role",
+    "target": "messages send --bcc",
+    "reason": "cli-base's vocabulary has no mail words yet; a cli-base PR adds them, and mail can take them only when cli-core moves past cli-base 0.68. Review when cli-core depends on a cli-base that has them.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
+    "rule": "option-role",
+    "target": "messages forward --cc",
+    "reason": "cli-base's vocabulary has no mail words yet; a cli-base PR adds them, and mail can take them only when cli-core moves past cli-base 0.68. Review when cli-core depends on a cli-base that has them.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
+    "rule": "option-role",
+    "target": "messages forward --bcc",
+    "reason": "cli-base's vocabulary has no mail words yet; a cli-base PR adds them, and mail can take them only when cli-core moves past cli-base 0.68. Review when cli-core depends on a cli-base that has them.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
+    "rule": "option-role",
+    "target": "messages send --reply-all",
+    "reason": "cli-base's vocabulary has no mail words yet; a cli-base PR adds them, and mail can take them only when cli-core moves past cli-base 0.68. Review when cli-core depends on a cli-base that has them.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
+    "rule": "list-without-query",
+    "target": "attachments list",
+    "reason": "Lists the few files of one email, which has nothing to filter; download takes their numbers. Review if an email commonly carries more files than fit one screen.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
   }
 ]

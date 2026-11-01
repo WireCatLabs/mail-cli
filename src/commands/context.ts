@@ -7,6 +7,7 @@ import type { DiscoveryDeps } from "../discovery.js"
 import { IDENTITY } from "../identity.js"
 import type { MailEndpoint, OpenBackend, RunBounds } from "../mail/backend.js"
 import { imapBackend } from "../mail/imap/index.js"
+import { providerFor } from "../providers.js"
 import { type LookupHimalaya, passwordStore } from "../secret.js"
 
 /** What a test hands `run()` in place of the network, the keyring and `secret-tool`. */
@@ -37,7 +38,17 @@ export const endpointOf = (settings: ReturnType<typeof contextOf>["settings"]): 
       "configuration_error",
       `profile ${settings.profile} has no mail server; run \`${IDENTITY.command} ${settings.profile} session start --address <email>\``,
     )
-  return { host, port, security, login: login ?? address }
+  const smtp = smtpOf(settings.mailbox)
+  return { host, port, security, login: login ?? address, ...(smtp ? { smtp } : {}) }
+}
+
+/** The profile's own submission server, else the one the registry knows for its provider. */
+const smtpOf = (mailbox: ReturnType<typeof contextOf>["settings"]["mailbox"]) => {
+  const known = mailbox.address ? providerFor(mailbox.address, mailbox.host)?.smtp : undefined
+  const host = mailbox.smtp?.host ?? known?.host
+  const port = mailbox.smtp?.port ?? known?.port
+  const security = mailbox.smtp?.security ?? known?.security
+  return host && port && security ? { host, port, security } : undefined
 }
 
 export const passwordsOf = (context: ReturnType<typeof contextOf>) =>
