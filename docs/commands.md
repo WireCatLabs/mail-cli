@@ -169,7 +169,7 @@ mail folders create <folder>
 |---|---|---|
 | `folder` | required | the folder's path; the server's separator (usually / or .) makes a subfolder. |
 
-**Returns:** mail folder change — action, folder, to, messages; every field: mail commands info folders create
+**Returns:** mail folder change — action, folder, to, messages, applied, hint; every field: mail commands info folders create
 
 **Example:** `mail ya folders create Receipts`, `mail ya folders create Work/2026`
 
@@ -188,13 +188,13 @@ mail folders rename <folder> <name>
 | `folder` | required | the folder, by path or name. |
 | `name` | required | its new path. |
 
-**Returns:** mail folder change — action, folder, to, messages; every field: mail commands info folders rename
+**Returns:** mail folder change — action, folder, to, messages, applied, hint; every field: mail commands info folders rename
 
 **Example:** `mail ya folders rename Receipts Invoices`
 
 ### `mail folders delete`
 
-delete a folder of your own; it must be empty (move or delete its mail first), unless --allow-dangerous, which loses that mail for good
+delete a folder of your own; it must be empty (move or delete its mail first), unless --allow-dangerous, which loses that mail for good; a preview without --yes
 
 **Changes something in the service.**
 
@@ -208,9 +208,11 @@ mail folders delete <folder> [options]
 
 | Option | What it does |
 |---|---|
+| `--yes` | delete it; without it, only a preview. |
+| `--dry-run` | only preview, even with --yes. |
 | `--allow-dangerous` | delete a folder that still holds mail: that mail is gone for good, no restore. |
 
-**Returns:** mail folder change — action, folder, to, messages; every field: mail commands info folders delete
+**Returns:** mail folder change — action, folder, to, messages, applied, hint; every field: mail commands info folders delete
 
 **Example:** `mail ya folders delete Old --yes`
 
@@ -895,13 +897,13 @@ mail drafts create [text] [options]
 | `--reply-to <message>` | answer this stored message: its sender, its subject with Re:, in its thread. |
 | `--reply-all` | with --reply-to, also everyone it went to, but you. |
 
-**Returns:** mail draft change — action, applied, id, folder, uid, replaced_uid, subject, to, and 2 more; every field: mail commands info drafts create
+**Returns:** mail draft change — action, applied, id, folder, uid, replaced_uid, old_version_in, subject, and 3 more; every field: mail commands info drafts create
 
 **Example:** `mail ya drafts create --to anna@example.com --subject 'Monday' 'Shall we meet at ten?'`, `mail ya drafts create --reply-to msg:email/me%40example.com/t1/m1 --reply-all 'Thanks, agreed.'`
 
 ### `mail drafts update`
 
-replace a draft with a new version under the same id: each given field replaces the old one (a --to list replaces the whole To), the rest, the thread and the attachments stay; the old version is removed after
+replace a draft with a new version under the same id: each given field replaces the old one (a --to list replaces the whole To), the rest, the thread and the attachments stay; the old version goes to Trash
 
 **Changes something in the service.**
 
@@ -922,7 +924,7 @@ mail drafts update <draft> [text] [options]
 | `--subject <text>` | the subject line. |
 | `--dry-run` | build the draft and show it; store nothing. |
 
-**Returns:** mail draft change — action, applied, id, folder, uid, replaced_uid, subject, to, and 2 more; every field: mail commands info drafts update
+**Returns:** mail draft change — action, applied, id, folder, uid, replaced_uid, old_version_in, subject, and 3 more; every field: mail commands info drafts update
 
 **Example:** `mail ya drafts update 5b0e1c2a@example.com 'New text, the rest kept'`, `mail ya drafts update 5b0e1c2a@example.com --to anna@example.com --to boris@example.com`
 
@@ -945,7 +947,7 @@ mail drafts delete <draft> [options]
 | `--yes` | delete it; without it, only a preview. |
 | `--dry-run` | only preview, even with --yes. |
 
-**Returns:** mail draft change — action, applied, id, folder, uid, replaced_uid, subject, to, and 2 more; every field: mail commands info drafts delete
+**Returns:** mail draft change — action, applied, id, folder, uid, replaced_uid, old_version_in, subject, and 3 more; every field: mail commands info drafts delete
 
 **Example:** `mail ya drafts delete 5b0e1c2a@example.com --yes`
 

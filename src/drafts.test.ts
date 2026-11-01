@@ -92,7 +92,7 @@ describe("drafts on an IMAP server", () => {
     expect(saved).not.toContain(`Cc: ${ADDRESS}`)
   })
 
-  it("updates a draft under the same id: given fields replace, the rest stays, the old version goes", async () => {
+  it("updates a draft under the same id: given fields replace, the rest stays, the old version goes to Trash", async () => {
     const all = folders()
     const { mail, commands } = await harness({ folders: all })
     const { id } = item(
@@ -101,14 +101,22 @@ describe("drafts on an IMAP server", () => {
     )
     const updated = await mail(["ya", "drafts", "update", `<${id}>`, "Second text", "--json"])
     expect(updated.code, updated.err).toBe(0)
-    expect(item(updated.out)).toMatchObject({ action: "update", applied: true, id, uid: 2, replaced_uid: 1 })
+    expect(item(updated.out)).toMatchObject({
+      action: "update",
+      applied: true,
+      id,
+      uid: 2,
+      replaced_uid: 1,
+      old_version_in: "Trash",
+    })
     expect(draftsIn(all)).toHaveLength(1)
+    expect(all[2]?.messages.map(({ raw }) => raw)).toEqual([expect.stringContaining("First text")])
     const now = draftsIn(all)[0]?.raw ?? ""
     expect(now).toContain(`Message-ID: <${id}>`)
     expect(now).toContain("Subject: Plan")
     expect(now).toContain("To: anna@example.com")
     expect(now).toContain("Second text")
-    expect(commands()).toContain("UID EXPUNGE 1")
+    expect(commands().some((line) => line.startsWith("UID EXPUNGE"))).toBe(false)
 
     const readdressed = await mail([
       "ya",

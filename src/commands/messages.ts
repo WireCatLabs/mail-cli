@@ -6,6 +6,7 @@ import {
   answerEntity,
   baseContext,
   currentRun,
+  envName,
   itemOf,
   outputFor,
   REMOTE_WRITE,
@@ -505,7 +506,7 @@ Nothing is expunged: mail goes to Trash and the run's record keeps where it was,
 --rules moves only envelope mail, each email decided again with today's rules: it stays when a protect or keep
 rule matches, you replied to the sender, it is starred, important, sent or a draft, it carries a label of yours, or
 it is under 30 days old; Gmail's labels and stars are read again just before the move. It refuses until the store
-backup is under 8 days old, and a first run moves at most 100, to check by hand. Never run it from a timer.`,
+backup is under 8 days old, and a first run moves at most 100, to check by hand. It refuses to run from a schedule.`,
     )
     .action(async function (
       this: Command,
@@ -516,6 +517,13 @@ backup is under 8 days old, and a first run moves at most 100, to check by hand.
         throw new CliError("validation_error", "--rules chooses the mail itself: give no references or --filter")
       if (options.sinceTime !== undefined && !options.rules)
         throw new CliError("validation_error", "--since-time goes with --rules", { param: "since-time" })
+      const scheduled = envName(IDENTITY, "SCHEDULED")
+      if (options.rules && contextOf(this).env[scheduled] !== undefined)
+        throw new CliError(
+          "permission_error",
+          `messages delete --rules does not run from a schedule (${scheduled} is set): the owner checks each run by hand`,
+          { reason: "mail.cleanup-scheduled" },
+        )
       await organising(this, async (opened) => {
         const { mailbox } = opened
         const trash = await trashOf(mailbox)

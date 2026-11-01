@@ -84,7 +84,6 @@ const fileCopy = async (sending: Sending, messageId: string, copy: Uint8Array): 
     const { folder, found } = await inSent(sending.mailbox, messageId)
     if (!folder) return "no-sent-folder"
     if (found) return "found"
-    if (!sending.mailbox.writes.append) return "failed"
     await sending.mailbox.writes.append(folder, copy, ["\\Seen"])
     return "appended"
   } catch {

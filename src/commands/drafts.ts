@@ -37,10 +37,12 @@ import {
   listDrafts,
   nextVersion,
 } from "../mail/drafts.js"
-import { locate, selectIds } from "../mail/organise.js"
+import { trashOf } from "../mail/organise.js"
+import { fetchOriginal } from "../mail/send.js"
 import { collect } from "./context.js"
 import { draftSendCommand } from "./drafts-send.js"
 import { type Opened, organising } from "./messages.js"
+import { ownerOf } from "./send.js"
 
 const LIST_LIMIT = 50
 const MAX_LIST = 500
@@ -66,6 +68,7 @@ const draftChange = v.strictObject({
   folder: v.string(),
   uid: v.nullable(v.number()),
   replaced_uid: v.optional(v.number()),
+  old_version_in: v.optional(v.string()),
   subject: v.optional(v.string()),
   to: v.optional(v.array(v.string())),
   size: v.optional(v.number()),
@@ -125,21 +128,12 @@ const answer = (command: Command, change: v.InferOutput<typeof draftChange>) =>
   )
 
 /** The message `--reply-to` names, read from the server, so its ids and recipients are exactly what it holds. */
-const replyTo = async (opened: Opened, ref: string, all: boolean) => {
-  const { ids } = await selectIds(opened.mailbox, { refs: [ref] })
-  const { located } = await locate(opened.mailbox, ids)
-  const place = located[0]
-  const item = place?.items[0]
-  if (!place || !item)
-    throw new CliError("not_found", `${ref} is no longer on the server; sync, then search for it again`, {
-      param: "reply-to",
-    })
-  const [raw] = await opened.backend.fetchRaw([{ uid: String(item.uid), receivedAt: "", folder: place.folder }])
-  if (raw instanceof Error || raw === undefined) throw raw ?? new CliError("not_found", `${ref} could not be read`)
+const replyTo = async (command: Command, opened: Opened, ref: string, all: boolean) => {
+  const { raw } = await fetchOriginal(opened.mailbox, opened.backend, ref, opened.profile)
   const original = await originalOf(raw)
   if (!original.messageId)
     throw new CliError("invalid_response", `${ref} has no Message-ID, so a reply cannot name what it answers`)
-  const owner = new Set([ownAddress(opened)])
+  const owner = ownerOf(opened, command)
   const to = replyPeople(original, owner, false)
   return {
     to,
@@ -209,7 +203,9 @@ const createCommand = () =>
         throw new CliError("validation_error", "--reply-all goes with --reply-to", { param: "reply-all" })
       const body = (await textOf(this, given)) ?? ""
       await organising(this, async (opened) => {
-        const reply = options.replyTo ? await replyTo(opened, options.replyTo, options.replyAll === true) : undefined
+        const reply = options.replyTo
+          ? await replyTo(this, opened, options.replyTo, options.replyAll === true)
+          : undefined
         const from = ownAddress(opened)
         const message: Outgoing = {
           from: { address: from },
@@ -244,17 +240,19 @@ const saveDraft = async (
   if (dryRun)
     return answer(command, { action, applied: false, uid: null, ...shown, hint: "a preview: nothing was saved" })
   const writes = opened.mailbox.writes
+  // The owner may have been writing the old version by hand, so it goes to Trash, where it can be got back.
+  const trash = replacing ? await trashOf(opened.mailbox) : undefined
   const stored = await guarded(opened, `drafts.${action}`, async () => {
     const saved = await writes.append(folder, raw, DRAFT_FLAGS)
     // The new version is in place before the old one goes, so a failure in between leaves two drafts, never none.
-    if (replacing) await writes.expunge(folder, replacing.validity, [replacing.uid])
+    if (replacing && trash) await writes.move(folder, replacing.validity, [replacing.uid], trash)
     return saved
   })
   answer(command, {
     action,
     applied: true,
     uid: stored.uid ?? null,
-    ...(replacing ? { replaced_uid: replacing.uid } : {}),
+    ...(replacing && trash ? { replaced_uid: replacing.uid, old_version_in: trash } : {}),
     ...shown,
   })
 }
@@ -276,7 +274,7 @@ const updateCommand = () =>
     .summary("change a draft: what is given replaces it, the rest stays")
     .description(
       "replace a draft with a new version under the same id: each given field replaces the old one (a --to list " +
-        "replaces the whole To), the rest, the thread and the attachments stay; the old version is removed after",
+        "replaces the whole To), the rest, the thread and the attachments stay; the old version goes to Trash",
     )
     .argument("<draft>", "the draft's id, as drafts list shows it")
     .argument("[text]", "the new text; - reads it from stdin")

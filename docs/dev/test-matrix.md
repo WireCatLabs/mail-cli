@@ -7,7 +7,7 @@ ran it · ⛔ not tested offline, with the reason and where it is checked instea
 Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 [TESTING.md](TESTING.md) for how, and for the states and failures that cut across commands.
 
-**241 ✅ · 26 ⛔ · 0 ❌** — 72 commands, 195 options.
+**243 ✅ · 26 ⛔ · 0 ❌** — 72 commands, 197 options.
 
 | Command | Option | | Note |
 |---|---|---|---|
@@ -31,6 +31,8 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `folders create` |  | ✅ |  |
 | `folders rename` |  | ✅ |  |
 | `folders delete` |  | ✅ |  |
+| `folders delete` | `--yes` | ✅ |  |
+| `folders delete` | `--dry-run` | ✅ |  |
 | `folders delete` | `--allow-dangerous` | ✅ |  |
 | `sync` |  | ✅ |  |
 | `sync` | `--since-time` | ✅ |  |

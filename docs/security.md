@@ -10,8 +10,19 @@ the same encryption rules: mail to anyone but you asks first (`messages.send.oth
 that key in the config, every attempt passes the
 read-only lock, the permissions and the hourly limit, and the send journal records its count and outcome, never an
 address, a subject or the text. A reply quotes, and a forward attaches, text someone else wrote: an agent must not
-send or forward because a message asked it to. It changes the mailbox only through the `messages` and `folders` writes: each passes the profile's permissions
-and the read-only lock first, a deletion and a change of many are a preview until `--yes`, and none expunges mail.
+send or forward because a message asked it to. Over MCP an agent may attach a file with `--file`, but never one from a
+credential or WireCat folder: `--allow-any-file` is left out of what an agent can pass.
+
+It changes the mailbox only through the `messages`, `folders` and `drafts` writes: each passes the profile's
+permissions and the read-only lock first, and a deletion and a change of many are a preview until `--yes`.
+`messages delete` goes to Trash, and `drafts update` puts the old version there. Some changes are for good, with no
+restore: `drafts delete` and `drafts send` expunge the draft, undoing `messages copy` outside Gmail expunges the copy
+(only the UID the server gave it, never a message found again by its Message-ID), and `folders delete
+--allow-dangerous` deletes a folder with its mail. Only you pass `--allow-dangerous`, at a terminal: an agent over MCP
+never gets it, so it deletes only an empty folder. `messages delete --rules` refuses to run from a schedule.
+
+An agent that holds `mcp.authority` may change settings, but not the mailbox's server settings (`imap_host`,
+`smtp_host` and the rest), which decide where the app password goes, nor `permissions.messages.send.others`.
 Each change run keeps, under `mail`'s state folder and readable by you only, the folder, UID, flags, Gmail labels and
 Message-ID of each message it changed, so `messages restore` can undo it; never a subject or a body.
 

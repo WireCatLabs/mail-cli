@@ -1,6 +1,6 @@
 ---
 name: mail-cli
-description: Read and organise the owner's mailbox through mail, a WireCat CLI — sync mail over IMAP into the shared store, search it, read an email whole with its attachments' text and follow its thread; mark, move, copy, delete to Trash and undo, and keep the owner's mail rules, with JSON answers. Use when a task needs the owner's mail. It never asks for or prints a password, and it cannot send.
+description: Read and organise the owner's mailbox through mail, a WireCat CLI — sync mail over IMAP into the shared store, search it, read an email whole with its attachments' text and follow its thread; mark, move, copy, delete to Trash and undo, keep the owner's mail rules, write drafts, and send, reply and forward over SMTP, with JSON answers. Use when a task needs the owner's mail. It never asks for or prints a password, and over MCP it mails only the owner unless the owner allows more.
 metadata:
   openclaw:
     requires:
@@ -43,11 +43,13 @@ Find your way with the tool itself, not this file:
   <ref…>` (or `--filter '<query>'`) changes the server and the store; a deletion, a `--filter` change or one of more
   than 20 messages answers with a preview (`applied: false`) and the same command with `yes` in `next`. Show the
   owner the preview before you add `--yes`. Every change answers with a `run` id: `mail ya messages restore --run
-  <id> --yes` undoes it. Never `folders delete --allow-dangerous`: it loses mail for good.
+  <id> --yes` undoes it. `folders delete <folder> --yes` removes only an empty folder; deleting one that holds mail
+  loses it for good, so only the owner can, at a terminal.
 - When the owner asks you to write or answer mail, save a draft and tell them: `mail ya drafts create --to <address>
   --subject '<subject>' '<text>' --json`, or `--reply-to <ref> [--reply-all]` to answer in the thread. Nothing is sent;
   the owner sends it from a mail app. `drafts list` shows the drafts with their `id`; `drafts update <id> '<text>'`
-  changes one, `drafts delete <id> --yes` removes it for good — only a draft you made, or one the owner named.
+  changes one (its old version goes to Trash), `drafts delete <id> --yes` removes it for good — only a draft you made,
+  or one the owner named.
 - Your own labels on mail: `mail ya tags add <tag> --message <ref>` (or `--chat <ref>` for a conversation); they stay
   local, memo sees them, and `search messages tag:<tag>` finds them.
 - Send only what the owner asked you to send, to the people the owner named. Over MCP you can mail only the owner

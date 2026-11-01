@@ -7,6 +7,7 @@ import {
   LOCAL_READ,
   listOf,
   outputFor,
+  ownerOnlyOption,
   REMOTE_READ,
   REMOTE_WRITE,
   renderAnswer,
@@ -59,7 +60,9 @@ const folderChange = v.strictObject({
   action: v.picklist(["create", "rename", "delete"]),
   folder: v.string(),
   to: v.optional(v.string()),
-  messages: v.optional(v.number()),
+  messages: v.optional(v.nullable(v.number())),
+  applied: v.optional(v.boolean()),
+  hint: v.optional(v.string()),
 })
 
 type FolderAction = "create" | "rename" | "delete"
@@ -76,8 +79,10 @@ const changeFolder = async (
   ) => Promise<{
     folder: string
     to?: string
-    messages?: number
+    messages?: number | null
+    applied?: boolean
   }>,
+  preview?: (folders: FolderList) => { folder: string; messages: number | null } | undefined,
 ) => {
   const context = contextOf(command)
   refuseOffline(context.flags)
@@ -95,6 +100,8 @@ const changeFolder = async (
         terminalAsker(command),
       )
       const folders = await backend.folderList()
+      const shown = preview?.(folders)
+      if (shown) return { ...shown, applied: false, hint: "a preview: nothing changed; add --yes to delete it" }
       return guardedWrite(
         guard,
         {
@@ -176,25 +183,49 @@ const deleteFolderCommand = () =>
   )
     .summary("delete an empty folder")
     .description(
-      "delete a folder of your own; it must be empty (move or delete its mail first), unless --allow-dangerous, which loses that mail for good",
+      "delete a folder of your own; it must be empty (move or delete its mail first), unless --allow-dangerous, " +
+        "which loses that mail for good; a preview without --yes",
     )
     .argument("<folder>", "the folder, by path or name")
-    .option("--allow-dangerous", "delete a folder that still holds mail: that mail is gone for good, no restore")
-    .action(async function (this: Command, folder: string) {
-      // The shared program reads --allow-dangerous as its own flag, so the value is among the globals.
-      const dangerous = this.optsWithGlobals<{ allowDangerous?: boolean }>().allowDangerous === true
-      await changeFolder(this, "delete", async (writes, folders) => {
+    .option("--yes", "delete it; without it, only a preview")
+    .option("--dry-run", "only preview, even with --yes")
+    .addOption(
+      ownerOnlyOption(
+        "--allow-dangerous",
+        "delete a folder that still holds mail: that mail is gone for good, no restore",
+      ),
+    )
+    .action(async function (this: Command, folder: string, options: { dryRun?: boolean }) {
+      const given = this.optsWithGlobals<{ allowDangerous?: boolean; yes?: boolean }>()
+      const dangerous = given.allowDangerous === true
+      const emptyOrAllowed = (folders: FolderList) => {
         const found = existing(folders, folder)
         if (found.role) throw new CliError("validation_error", `${found.path} is the ${found.role} folder; it stays`)
-        if ((found.messages ?? 0) > 0 && !dangerous)
+        // A server that gives no count may still hold mail, so an unknown count is not taken for empty.
+        if (found.messages !== 0 && !dangerous)
           throw new CliError(
             "validation_error",
-            `${found.path} holds ${found.messages} messages; move them out first (messages move --filter 'mailbox:"${found.path}"' --folder …), or --allow-dangerous to lose them`,
+            `${found.path} holds ${found.messages ?? "an unknown number of"} messages; move them out first (messages move --filter 'mailbox:"${found.path}"' --folder …), or the owner adds --allow-dangerous to lose them`,
             { reason: "mail.folder-not-empty" },
           )
-        await writes.deleteFolder(found.path)
-        return { folder: found.path, messages: found.messages ?? 0 }
-      })
+        return found
+      }
+      const preview = options.dryRun === true || given.yes !== true
+      await changeFolder(
+        this,
+        "delete",
+        async (writes, folders) => {
+          const found = emptyOrAllowed(folders)
+          await writes.deleteFolder(found.path)
+          return { folder: found.path, messages: found.messages, applied: true }
+        },
+        preview
+          ? (folders) => {
+              const found = emptyOrAllowed(folders)
+              return { folder: found.path, messages: found.messages }
+            }
+          : undefined,
+      )
     })
 
 export const foldersCommand = (): Command =>

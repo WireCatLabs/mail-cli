@@ -81,7 +81,7 @@ export interface MailWrites {
   /** Each moved UID's new UID in `to`, where the server says (UIDPLUS). */
   move(folder: string, validity: string, uids: readonly number[], to: string): Promise<Moved>
   copy(folder: string, validity: string, uids: readonly number[], to: string): Promise<Moved>
-  /** `\Deleted` and UID EXPUNGE of exactly these UIDs: gone for good. Only undoing a copy calls it. */
+  /** `\Deleted` and UID EXPUNGE of exactly these UIDs: gone for good. Undoing a copy, drafts delete and drafts send. */
   expunge(folder: string, validity: string, uids: readonly number[]): Promise<void>
   /** Stores a message the tool built, with its flags; the new UID and UIDVALIDITY where the server says (APPENDUID). */
   append(folder: string, raw: Uint8Array, flags: readonly string[]): Promise<{ uid?: number; validity?: string }>

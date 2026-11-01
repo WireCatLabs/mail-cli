@@ -4,15 +4,18 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Readable } from "node:stream"
 import { memoryKeyring } from "@wirecat/cli-base"
+import { describeProgram } from "@wirecat/cli-base/commands"
+import { toolsFromCommands } from "@wirecat/cli-core/mcp"
 import { sendsPathFor } from "@wirecat/cli-core/sends"
 import { afterEach, describe, expect, it } from "vitest"
 
 // Each case signs in, syncs and sends over two local servers: seconds on a loaded machine.
 import type { MailEnvironment } from "./commands/context.js"
+import { configuration } from "./config.js"
 import { IDENTITY } from "./identity.js"
 import type { MailEndpoint, RunBounds } from "./mail/backend.js"
 import { imapBackend } from "./mail/imap/index.js"
-import { run } from "./program.js"
+import { createProgram, run } from "./program.js"
 import { type FakeFolder, type FakeImap, type FakeOptions, startFakeImap } from "./testing/fake-imap.js"
 import { type FakeSmtp, type FakeSmtpOptions, startFakeSmtp } from "./testing/fake-smtp.js"
 import { mcpClient } from "./testing/mcp.js"
@@ -713,6 +716,34 @@ describe("sending over MCP", { timeout: 20_000 }, () => {
       expect(await close()).toBe(0)
     }
     expect(smtp.received.map(({ recipients }) => recipients)).toEqual([[ADDRESS]])
+  })
+  it("lets an agent attach a file, but never one from a credential folder: --allow-any-file is the owner's", async () => {
+    const tools = toolsFromCommands(describeProgram(createProgram()), { permissions: configuration.permissions })
+    for (const command of ["messages send", "messages forward"]) {
+      const entries = tools.find((tool) => tool.command === command)?.input.entries ?? {}
+      expect(entries, command).toHaveProperty("file")
+      expect(entries, command).not.toHaveProperty("allow_any_file")
+    }
+    const { options, smtp } = await harness()
+    const dir = mkdtempSync(join(tmpdir(), "files-"))
+    mkdirSync(join(dir, ".ssh"))
+    const key = join(dir, ".ssh", "id_ed25519")
+    writeFileSync(key, "key")
+    const { client, close } = await mcpClient(options() as Parameters<typeof mcpClient>[0], [], "ya")
+    try {
+      const send = (extra: Record<string, unknown>) =>
+        client.callTool({
+          name: "mail_write",
+          arguments: { command: "messages send", arguments: { to: ADDRESS, subject: "Key", text: "x", ...extra } },
+        }) as Promise<{ isError?: boolean; content?: { text?: string }[] }>
+      const refused = await send({ file: key })
+      expect(refused.isError).toBe(true)
+      expect(JSON.stringify(refused.content)).toContain("--allow-any-file")
+      expect((await send({ file: key, allow_any_file: true })).isError).toBe(true)
+    } finally {
+      expect(await close()).toBe(0)
+    }
+    expect(smtp.received).toHaveLength(0)
   })
 })
 

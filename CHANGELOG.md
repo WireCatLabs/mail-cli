@@ -21,10 +21,13 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   `Inbox` taken away, a copy a label added, `--folder archive` only `Inbox` taken away.
 - **`messages delete <ref…>`** moves mail to Trash, never expunges it; `--rules` is memo's envelope cleanup, moved
   here: envelope mail the rules let go, each decided again, with Gmail's labels and stars read again just before the
-  move, a fresh store backup required and a first run of at most 100.
+  move, a fresh store backup required and a first run of at most 100; it refuses to run from a schedule.
 - **`messages restore --run <id>`** undoes a change run, last step first: Trash back to where the mail was (on Gmail
   with its labels), moves back, copies removed, flags as they were. memo's `mail delete` run ids restore here too.
-- **`folders create|rename|delete`**; `delete` refuses a folder that holds mail unless `--allow-dangerous`.
+  Outside Gmail a copy is removed for good by the UID the server gave it, never by a Message-ID search that could find
+  the original.
+- **`folders create|rename|delete`**; `delete` is a preview until `--yes`, and refuses a folder that holds mail, or
+  whose count the server does not give, unless `--allow-dangerous`, which only the owner passes at a terminal.
 - **`rules list|add|remove|apply|export|import`**, moved from memo with the same options: the profile is the mailbox,
   so there is no account argument; the default import format is `mail`, the file memo's export writes.
 - Every message write takes the messages by `ref` or by `--filter '<query>'` (`--limit`, newest first). A deletion,
@@ -37,8 +40,8 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 - **`mail <profile> drafts list|create|update|delete`** keeps drafts in the mailbox's own Drafts folder, so an agent
   writes one and the owner checks and sends it from any mail app. `create` takes `--to`, `--cc`, `--bcc`, `--subject`
   and the text (`-` reads stdin); `--reply-to <ref> [--reply-all]` answers a stored message in its thread. A draft is
-  named by its Message-ID; `update` replaces only what is given and keeps the rest, the thread and the attachments;
-  `delete` removes it for good and asks first (`drafts.delete`). Nothing is sent: `drafts send` comes with sending.
+  named by its Message-ID; `update` replaces only what is given and keeps the rest, the thread and the attachments,
+  and moves the old version to Trash; `delete` removes it for good and asks first (`drafts.delete`).
 - **`mail <profile> tags add|remove <tag…> --message <ref> | --chat <ref>`** and **`tags list`** put your own tags on
   stored mail and conversations. They stay in the local store, in the same tables memo tags with, and never reach the
   server; `search messages tag:<tag>` finds them. Provider keywords stay `messages update --flag`, Gmail labels
@@ -55,7 +58,7 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   `--offline` and `MAIL_READ_ONLY` keep to the store (cli-core 0.525.0).
 - **`mail <profile> messages send --to … --subject … [text]`** sends over the provider's SMTP server with the same
   app password; the text comes from stdin when left out. `--cc`, `--bcc`, `--file <path>` (repeat; a named path, never
-  a pattern; credential and WireCat folders refused without `--allow-any-file`). `--reply-to <ref> [--reply-all]`
+  a pattern; credential and WireCat folders refused without `--allow-any-file`, which an agent over MCP never gets). `--reply-to <ref> [--reply-all]`
   answers a stored email: `In-Reply-To`, `References`, `Re:`, the original quoted, `\Answered` set on it.
 - **`messages forward <ref> --to … [text]`** sends the original attached whole (`message/rfc822`), `Fwd:` before its
   subject, and sets `$Forwarded` on it.

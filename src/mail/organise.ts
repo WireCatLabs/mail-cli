@@ -542,6 +542,33 @@ const whereNow = async (
 }
 
 /**
+ * The copies a copy step made, by the UIDs the server gave them (COPYUID) alone. The original and a copy share the
+ * Message-ID, and on a server with OBJECTID the email id too, so finding them again by either could pick the
+ * original, which undoing a copy then expunges for good.
+ */
+const copiesNow = async (
+  mailbox: Mailbox,
+  folder: string,
+  items: ChangedItem[],
+  done: { uids?: Record<string, number>; to_validity?: string } | undefined,
+): Promise<{ validity: string; found: Map<string, number> }> => {
+  const { uids, to_validity: validity } = done ?? {}
+  if (!uids || !validity)
+    throw new CliError(
+      "provider_unavailable",
+      "the server gave no UIDs for the copies, so they cannot be told from other mail and are left in place",
+      { reason: "mail.copy-not-undoable" },
+    )
+  const left = items.flatMap(({ id }) => (uids[id] === undefined ? [] : [[id, uids[id] as number] as const]))
+  const present = await mailbox.writes.state(
+    folder,
+    validity,
+    left.map(([, uid]) => uid),
+  )
+  return { validity, found: new Map(left.filter(([, uid]) => present.has(uid))) }
+}
+
+/**
  * Undoes a run, last step first, for the messages still where it left them. Without `apply` it only counts. Trash
  * brings mail back to where it was (on Gmail: to the Inbox if it was there, else All Mail, labels put back).
  */
@@ -606,21 +633,18 @@ export const restoreRun = async (
       continue
     }
     const to = step.to || (await trashOf(mailbox))
-    const { validity, found } = await whereNow(mailbox, to, items, {
-      ...(done?.uids ? { uids: done.uids } : {}),
-      ...(done?.to_validity ? { validity: done.to_validity } : {}),
-    })
+    const { validity, found } =
+      step.op === "copy"
+        ? await copiesNow(mailbox, to, items, done)
+        : await whereNow(mailbox, to, items, {
+            ...(done?.uids ? { uids: done.uids } : {}),
+            ...(done?.to_validity ? { validity: done.to_validity } : {}),
+          })
     const here = items.filter(({ id }) => found.has(id))
     plan.restorable += here.length
     plan.missing += items.length - here.length
     if (!apply || here.length === 0) continue
     if (step.op === "copy") {
-      if (!done?.uids)
-        throw new CliError(
-          "provider_unavailable",
-          "the server gave no UIDs for the copies, so they cannot be told from other mail and are left in place",
-          { reason: "mail.copy-not-undoable" },
-        )
       const uids = here.map(({ id }) => found.get(id) as number)
       await changer.step({ op: "copy", folder: to, validity, items: here }, () =>
         mailbox.writes.expunge(to, validity, uids),
@@ -654,7 +678,7 @@ export const restoreRun = async (
       for (const id of ids) restored.push(id)
     }
     if (gmailTrash) {
-      const all = folder
+      const all = await allMailOf(mailbox)
       const labelled = here.filter((item) => (item.labels ?? []).some((label) => label !== "\\Inbox"))
       if (labelled.length) {
         const { validity: allValidity, found: inAll } = await whereNow(mailbox, all, labelled, {})

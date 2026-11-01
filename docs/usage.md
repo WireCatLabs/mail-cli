@@ -99,7 +99,8 @@ server in the background, `mcp server status` shows its port, the login code and
 
 ## Search your mail
 
-`mail` searches and reads the mail its profile synced, in the local store; it asks no server:
+`mail` searches and reads the mail its profile synced, in the local store, and asks the mail server for mail `sync`
+has not read yet (`--backend archive` keeps to the store):
 
 ```sh
 mail ya search messages invoice                                  # best match first, any form of the word
@@ -184,13 +185,15 @@ mail ya folders create Receipts                                  # also folders 
   it stays when a protect or keep rule matches, you replied to the sender, it is starred, important, sent or a draft,
   it carries a label of yours, or it is under 30 days old; Gmail's labels and stars are read again just before the
   move. It refuses until the store backup is under 8 days old, and a first run moves at most 100.
-- **Folders.** `folders delete` refuses a folder that still holds mail; `--allow-dangerous` deletes it with its mail,
-  for good. The inbox and the special folders keep their names.
+- **Folders.** `folders delete` is a preview until `--yes`, and refuses a folder that still holds mail, or whose
+  count the server does not give; `--allow-dangerous` deletes it with its mail, for good (outside Gmail, the mail is
+  gone). Only you pass `--allow-dangerous`, at a terminal: an agent over MCP never gets it. The inbox and the special
+  folders keep their names.
 
 ## Drafts
 
 A draft goes into the mailbox's own Drafts folder, so it shows in every mail app. An agent writes it; you read it and
-send it from your mail app. Nothing here sends mail.
+send it from your mail app, or with `drafts send`.
 
 ```sh
 mail ya drafts create --to anna@example.com --subject 'Monday' 'Shall we meet at ten?'
@@ -205,9 +208,11 @@ mail ya drafts delete '<id>' --yes                                        # gone
   draft changes.
 - **A reply** reads the message from the server: it goes to its Reply-To or sender (with `--reply-all` also to
   everyone else it went to, never to you), with `Re:` and the `In-Reply-To` and `References` that keep it in the thread.
-- **A change** saves the new version first and then removes the old one, so a failure in between leaves two drafts,
-  never none. The text, `--to`, `--cc`, `--bcc` and `--subject` you give replace the old ones; the rest, the thread
-  and the attachments stay. Removing the old version needs UIDPLUS on the server.
+- **A change** saves the new version first and then moves the old one to Trash, so a failure in between leaves two
+  drafts, never none, and the old text can still be found. The text, `--to`, `--cc`, `--bcc` and `--subject` you give
+  replace the old ones; the rest, the thread and the attachments stay. It needs a Trash folder.
+- **Deleting** is for good: `drafts delete` and `drafts send` remove the draft with UID EXPUNGE, which needs UIDPLUS
+  on the server.
 - **The folder** is the one the server marks `\Drafts`, else the provider's own name (Gmail «[Gmail]/Drafts», Yandex
   «Черновики»).
 - A draft is flagged `\Draft` and `\Seen`. `drafts.delete` asks first; `drafts.create` and `drafts.update` go ahead,
@@ -249,8 +254,8 @@ mail ya drafts send '<draft id>'                                     # send a sa
 - **Agents.** Over MCP an agent may mail, reply, forward and send drafts only to you; mail to anyone else answers
   `permission_error` until you set `messages.send.others` in the config.
 - **Files.** `--file` takes a path as you name it; `mail` never expands a pattern. Credential folders (`.ssh`, keyrings,
-  browser profiles) and the WireCat folders are refused unless `--allow-any-file`. A text that says "attached" with no
-  file draws a warning.
+  browser profiles) and the WireCat folders are refused unless `--allow-any-file`, which only you pass at a terminal:
+  an agent over MCP never gets it. A text that says "attached" with no file draws a warning.
 - **Sent.** Gmail files mail sent over SMTP in Sent itself. Elsewhere `mail` appends its copy, with the Bcc line, unless
   Sent already holds that Message-ID. The message is then read into the store, so `search messages` finds it at once.
 - **A lost answer.** If the line breaks after the message left, the answer is `outcome_unknown` with an `operation_id`.
