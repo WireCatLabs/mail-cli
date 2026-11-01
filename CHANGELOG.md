@@ -18,6 +18,10 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 - Each reads the profile's own mailbox only; a reference of another mailbox is refused. Over MCP they are `read`
   commands.
 
+### Changed
+
+- **cli-core 0.520.0**, whose shared mail read commands these are.
+
 ## 0.2.0 — 01.11.2026
 
 ### Added
