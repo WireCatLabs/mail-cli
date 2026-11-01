@@ -5,8 +5,10 @@ import { join } from "node:path"
 import { Readable } from "node:stream"
 import { memoryKeyring } from "@wirecat/cli-base"
 import { describeProgram } from "@wirecat/cli-base/commands"
+import { mailAccountKey } from "@wirecat/cli-core/mail"
 import { toolsFromCommands } from "@wirecat/cli-core/mcp"
 import { sendsPathFor } from "@wirecat/cli-core/sends"
+import { openStore } from "@wirecat/cli-core/store"
 import { afterEach, describe, expect, it } from "vitest"
 
 // Each case signs in, syncs and sends over two local servers: seconds on a loaded machine.
@@ -183,6 +185,22 @@ describe("messages send over SMTP", { timeout: 20_000 }, () => {
     expect(JSON.parse(found.out).items).toHaveLength(1)
   })
 
+  it("stores the sent copy without moving the archive's coverage", async () => {
+    const { mail, env } = await harness()
+    const coverage = async () => {
+      const store = await openStore({ env })
+      try {
+        return (await store.sync.syncState(mailAccountKey(ADDRESS), "mail_coverage"))?.value
+      } finally {
+        await store.close()
+      }
+    }
+    const before = await coverage()
+    expect(before).toBeDefined()
+    const sent = await mail(["ya", "messages", "send", "--to", ADDRESS, "--subject", "Cover", "Words", "--json"])
+    expect(item(sent.out)).toMatchObject({ sent: true, stored: true })
+    expect(await coverage()).toBe(before)
+  })
   it("keeps Bcc out of what goes, and in the copy for Sent", async () => {
     const folders = yandex()
     const { mail, smtp } = await harness({ folders })

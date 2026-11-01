@@ -173,7 +173,7 @@ mail ya folders create Receipts                                  # also folders 
   previews. One message's flag or move goes ahead at once.
 - **Undo.** Each change answers with a `run` id. Before it asks the server, the run records each message's place,
   flags and Gmail labels; `messages restore --run <id>` puts back what is still where the run left it: Trash back to
-  its folder, a move moved back, a copy removed, flags as they were. The runs of memo's old `mail delete` restore here
+  its folder, a move moved back, a copy removed, flags as they were. The runs of `memo mail delete` restore here
   too. Mail with text comes back to search with the next `sync`; an envelope at once.
 - **Gmail.** All mail is in All Mail and a folder is a label: `move --folder Work` adds the label `Work` and takes
   `Inbox` away, `copy` only adds it, `--folder archive` only takes `Inbox` away, and `delete` moves the mail from All

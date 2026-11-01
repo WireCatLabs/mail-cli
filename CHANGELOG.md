@@ -2,6 +2,27 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Changed — may break callers
+
+- **`drafts delete` takes `--allow-dangerous`, not `--yes`**, because a draft deleted this way does not come back
+  (WC-PERM-9). Only the owner passes it; an agent over MCP gets a preview.
+
+### Added
+
+- **`messages export --output` refuses credential folders** and the WireCat apps' folders, as `attachments download`
+  does.
+
+### Fixed
+
+- **An agent over MCP can attach several files**: `--file` of `messages send` and `messages forward` is a list there.
+- **Sending a message no longer shortens the archive's coverage** to the last 10 minutes, which memo reported until
+  the next full sync.
+- **`attachments list` and `download` show every attachment**, not the first 50, and `drafts update` keeps them all.
+- **Attachments are saved through cli-core's atomic write**, which also syncs the file and the folder to disk.
+- The `memo mail delete` command is named as it is now, in the docs and the help of `messages delete --rules`.
+
 ## 0.6.0 — 01.11.2026
 
 ### Added
@@ -23,7 +44,7 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   here: envelope mail the rules let go, each decided again, with Gmail's labels and stars read again just before the
   move, a fresh store backup required and a first run of at most 100; it refuses to run from a schedule.
 - **`messages restore --run <id>`** undoes a change run, last step first: Trash back to where the mail was (on Gmail
-  with its labels), moves back, copies removed, flags as they were. memo's `mail delete` run ids restore here too.
+  with its labels), moves back, copies removed, flags as they were. `memo mail delete` run ids restore here too.
   Outside Gmail a copy is removed for good by the UID the server gave it, never by a Message-ID search that could find
   the original.
 - **`folders create|rename|delete`**; `delete` is a preview until `--yes`, and refuses a folder that holds mail, or

@@ -500,7 +500,10 @@ const deleteCommand = (): Command =>
     .description(
       "move messages to Trash, where the provider keeps them for a while (Gmail: 30 days) and messages restore brings them back; a preview unless --yes",
     )
-    .option("--rules", "the envelope mail the owner's rules let go, each decided again (memo's mail delete)")
+    .option(
+      "--rules",
+      "the envelope mail the owner's rules let go, each decided again (`memo mail delete` did this before)",
+    )
     .option("--since-time <time>", "with --rules, only mail received from this time; older mail stays")
     .addHelpText(
       "after",
@@ -625,7 +628,7 @@ const restoreCommand = (): Command =>
     .addHelpText(
       "after",
       `
-memo's mail delete runs restore here too, by their id. Mail Gmail has emptied from Trash (30 days) cannot come back.
+memo mail delete runs restore here too, by their id. Mail Gmail has emptied from Trash (30 days) cannot come back.
 Envelopes come back to search at once; mail with text is saved again by the next sync.`,
     )
     .action(async function (this: Command, options: { run: string; dryRun?: boolean }) {

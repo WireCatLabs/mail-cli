@@ -1,8 +1,7 @@
 import { CliError } from "@wirecat/cli-base"
-import { htmlToText, looksLikeHtml } from "@wirecat/cli-core/mail"
+import { type Address, parseMail } from "@wirecat/cli-core/mail"
 import addressparser from "nodemailer/lib/addressparser"
 import MailComposer from "nodemailer/lib/mail-composer"
-import PostalMime from "postal-mime"
 
 const EMAIL = /^[^\s@<>()",;:]+@[^\s@<>()",;:]+\.[^\s@<>()",;:]+$/u
 
@@ -42,40 +41,25 @@ export interface Original {
   text: string
 }
 
-const personOf = (address: { address?: string; name?: string } | undefined): Person | undefined =>
-  address?.address
-    ? { address: address.address.toLowerCase(), ...(address.name ? { name: address.name } : {}) }
-    : undefined
-
-const peopleIn = (list: readonly { address?: string; name?: string; group?: unknown[] }[] | undefined): Person[] =>
-  (list ?? [])
-    .flatMap((entry) => (Array.isArray(entry.group) ? (entry.group as typeof list & object) : [entry]))
-    .flatMap((entry) => {
-      const person = personOf(entry)
-      return person ? [person] : []
-    })
-
-const ids = (text: string | undefined): string[] => text?.match(/<[^<>\s]+>/g) ?? []
+const personOf = ({ email, name }: Address): Person => ({ address: email, ...(name ? { name } : {}) })
 
 export const originalOf = async (raw: Uint8Array): Promise<Original> => {
-  let email: Awaited<ReturnType<typeof PostalMime.parse>>
+  let mail: Awaited<ReturnType<typeof parseMail>>
   try {
-    email = await PostalMime.parse(raw)
+    mail = await parseMail(raw, undefined, 0)
   } catch {
     throw new CliError("invalid_response", "the original message on the server cannot be read")
   }
-  const plain = email.text?.trim() ?? ""
-  const from = personOf(email.from)
   return {
-    ...(email.messageId ? { messageId: ids(email.messageId)[0] ?? email.messageId } : {}),
-    references: ids(email.references),
-    subject: email.subject ?? "",
-    ...(email.date ? { date: email.date } : {}),
-    ...(from ? { from } : {}),
-    replyTo: peopleIn(email.replyTo),
-    to: peopleIn(email.to),
-    cc: peopleIn(email.cc),
-    text: plain && !looksLikeHtml(plain) ? plain : htmlToText(email.html ?? plain),
+    ...(mail.messageId ? { messageId: mail.messageId } : {}),
+    references: mail.references,
+    subject: mail.subject ?? "",
+    ...(mail.date ? { date: mail.date } : {}),
+    ...(mail.from ? { from: personOf(mail.from) } : {}),
+    replyTo: mail.replyTo.map(personOf),
+    to: mail.to.map(personOf),
+    cc: mail.cc.map(personOf),
+    text: mail.text,
   }
 }
 
