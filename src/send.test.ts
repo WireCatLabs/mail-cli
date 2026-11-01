@@ -640,7 +640,57 @@ describe("attachments list and download", { timeout: 20_000 }, () => {
   })
 })
 
+const callSend = (client: Awaited<ReturnType<typeof mcpClient>>["client"], to: string) =>
+  client.callTool({
+    name: "mail_write",
+    arguments: { command: "messages send", arguments: { to, subject: "From the agent", text: "Hello" } },
+  }) as Promise<{ isError?: boolean; content?: { text?: string }[] }>
+
 describe("sending over MCP", { timeout: 20_000 }, () => {
+  it("lets an agent mail only the owner by default, and names the key that opens it", async () => {
+    const { options, smtp } = await harness()
+    const { client, close } = await mcpClient(options() as Parameters<typeof mcpClient>[0], [], "ya")
+    try {
+      const refused = await callSend(client, "eve@example.com")
+      expect(refused.isError).toBe(true)
+      const text = JSON.stringify(refused.content)
+      expect(text).toContain("permission_error")
+      expect(text).toContain("config set permissions.messages.send.others allow")
+      expect((await callSend(client, ADDRESS)).isError).not.toBe(true)
+    } finally {
+      expect(await close()).toBe(0)
+    }
+    expect(smtp.received.map(({ recipients }) => recipients)).toEqual([[ADDRESS]])
+  })
+
+  it("lets an agent mail others once the owner allows it in the config", async () => {
+    const { mail, options, smtp } = await harness()
+    expect((await mail(["ya", "config", "set", "permissions.messages.send.others", "allow"])).code).toBe(0)
+    const { client, close } = await mcpClient(options() as Parameters<typeof mcpClient>[0], [], "ya")
+    try {
+      const sent = await callSend(client, "ann@example.com")
+      expect(sent.isError, JSON.stringify(sent)).not.toBe(true)
+    } finally {
+      expect(await close()).toBe(0)
+    }
+    expect(smtp.received.map(({ recipients }) => recipients)).toEqual([["ann@example.com"]])
+  })
+
+  it("does not let an mcp serve --permission open mail to others", async () => {
+    const { options, smtp } = await harness()
+    const { client, close } = await mcpClient(
+      options() as Parameters<typeof mcpClient>[0],
+      ["--permission", "messages.send.others=ask"],
+      "ya",
+    )
+    try {
+      expect((await callSend(client, "eve@example.com")).isError).toBe(true)
+    } finally {
+      expect(await close()).toBe(0)
+    }
+    expect(smtp.received).toHaveLength(0)
+  })
+
   it("lets the owner fence an agent to mail only the owner, with messages.send.others=readonly", async () => {
     const { options, smtp } = await harness()
     const { client, close } = await mcpClient(

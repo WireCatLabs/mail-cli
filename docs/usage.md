@@ -246,6 +246,8 @@ mail ya drafts send '<draft id>'                                     # send a sa
 - **The question.** Mail to anyone but you asks first, and shows from, to, cc, bcc, subject, each attachment and the
   first lines of the text; `--yes` answers it. With no terminal it answers `confirmation_required`.
   `config set permissions.messages.send.others allow` turns the question off. Mail only to yourself never asks.
+- **Agents.** Over MCP an agent may mail, reply, forward and send drafts only to you; mail to anyone else answers
+  `permission_error` until you set `messages.send.others` in the config.
 - **Files.** `--file` takes a path as you name it; `mail` never expands a pattern. Credential folders (`.ssh`, keyrings,
   browser profiles) and the WireCat folders are refused unless `--allow-any-file`. A text that says "attached" with no
   file draws a warning.

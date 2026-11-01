@@ -31,6 +31,11 @@ export interface Sending {
   /** The folders a plain `sync` reads, so the sent message is stored as the next sync would store it. */
   syncFolders: () => Promise<{ folders: string[]; mode: "imap" | "gmail" }>
   warn: (message: string) => void
+  /**
+   * Run by an agent over MCP, where `ask` would go ahead (WC-MCP-7), and the owner has not set
+   * `messages.send.others` in the config: mail to others is then refused, as `readonly` would.
+   */
+  agentWithoutOthers?: boolean
 }
 
 export const everyone = (draft: Pick<Draft, "to" | "cc" | "bcc">): Person[] => {
@@ -182,6 +187,14 @@ export const sendOut = async (sending: Sending, outgoing: Outgoing): Promise<Sen
     // One more key for mail that reaches anyone but the owner: the owner can open self-sends and still be asked here.
     const probe: GuardRequest = { chatId: null, kind: "read", key: SEND_OTHERS_KEY }
     try {
+      if (sending.agentWithoutOthers)
+        throw new CliError(
+          "permission_error",
+          `over MCP, profile ${sending.profile} mails only its owner: permissions.${SEND_OTHERS_KEY} is readonly for an ` +
+            "agent until the owner sets it in the config; to let an agent mail others: " +
+            `${IDENTITY.command} ${sending.profile} config set permissions.${SEND_OTHERS_KEY} allow`,
+          { permission: SEND_OTHERS_KEY },
+        )
       await sending.guard.ask?.(probe)
       sending.guard.check(probe, { reserve: false })
     } catch (error) {
