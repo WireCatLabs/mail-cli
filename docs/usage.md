@@ -44,8 +44,8 @@ private file and says so once on stderr. `--credential-storage file` chooses the
 name). An existing Himalaya setup then needs no new password.
 
 `sync` reads INBOX and the Sent folder; on Gmail it reads All Mail, since archived mail leaves INBOX. `--folder` or the
-profile's `folders` setting names other folders. It reads the newest mail first. `--limit` caps the new mail of one run. `--rescan` lists the whole window again. It saves
-text and headers only. It does not store attachments.
+profile's `folders` setting names other folders. It reads the newest mail first. `--limit` caps the new mail of one
+run. `--rescan` lists the whole window again. It saves text and headers only. It does not store attachments.
 
 A big mailbox does not fit in one run. `sync` has a budget of requests to the server, set by its deadline: 15
 minutes at a terminal, 45 seconds over MCP. `--timeout` changes the deadline. `--max-pages` lowers the budget. The
@@ -54,7 +54,9 @@ run saves what it read, then answers `state: partial` and gives the same command
 
 Yandex gives no message id. For such a server, `sync` lists only each message's number, flags, date and size, and it
 downloads each new message once. It skips stored mail by that number, so a rerun reads nothing twice. It does not
-notice mail deleted on the server or changed flags on mail it skips. `--rescan` does both.
+notice mail deleted on the server or changed flags on mail it skips. `--rescan` does both. It also moves a reply stored
+by mail 0.1 into the thread of the first email it answers: run `mail <profile> sync --rescan --since-time <date>` once,
+with a date as old as the stored mail, and `rethreaded` says how many it moved.
 
 Sometimes the server cannot answer for one message (Yandex answers some with `NO [UNAVAILABLE]`). `sync` asks for it
 again at the end of the run. If it still fails, `sync` counts it in `unreadable` and leaves it for the next run.

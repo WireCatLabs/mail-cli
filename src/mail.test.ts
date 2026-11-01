@@ -17,6 +17,7 @@ import type { MailEnvironment } from "./commands/context.js"
 import { discover } from "./discovery.js"
 import type { AccountCheck, MailBackend, MailEndpoint, RunBounds } from "./mail/backend.js"
 import { type ImapTuning, imapBackend } from "./mail/imap/index.js"
+import { idsOf } from "./mail/imap/messages.js"
 import { run } from "./program.js"
 import { type FakeImap, type FakeOptions, startFakeImap } from "./testing/fake-imap.js"
 
@@ -616,6 +617,8 @@ describe("account check, folders and sync", () => {
     expect(body.item).toMatchObject({ state: "partial", stopped: "limit" })
     expect(body.next[0]).toMatchObject({ command: "sync", args: { since_time: "2026-10-01", limit: 1 } })
     expect(body.next[0].why).toContain("--limit")
+    expect(body.item.remaining).toBe(1)
+    expect(body.next[0].why).toContain("left 1")
     const store = await openStore({ path: storePath(env), env, command: "mail" })
     try {
       const accountId = await store.accounts.saveAccount({ provider: "email", account: ADDRESS }, { name: ADDRESS })
@@ -663,6 +666,89 @@ describe("account check, folders and sync", () => {
     expect(started.code).toBe(0)
     const synced = await mail(["g", "sync", "--since-time", "2026-10-01", "--json"])
     expect(item(synced.out)).toMatchObject({ folders: ["[Gmail]/Alle Nachrichten"], saved: 1 })
+  })
+
+  it("applies the account's stored rules, as memo does: a skip rule keeps the sender's mail out", async () => {
+    const { mail, env } = await ready()
+    const store = await openStore({ path: storePath(env), env, command: "mail" })
+    try {
+      const accountId = await store.accounts.saveAccount({ provider: "email", account: ADDRESS }, { name: ADDRESS })
+      await store.mail.rules.upsert(
+        accountId,
+        { conditions: { subject: "Ignore" }, actions: { store: "skip" }, source: "owner", decidedAt: Date.now() },
+        Date.now(),
+      )
+    } finally {
+      await store.close()
+    }
+    const synced = await mail(["ya", "sync", "--since-time", "2026-10-01", "--folder", "INBOX", "--json"])
+    expect(item(synced.out)).toMatchObject({ saved: 1 })
+  })
+
+  it("moves stored replies into their first email's thread on --rescan, and only once", async () => {
+    const reply = raw("reply", "Re: Заявка", "Thanks", "In-Reply-To: <root@example.com>\r\n")
+    const { mail, env } = await ready({
+      fake: {
+        folders: [
+          {
+            name: "INBOX",
+            messages: [
+              { uid: 1, raw: raw("root", "Заявка", "Hello") },
+              { uid: 2, raw: reply },
+            ],
+          },
+        ],
+      },
+    })
+    await mail(["ya", "sync", "--since-time", "2026-10-01", "--folder", "INBOX", "--json"])
+    const threadsOf = async () => {
+      const store = await openStore({ path: storePath(env), env, command: "mail" })
+      try {
+        const accountId = await store.accounts.saveAccount({ provider: "email", account: ADDRESS }, { name: ADDRESS })
+        const emails = await store.mail.emails({ accountId })
+        return { store, accountId, emails }
+      } catch (error) {
+        await store.close()
+        throw error
+      }
+    }
+    // As 0.1 stored it: every email in a thread of its own.
+    const before = await threadsOf()
+    try {
+      const stored = before.emails.find((one) => one.subject === "Re: Заявка")
+      if (!stored) throw new Error("the reply was not stored")
+      await before.store.mail.saveThread({
+        accountId: before.accountId,
+        externalId: idsOf("<reply@example.com>", "INBOX", "", "2").messageId,
+        now: Date.now(),
+        emails: [
+          {
+            externalId: stored.externalId,
+            subject: stored.subject,
+            from: stored.fromAddress === null ? null : { address: stored.fromAddress, name: stored.fromName },
+            sentAt: stored.sentAt,
+            bodyText: stored.bodyText,
+          },
+        ],
+      })
+      expect(
+        new Set((await before.store.mail.emails({ accountId: before.accountId })).map((one) => one.emailThreadId)).size,
+      ).toBe(2)
+    } finally {
+      await before.store.close()
+    }
+
+    const rescan = await mail(["ya", "sync", "--since-time", "2026-10-01", "--folder", "INBOX", "--rescan", "--json"])
+    expect(item(rescan.out)).toMatchObject({ rethreaded: 1, deleted: 0 })
+    const after = await threadsOf()
+    try {
+      expect(new Set(after.emails.map((one) => one.emailThreadId)).size).toBe(1)
+      expect(after.emails.find((one) => one.subject === "Re: Заявка")?.bodyText).toContain("Thanks")
+    } finally {
+      await after.store.close()
+    }
+    const again = await mail(["ya", "sync", "--since-time", "2026-10-01", "--folder", "INBOX", "--rescan", "--json"])
+    expect(item(again.out)).toMatchObject({ rethreaded: 0 })
   })
 
   it("reads the folders the profile names, and nothing is fetched with --offline", async () => {
