@@ -20,13 +20,19 @@ import {
 import { appUpdate } from "@wirecat/cli-core/update"
 import type { Command } from "commander"
 import { accountCommand } from "./commands/account.js"
+import { draftsCommand } from "./commands/drafts.js"
 import { foldersCommand } from "./commands/folders.js"
+import { messageWrites } from "./commands/messages.js"
 import { readCommands } from "./commands/read.js"
+import { rulesCommand } from "./commands/rules.js"
 import { sessionCommand } from "./commands/session.js"
+import { statsCommand } from "./commands/stats.js"
 import { statusCommand } from "./commands/status.js"
 import { syncCommand } from "./commands/sync.js"
+import { tagsCommand } from "./commands/tags.js"
 import { configuration } from "./config.js"
 import { IDENTITY, PACKAGE, SKILL } from "./identity.js"
+import { changesCheck } from "./mail/doctor.js"
 
 const update = appUpdate({
   packageName: PACKAGE,
@@ -39,6 +45,14 @@ const update = appUpdate({
   offVariables: [`${IDENTITY.envPrefix}_NO_UPDATE_CHECK`],
 })
 
+/** cli-core's `messages` group reads; the changes to a mailbox go beside `messages show`. */
+const withWrites = (reads: Command[]): Command[] => {
+  const messages = reads.find((one) => one.name() === "messages")
+  if (!messages) throw new Error("cli-core's mail reads have no messages group")
+  for (const write of messageWrites()) messages.addCommand(write)
+  return reads
+}
+
 export const definition = (): ProgramDefinition => ({
   app: IDENTITY,
   firstScreen: { start: `${IDENTITY.command} personal session start --address <email>` },
@@ -49,9 +63,13 @@ export const definition = (): ProgramDefinition => ({
     accountCommand(),
     foldersCommand(),
     syncCommand(),
+    rulesCommand(),
     statusCommand(),
-    ...readCommands(),
-    appDoctorCommand(IDENTITY, configuration, { packageName: PACKAGE }),
+    ...withWrites(readCommands()),
+    statsCommand(),
+    draftsCommand(),
+    tagsCommand(),
+    appDoctorCommand(IDENTITY, configuration, { packageName: PACKAGE, local: changesCheck }),
     skillCommand(IDENTITY, SKILL),
     appMcpCommand(IDENTITY, configuration, {
       name: "mail",

@@ -2,7 +2,7 @@
   "name": "@wirecat/mail-cli",
   "version": "0.5.0",
   "mcpName": "dev.wirecat/mail-cli",
-  "description": "Read-only IMAP sync of a mailbox into the shared WireCat store, with offline search and the app password kept in the OS keyring — built for agents and scripts",
+  "description": "IMAP sync of a mailbox into the shared WireCat store, offline search, and flags, folders and Trash with undo on the server, the app password kept in the OS keyring — built for agents and scripts",
   "license": "Apache-2.0",
   "author": "Viacheslav Ptsarev",
   "repository": {
@@ -47,7 +47,7 @@
     "version:check": "cli-dev version && node --experimental-strip-types scripts/version-level.ts",
     "version:sync": "cli-dev version --sync",
     "standards:check": "node config/wirecat/check.mjs",
-    "lint:commands": "pnpm build && cli-dev lint --cli dist/bin/mail.js",
+    "lint:commands": "pnpm build && cli-dev lint --cli dist/bin/mail.js --budget 20",
     "audit:commands": "pnpm build && bash scripts/audit.sh",
     "ci:quick": "pnpm typecheck && pnpm build && pnpm lint:commands",
     "release:check": "pnpm standards:check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm lint:commands && pnpm audit:commands && pnpm contracts:check && pnpm test:matrix:check && pnpm docs:check && pnpm generate:check && pnpm version:check && pnpm security:no-leak && pnpm package:check",
@@ -57,9 +57,11 @@
   },
   "dependencies": {
     "@wirecat/cli-base": "0.68.1",
-    "@wirecat/cli-core": "0.521.0",
+    "@wirecat/cli-core": "0.525.0",
     "commander": "15.0.0",
     "imapflow": "2.9.1",
+    "nodemailer": "10.1.7",
+    "postal-mime": "4.1.4",
     "valibot": "1.5.0"
   },
   "devDependencies": {

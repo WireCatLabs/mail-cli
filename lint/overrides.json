@@ -40,5 +40,89 @@
     "reason": "Lists the few profiles on this computer, every one at once by design (WC-ACCT-12), as gcal's session list does; a filter would let a caller narrow it to one and read that as the only profile. Review if a computer commonly holds more profiles than fit one screen.",
     "owner": "@WireCatLabs",
     "review_after": "2027-01-31"
+  },
+  {
+    "rule": "option-role",
+    "target": "messages update --flag",
+    "reason": "Sets an IMAP flag or keyword on an email (read, flagged, $Junk); no vocabulary role names a mail flag yet, and --add means a chat and --set an id across the family. Review when cli-base's vocabulary names one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-02-01"
+  },
+  {
+    "rule": "option-role",
+    "target": "messages update --unflag",
+    "reason": "Takes an IMAP flag or keyword off an email; no vocabulary role names a mail flag yet, and --remove means a chat across the family. Review when cli-base's vocabulary names one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-02-01"
+  },
+  {
+    "rule": "option-role",
+    "target": "messages delete --rules",
+    "reason": "Chooses the envelope mail the owner's rules let go, memo's mail delete moved here; no vocabulary role names a selection by rules yet, and --by groups a list across the family. Review when cli-base's vocabulary names one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-02-01"
+  },
+  {
+    "rule": "unknown-resource",
+    "target": "drafts",
+    "reason": "E-mails in the mailbox's Drafts folder, written by an agent and sent by the owner; cli-core already has drafts as a permission resource. cli-base PR #435 adds the word; drop this when mail can take a cli-base with it (cli-core still pins cli-base below 0.69).",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
+    "rule": "option-role",
+    "target": "drafts create --cc",
+    "reason": "An e-mail address that gets a copy. cli-base PR #435 adds the word; drop this when mail can take a cli-base with it (cli-core still pins cli-base below 0.69).",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
+    "rule": "option-role",
+    "target": "drafts create --bcc",
+    "reason": "An e-mail address that gets a blind copy. cli-base PR #435 adds the word; drop this when mail can take a cli-base with it (cli-core still pins cli-base below 0.69).",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
+    "rule": "option-role",
+    "target": "drafts update --cc",
+    "reason": "An e-mail address that gets a copy. cli-base PR #435 adds the word; drop this when mail can take a cli-base with it (cli-core still pins cli-base below 0.69).",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
+    "rule": "option-role",
+    "target": "drafts update --bcc",
+    "reason": "An e-mail address that gets a blind copy. cli-base PR #435 adds the word; drop this when mail can take a cli-base with it (cli-core still pins cli-base below 0.69).",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
+    "rule": "option-role",
+    "target": "drafts create --reply-all",
+    "reason": "With --reply-to, the reply also goes to everyone the message went to, as in messages send. cli-base PR #435 adds the word; drop this when mail can take a cli-base with it (cli-core still pins cli-base below 0.69).",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
+    "rule": "flag-two-meanings",
+    "target": "--to",
+    "reason": "Mail sends to an e-mail address, a messenger to a chat; the same word as messages send uses. Whether --to may carry both meanings is the owner's decision (NEED-2113).",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
+    "rule": "flag-two-meanings",
+    "target": "--subject",
+    "reason": "A mail subject line is text, not a reference as memo's --subject; the same word as messages send uses. Whether --subject may carry both meanings is the owner's decision (NEED-2113).",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
+    "rule": "list-without-query",
+    "target": "drafts list",
+    "reason": "Reads the server's Drafts folder, a short list read whole; once Drafts is synced, search messages mailbox:drafts filters it. Review if drafts outgrow one screen.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
   }
 ]

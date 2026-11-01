@@ -7,7 +7,7 @@ ran it · ⛔ not tested offline, with the reason and where it is checked instea
 Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 [TESTING.md](TESTING.md) for how, and for the states and failures that cut across commands.
 
-**97 ✅ · 26 ⛔ · 0 ❌** — 40 commands, 83 options.
+**211 ✅ · 26 ⛔ · 0 ❌** — 67 commands, 170 options.
 
 | Command | Option | | Note |
 |---|---|---|---|
@@ -28,12 +28,37 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `session list` |  | ✅ |  |
 | `account check` |  | ✅ |  |
 | `folders list` |  | ✅ |  |
+| `folders create` |  | ✅ |  |
+| `folders rename` |  | ✅ |  |
+| `folders delete` |  | ✅ |  |
+| `folders delete` | `--allow-dangerous` | ✅ |  |
 | `sync` |  | ✅ |  |
 | `sync` | `--since-time` | ✅ |  |
 | `sync` | `--limit` | ✅ |  |
 | `sync` | `--max-pages` | ✅ |  |
 | `sync` | `--folder` | ✅ |  |
 | `sync` | `--rescan` | ✅ |  |
+| `rules list` |  | ✅ |  |
+| `rules add` |  | ✅ |  |
+| `rules add` | `--sender` | ✅ |  |
+| `rules add` | `--domain` | ✅ |  |
+| `rules add` | `--list-id` | ✅ |  |
+| `rules add` | `--filter` | ✅ |  |
+| `rules add` | `--kind` | ✅ |  |
+| `rules add` | `--do` | ✅ |  |
+| `rules add` | `--reason` | ✅ |  |
+| `rules remove` |  | ✅ |  |
+| `rules remove` | `--sender` | ✅ |  |
+| `rules remove` | `--domain` | ✅ |  |
+| `rules remove` | `--list-id` | ✅ |  |
+| `rules remove` | `--filter` | ✅ |  |
+| `rules remove` | `--kind` | ✅ |  |
+| `rules apply` |  | ✅ |  |
+| `rules apply` | `--since-time` | ✅ |  |
+| `rules apply` | `--dry-run` | ✅ |  |
+| `rules export` |  | ✅ |  |
+| `rules import` |  | ✅ |  |
+| `rules import` | `--format` | ✅ |  |
 | `status` |  | ✅ |  |
 | `search messages` |  | ✅ |  |
 | `search messages` | `--limit` | ✅ |  |
@@ -47,10 +72,99 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `messages show` |  | ✅ |  |
 | `messages show` | `--before-n` | ✅ |  |
 | `messages show` | `--after-n` | ✅ |  |
+| `messages export` |  | ✅ |  |
+| `messages export` | `--format` | ✅ |  |
+| `messages export` | `--output` | ✅ |  |
+| `messages export` | `--folder` | ✅ |  |
+| `messages export` | `--limit` | ✅ |  |
+| `messages export` | `--max-pages` | ✅ |  |
+| `messages export` | `--resume` | ✅ |  |
+| `messages export` | `--replace` | ✅ |  |
+| `messages mark-read` |  | ✅ |  |
+| `messages mark-read` | `--filter` | ✅ |  |
+| `messages mark-read` | `--limit` | ✅ |  |
+| `messages mark-read` | `--yes` | ✅ |  |
+| `messages mark-read` | `--dry-run` | ✅ |  |
+| `messages mark-unread` |  | ✅ |  |
+| `messages mark-unread` | `--filter` | ✅ |  |
+| `messages mark-unread` | `--limit` | ✅ |  |
+| `messages mark-unread` | `--yes` | ✅ |  |
+| `messages mark-unread` | `--dry-run` | ✅ |  |
+| `messages star` |  | ✅ |  |
+| `messages star` | `--filter` | ✅ |  |
+| `messages star` | `--limit` | ✅ |  |
+| `messages star` | `--yes` | ✅ |  |
+| `messages star` | `--dry-run` | ✅ |  |
+| `messages unstar` |  | ✅ |  |
+| `messages unstar` | `--filter` | ✅ |  |
+| `messages unstar` | `--limit` | ✅ |  |
+| `messages unstar` | `--yes` | ✅ |  |
+| `messages unstar` | `--dry-run` | ✅ |  |
+| `messages update` |  | ✅ |  |
+| `messages update` | `--filter` | ✅ |  |
+| `messages update` | `--limit` | ✅ |  |
+| `messages update` | `--yes` | ✅ |  |
+| `messages update` | `--dry-run` | ✅ |  |
+| `messages update` | `--flag` | ✅ |  |
+| `messages update` | `--unflag` | ✅ |  |
+| `messages update` | `--replace` | ✅ |  |
+| `messages move` |  | ✅ |  |
+| `messages move` | `--filter` | ✅ |  |
+| `messages move` | `--limit` | ✅ |  |
+| `messages move` | `--yes` | ✅ |  |
+| `messages move` | `--dry-run` | ✅ |  |
+| `messages move` | `--folder` | ✅ |  |
+| `messages copy` |  | ✅ |  |
+| `messages copy` | `--filter` | ✅ |  |
+| `messages copy` | `--limit` | ✅ |  |
+| `messages copy` | `--yes` | ✅ |  |
+| `messages copy` | `--dry-run` | ✅ |  |
+| `messages copy` | `--folder` | ✅ |  |
+| `messages delete` |  | ✅ |  |
+| `messages delete` | `--filter` | ✅ |  |
+| `messages delete` | `--limit` | ✅ |  |
+| `messages delete` | `--yes` | ✅ |  |
+| `messages delete` | `--dry-run` | ✅ |  |
+| `messages delete` | `--rules` | ✅ |  |
+| `messages delete` | `--since-time` | ✅ |  |
+| `messages restore` |  | ✅ |  |
+| `messages restore` | `--run` | ✅ |  |
+| `messages restore` | `--yes` | ✅ |  |
+| `messages restore` | `--dry-run` | ✅ |  |
 | `conversations list` |  | ✅ |  |
 | `conversations list` | `--limit` | ✅ |  |
 | `conversations list` | `--page` | ✅ |  |
 | `conversations show` |  | ✅ |  |
+| `stats messages top` |  | ✅ |  |
+| `stats messages top` | `--by` | ✅ |  |
+| `stats messages top` | `--limit` | ✅ |  |
+| `drafts list` |  | ✅ |  |
+| `drafts list` | `--limit` | ✅ |  |
+| `drafts create` |  | ✅ |  |
+| `drafts create` | `--to` | ✅ |  |
+| `drafts create` | `--cc` | ✅ |  |
+| `drafts create` | `--bcc` | ✅ |  |
+| `drafts create` | `--subject` | ✅ |  |
+| `drafts create` | `--dry-run` | ✅ |  |
+| `drafts create` | `--reply-to` | ✅ |  |
+| `drafts create` | `--reply-all` | ✅ |  |
+| `drafts update` |  | ✅ |  |
+| `drafts update` | `--to` | ✅ |  |
+| `drafts update` | `--cc` | ✅ |  |
+| `drafts update` | `--bcc` | ✅ |  |
+| `drafts update` | `--subject` | ✅ |  |
+| `drafts update` | `--dry-run` | ✅ |  |
+| `drafts delete` |  | ✅ |  |
+| `drafts delete` | `--yes` | ✅ |  |
+| `drafts delete` | `--dry-run` | ✅ |  |
+| `tags add` |  | ✅ |  |
+| `tags add` | `--message` | ✅ |  |
+| `tags add` | `--chat` | ✅ |  |
+| `tags remove` |  | ✅ |  |
+| `tags remove` | `--message` | ✅ |  |
+| `tags remove` | `--chat` | ✅ |  |
+| `tags list` |  | ✅ |  |
+| `tags list` | `--limit` | ✅ |  |
 | `doctor` |  | ✅ |  |
 | `doctor` | `--online` | ✅ |  |
 | `skill show` |  | ✅ |  |

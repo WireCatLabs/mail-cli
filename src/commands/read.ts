@@ -7,6 +7,7 @@ import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
 import { openMailStore } from "../store.js"
 import { contextOf } from "./context.js"
+import { exportLeaf } from "./export.js"
 import { serverAccess } from "./server-search.js"
 
 const reads: MailReads = {
@@ -41,4 +42,8 @@ const reads: MailReads = {
  * `search messages`, `messages show`, `conversations list|show`: cli-core's, over this profile's mailbox; the search
  * also asks the mail server (`--backend`).
  */
-export const readCommands = () => mailReadCommands(reads)
+export const readCommands = () => {
+  const commands = mailReadCommands(reads)
+  commands.find((command) => command.name() === "messages")?.addCommand(exportLeaf())
+  return commands
+}

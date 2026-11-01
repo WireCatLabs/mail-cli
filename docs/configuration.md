@@ -25,6 +25,20 @@ and others). Every WireCat CLI shares that list. `mail` ignores them.
 key. Over MCP there is no one to ask, so `ask` lets the command run. `MAIL_READ_ONLY=1` refuses every write, whatever
 the permissions say.
 
+The key of a command is its path: `messages.move`, `folders.delete`. Built in, a change that can be undone goes ahead
+(flags, moves, copies, folders made or renamed, drafts saved), and these ask: `messages.delete`, `folders.delete`,
+`drafts.delete`, and `messages.bulk`, which every change of more than 20 messages or chosen by `--filter` passes as
+well. At a terminal
+`ask` is a y/N question; `--yes` answers it.
+
+```sh
+mail ya config set permissions.messages readonly      # no flag, move or deletion on this profile
+mail ya config set permissions.messages.bulk deny     # one message at a time only
+```
+
+Every attempt to change the mailbox goes into the profile's send journal with its key, the count and the outcome,
+never a subject or an address.
+
 ## Run records
 
 A command that fails is kept as a run, for `mail runs list` and `runs show`. `record_input` decides whether a run

@@ -24,7 +24,11 @@ export interface Mailbox {
 }
 
 export const configuration = settingsFor<{ mailbox: Mailbox }>(IDENTITY, {
-  permissions: commandPermissions({ extra: ["messages.server-search"] }),
+  // An ordinary change goes ahead, as tg's and drive's do; a deletion or a change of many asks (WC-PERM-22, NEED-2067 A).
+  permissions: commandPermissions({
+    extra: ["messages.bulk", "messages.server-search"],
+    defaults: { "messages.delete": "ask", "folders.delete": "ask", "messages.bulk": "ask", "drafts.delete": "ask" },
+  }),
   profile: PROFILE_ENTRIES,
   resolve: ({ fromLayers }) => {
     const pick = <T>(key: string) => fromLayers<T | undefined>(key, undefined)

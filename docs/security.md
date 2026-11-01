@@ -4,9 +4,11 @@ What WireCat CLIs share — the keyring, permissions, MCP and what never reaches
 [shared security page](https://wirecat.dev/en/docs/security). This page keeps only what is particular to `mail`.
 
 `mail` keeps its settings in `config.json` and its state in the folders `mail doctor` shows. It reads mail only from
-the IMAP server of each profile, over TLS or STARTTLS; a connection with no encryption is refused. It cannot send mail and never changes the mailbox. But `memo` has
-`memo mail delete`, which moves Gmail mail to Trash. An agent with write access to memo can change mail; an agent
-with only `mail` cannot.
+the IMAP server of each profile, over TLS or STARTTLS; a connection with no encryption is refused. It cannot send
+mail. It changes the mailbox only through the `messages` and `folders` writes: each passes the profile's permissions
+and the read-only lock first, a deletion and a change of many are a preview until `--yes`, and none expunges mail.
+Each change run keeps, under `mail`'s state folder and readable by you only, the folder, UID, flags, Gmail labels and
+Message-ID of each message it changed, so `messages restore` can undo it; never a subject or a body.
 
 `session start` on a new profile looks for the server of an address whose domain is not in its built-in table
 (Yandex, Gmail, iCloud, Mail.ru, Fastmail, Outlook). It sends the domain, never the full address, to three places:

@@ -6,13 +6,58 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Added
 
+- **`mail <profile> messages export [query] --output <folder>`** writes the original messages of the stored mail that
+  match a query to mbox files (one per folder, mboxrd) or a Maildir++ tree (`--format maildir`), for backup or for mu
+  and notmuch. The store keeps text only, so each message is read from the server again. The folder is private (mode
+  700, files 600); a folder with something in it is refused unless `--resume` goes on with an export or `--replace`
+  writes over files of the same name. `--limit` and `--max-pages` bound a run, which also stops before its deadline;
+  `--resume` skips what the folder holds and cuts back a half-written message.
+- **`mail <profile> stats messages top --by sender|list|domain`** ranks the stored mail by sender, mailing list or
+  sender domain, with unread counts and size.
+- **`mail <profile> messages mark-read|mark-unread|star|unstar <ref…>`** and **`messages update <ref…> --flag <flag>
+  --unflag <flag> [--replace]`** change flags and keywords on the server (read, flagged, answered, draft, `$Junk`, words
+  of your own); a folder that keeps no keywords answers `provider_unavailable`.
+- **`messages move|copy <ref…> --folder <folder|role>`** files mail by folder; on Gmail a move is a label added and
+  `Inbox` taken away, a copy a label added, `--folder archive` only `Inbox` taken away.
+- **`messages delete <ref…>`** moves mail to Trash, never expunges it; `--rules` is memo's envelope cleanup, moved
+  here: envelope mail the rules let go, each decided again, with Gmail's labels and stars read again just before the
+  move, a fresh store backup required and a first run of at most 100.
+- **`messages restore --run <id>`** undoes a change run, last step first: Trash back to where the mail was (on Gmail
+  with its labels), moves back, copies removed, flags as they were. memo's `mail delete` run ids restore here too.
+- **`folders create|rename|delete`**; `delete` refuses a folder that holds mail unless `--allow-dangerous`.
+- **`rules list|add|remove|apply|export|import`**, moved from memo with the same options: the profile is the mailbox,
+  so there is no account argument; the default import format is `mail`, the file memo's export writes.
+- Every message write takes the messages by `ref` or by `--filter '<query>'` (`--limit`, newest first). A deletion,
+  a `--filter` change and a change of more than 20 messages answer with a preview and the command with `--yes` in
+  `next`; `--dry-run` only previews. The store follows each server change at once: flags, folder and UID, Gmail labels,
+  deletion.
+- **Permissions:** `messages.delete`, `folders.delete` and `messages.bulk` (any change of many) ask; the rest of the
+  changes go ahead. `MAIL_READ_ONLY=1` refuses them all. Each attempt goes into the send journal (cli-core 0.522.0).
+- Error reasons (`mail.no-trash`, `mail.run-unknown`, `mail.archive-unverified`, …) now reach the JSON error.
+- **`mail <profile> drafts list|create|update|delete`** keeps drafts in the mailbox's own Drafts folder, so an agent
+  writes one and the owner checks and sends it from any mail app. `create` takes `--to`, `--cc`, `--bcc`, `--subject`
+  and the text (`-` reads stdin); `--reply-to <ref> [--reply-all]` answers a stored message in its thread. A draft is
+  named by its Message-ID; `update` replaces only what is given and keeps the rest, the thread and the attachments;
+  `delete` removes it for good and asks first (`drafts.delete`). Nothing is sent: `drafts send` comes with sending.
+- **`mail <profile> tags add|remove <tag…> --message <ref> | --chat <ref>`** and **`tags list`** put your own tags on
+  stored mail and conversations. They stay in the local store, in the same tables memo tags with, and never reach the
+  server; `search messages tag:<tag>` finds them. Provider keywords stay `messages update --flag`, Gmail labels
+  `messages move|copy --folder`.
+- **`mail doctor`** says when a change run stopped part way, and when mail a run moved to Gmail's Trash is within five
+  days of Gmail emptying it, with the `messages restore` command for each. memo's doctor said this until the cleanup
+  moved here; memo's own cleanup runs count too. It needs cli-core 0.524.0 (`appDoctorCommand`'s `local` check).
 - **`search messages` asks the mail server too** for mail sync has not read yet: `--backend archive|server|both`
   (default `both`) and `--server-time` (default 5s), as `tg search messages` has them. Gmail is searched once in All
   Mail with its own syntax (X-GM-RAW); other servers with IMAP `UID SEARCH` in INBOX, Sent and Archive, or the
   profile's `folders`. The server gets the words, `from:`, `to:`, `cc:`, `subject:`, `body:`, `is:` and `date:`; what
   it finds is stored, and the same query then runs on the store, so the answer means the same on both backends and
   each hit says `found_in`. The mailbox is opened read only. `permissions.messages.server-search=deny` turns it off;
-  `--offline` and `MAIL_READ_ONLY` keep to the store (cli-core 0.523.0).
+  `--offline` and `MAIL_READ_ONLY` keep to the store (cli-core 0.525.0).
+
+### Changed — may break callers
+
+- `mail` is no longer read-only: an MCP client with `--allow-writes` can change the mailbox through the `write` tool,
+  within the profile's permissions.
 
 ## 0.5.0 — 01.11.2026
 
