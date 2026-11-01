@@ -218,6 +218,7 @@ mail ya tags remove invoices --message '<ref>'
 
 A tag is 1–32 letters a–z, digits and hyphens; upper case is lowered. What the server keeps instead are keywords
 (`messages update --flag '$Work'`) and, on Gmail, labels (`messages move|copy --folder Work`).
+
 ## Send, reply and forward
 
 `mail` sends over the provider's SMTP server with the profile's app password; the server comes from the
