@@ -745,6 +745,27 @@ describe("sending over MCP", { timeout: 20_000 }, () => {
     }
     expect(smtp.received).toHaveLength(0)
   })
+  it("lets an agent attach several files: file is a list over MCP", async () => {
+    const { options, smtp } = await harness()
+    const dir = mkdtempSync(join(tmpdir(), "files-"))
+    writeFileSync(join(dir, "one.txt"), "first")
+    writeFileSync(join(dir, "two.txt"), "second")
+    const { client, close } = await mcpClient(options() as Parameters<typeof mcpClient>[0], [], "ya")
+    try {
+      const sent = (await client.callTool({
+        name: "mail_write",
+        arguments: {
+          command: "messages send",
+          arguments: { to: ADDRESS, subject: "Two", text: "x", file: [join(dir, "one.txt"), join(dir, "two.txt")] },
+        },
+      })) as { isError?: boolean }
+      expect(sent.isError).toBeFalsy()
+    } finally {
+      expect(await close()).toBe(0)
+    }
+    expect(smtp.received[0]?.raw).toContain("filename=one.txt")
+    expect(smtp.received[0]?.raw).toContain("filename=two.txt")
+  })
 })
 
 describe("settings an agent cannot change", { timeout: 20_000 }, () => {
