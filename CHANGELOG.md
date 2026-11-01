@@ -6,6 +6,14 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Added
 
+- **`mail <profile> messages export [query] --output <folder>`** writes the original messages of the stored mail that
+  match a query to mbox files (one per folder, mboxrd) or a Maildir++ tree (`--format maildir`), for backup or for mu
+  and notmuch. The store keeps text only, so each message is read from the server again. The folder is private (mode
+  700, files 600); a folder with something in it is refused unless `--resume` goes on with an export or `--replace`
+  writes over files of the same name. `--limit` and `--max-pages` bound a run, which also stops before its deadline;
+  `--resume` skips what the folder holds and cuts back a half-written message.
+- **`mail <profile> stats messages top --by sender|list|domain`** ranks the stored mail by sender, mailing list or
+  sender domain, with unread counts and size.
 - **`mail <profile> messages mark-read|mark-unread|star|unstar <ref…>`** and **`messages update <ref…> --flag <flag>
   --unflag <flag> [--replace]`** change flags and keywords on the server (read, flagged, answered, draft, `$Junk`, words
   of your own); a folder that keeps no keywords answers `provider_unavailable`.

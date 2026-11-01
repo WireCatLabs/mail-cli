@@ -17,8 +17,7 @@ AI agents the same commands. Every command is in the [command reference](command
 
 ## Next
 
-- **Search on the server** (IMAP SEARCH, Gmail's own search) for mail not synced yet, and **export** to `.eml` files
-  and mailbox archives.
+- **Search on the server** (IMAP SEARCH, Gmail's own search) for mail not synced yet.
 - **Sending**: send, reply, forward and attachments over SMTP with the same app password, behind a recipient list
   and an hourly limit; then drafts, and tags of the server and of the owner.
 - **OAuth sign-in for Outlook, Microsoft 365 and Google Workspace.** Microsoft accepts only OAuth for IMAP, so these

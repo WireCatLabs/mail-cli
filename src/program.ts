@@ -26,6 +26,7 @@ import { messageWrites } from "./commands/messages.js"
 import { readCommands } from "./commands/read.js"
 import { rulesCommand } from "./commands/rules.js"
 import { sessionCommand } from "./commands/session.js"
+import { statsCommand } from "./commands/stats.js"
 import { statusCommand } from "./commands/status.js"
 import { syncCommand } from "./commands/sync.js"
 import { tagsCommand } from "./commands/tags.js"
@@ -65,6 +66,7 @@ export const definition = (): ProgramDefinition => ({
     rulesCommand(),
     statusCommand(),
     ...withWrites(readCommands()),
+    statsCommand(),
     draftsCommand(),
     tagsCommand(),
     appDoctorCommand(IDENTITY, configuration, { packageName: PACKAGE, local: changesCheck }),

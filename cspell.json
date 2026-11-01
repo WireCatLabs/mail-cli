@@ -14,6 +14,10 @@
     "UIDVALIDITY",
     "UIDPLUS",
     "yandex",
-    "icloud"
+    "icloud",
+    "mbox",
+    "mboxrd",
+    "Maildir",
+    "notmuch"
   ]
 }
