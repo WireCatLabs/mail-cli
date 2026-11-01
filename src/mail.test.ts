@@ -303,14 +303,14 @@ describe("session start of a new profile", () => {
     expect((await mail([...base, "--security", "plain"], typed(PASSWORD))).code).not.toBe(0)
   })
 
-  it("will not create a profile for a provider that allows only OAuth", async () => {
+  it("creates no Outlook profile while mail has no Microsoft app to sign in with", async () => {
     const { mail, env } = await harness()
     const refused = await mail(["me", "session", "start", "--address", "me@outlook.com", "--json"], {
       discovery: { mx: async () => [] },
       ...typed(PASSWORD),
     })
     expect(refused.code).not.toBe(0)
-    expect(refused.err).toContain("OAuth")
+    expect(refused.err).toContain("microsoft_client_id")
     expect(profilesIn(env)).toEqual([])
   })
 
@@ -430,10 +430,14 @@ describe("session", () => {
     const { mail } = await harness()
     await profileSet(mail)
     const before = await mail(["session", "list", "--json"])
-    expect(JSON.parse(before.out).items).toEqual([{ profile: "ya", address: ADDRESS, password_from: null }])
+    expect(JSON.parse(before.out).items).toEqual([
+      { profile: "ya", address: ADDRESS, auth: "app-password", password_from: null },
+    ])
     await mail(["ya", "session", "start", "--json"], typed(PASSWORD))
     const after = await mail(["session", "list", "--json"])
-    expect(JSON.parse(after.out).items).toEqual([{ profile: "ya", address: ADDRESS, password_from: "keyring" }])
+    expect(JSON.parse(after.out).items).toEqual([
+      { profile: "ya", address: ADDRESS, auth: "app-password", password_from: "keyring" },
+    ])
   })
 
   describe("with only HOME moved, against the system keyring (WC-SECR-24)", () => {

@@ -88,6 +88,7 @@ const statusCommand = () =>
     "mail_session_status",
     mailSessionStatus,
   )
+    .summary("show how this profile signs in; no secret is printed")
     .description(
       "show where this profile's app password comes from, or what its OAuth sign-in allows and until when; no " +
         "password or token is ever printed",
@@ -126,6 +127,7 @@ const endCommand = () =>
       examples: [`${IDENTITY.command} ya session end`],
     }),
   )
+    .summary("forget this profile's password or sign-in; synced mail stays")
     .description("forget this profile's app password or OAuth sign-in on this computer; synced mail stays")
     .option(
       "--revoke",

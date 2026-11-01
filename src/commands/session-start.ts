@@ -60,13 +60,8 @@ const mayAsk = (command: Command, environment: MailEnvironment, env: NodeJS.Proc
 
 type Auth = "app-password" | "oauth"
 
-const authOf = (value: string): Auth => {
-  if (value !== "app-password" && value !== "oauth")
-    throw new CliError("validation_error", "--auth takes app-password or oauth", { param: "auth" })
-  return value
-}
-
 interface OAuthSignIn {
+  provider: string
   endpoint: MailEndpoint
   address: string
   kind: OAuthKind
@@ -90,6 +85,9 @@ const signInWithOAuth = async (command: Command, context: ReturnType<typeof cont
       ? { client: googleClient(env, given.clientFile), source: "own" as const }
       : microsoftClient(context.settings.mailbox)
   const scopesAsked = scopesOf(given.kind)
+  const { endpoint } = given
+  output.renderer.note(`Server: ${endpoint.host}:${endpoint.port} (${endpoint.security}), login ${endpoint.login}`)
+  output.renderer.note(prepareText(given.provider, given.prepare))
   output.renderer.note(
     [
       `${name} will ask you to let ${IDENTITY.command} (app ${source === "own" ? "of your own" : "of WireCat"}):`,
@@ -168,16 +166,14 @@ export const sessionStartCommand = () =>
       mcp: false,
       examples: [
         `${IDENTITY.command} ya session start --address me@example.com`,
-        `${IDENTITY.command} ya session start`,
-        `${IDENTITY.command} me session start --address me@example.com --host imap.example.com --security tls`,
         `${IDENTITY.command} work session start --address me@outlook.com`,
-        `${IDENTITY.command} gm session start --address me@gmail.com --auth oauth --client-file ~/client.json`,
+        `${IDENTITY.command} gm session start --address me@gmail.com --client-file ~/client.json`,
       ],
     }),
   )
     .summary("sign in; a new profile is created first")
     .description(
-      `sign this profile in. A new profile needs its mailbox: --address, or it is asked at a terminal; the server is found (built-in providers, the MX record, ISPDB, the domain's autoconfig; all providers: ${PROVIDERS_URL}); for a domain the built-in table does not know, the domain, never the address, goes to the DNS resolver, autoconfig.thunderbird.net and autoconfig.<domain>, and --provider or --host skips those lookups; the steps to prepare the mailbox are shown, the app password is asked (hidden) or read from ${IDENTITY.envPrefix}_PASSWORD, checked against the server, and only then the profile and the keyring entry are saved. Outlook.com and Microsoft 365 sign in with OAuth instead, and Gmail with --auth oauth and your own Google app (--client-file): the browser opens the provider's page, and the token is checked against the server before it is kept. An existing profile only asks for the password, or signs in, again. Without a terminal nothing is asked: a missing --address or password is a validation error`,
+      `sign this profile in. A new profile needs its mailbox: --address, or it is asked at a terminal; the server is found (built-in providers, the MX record, ISPDB, the domain's autoconfig; all providers: ${PROVIDERS_URL}); for a domain the built-in table does not know, the domain, never the address, goes to the DNS resolver, autoconfig.thunderbird.net and autoconfig.<domain>, and --provider or --host skips those lookups; the steps to prepare the mailbox are shown, the app password is asked (hidden) or read from ${IDENTITY.envPrefix}_PASSWORD, checked against the server, and only then the profile and the keyring entry are saved. Outlook.com and Microsoft 365 sign in with OAuth instead, and Gmail with your own Google app (--client-file): the browser opens the provider's page, and the token is checked against the server before it is kept. An existing profile only asks for the password, or signs in, again. Without a terminal nothing is asked: a missing --address or password is a validation error`,
     )
     .option("--address <email>", "the full mail address of a new profile, also the login for most providers")
     .option("--provider <provider>", `skip discovery and use a built-in provider: ${PROVIDER_NAMES.join(", ")}`)
@@ -186,7 +182,6 @@ export const sessionStartCommand = () =>
     .option("--security <mode>", "tls or starttls (default tls)", securityOf)
     .option("--login <login>", "the login name, when it is not the full address")
     .option("--folder <folder>", "sync only this folder; repeat it for more", collect)
-    .option("--auth <method>", "app-password or oauth; the default is what the provider takes", authOf)
     .option("--no-browser", "OAuth: print the sign-in link instead of opening the browser")
     .option("--client-file <file>", "Gmail over OAuth: your own Google Desktop app client JSON (chmod 600)")
     .option(
@@ -200,7 +195,6 @@ export const sessionStartCommand = () =>
       flags: MailboxFlags & {
         address?: string
         credentialStorage: string
-        auth?: Auth
         browser: boolean
         clientFile?: string
       },
@@ -244,11 +238,11 @@ export const sessionStartCommand = () =>
         provider = hosting?.name ?? address.split("@")[1] ?? "this"
         prepare = hosting?.prepare ?? GENERIC_PREPARE
         auth = context.settings.mailbox.auth
-        if (flags.auth && flags.auth !== auth)
+        if (flags.clientFile && auth !== "oauth")
           throw new CliError(
             "validation_error",
-            `profile ${context.profile} signs in with ${auth}; change that first: \`${IDENTITY.command} ${context.profile} config set auth ${flags.auth}\``,
-            { param: "auth" },
+            `profile ${context.profile} signs in with an app password; switch it first: \`${IDENTITY.command} ${context.profile} config set auth oauth\``,
+            { param: "client-file" },
           )
       } else {
         const typedAddress = flags.address ?? (asking ? (await ask("Mail address: ", { echo: true })).trim() : "")
@@ -268,11 +262,7 @@ export const sessionStartCommand = () =>
             }
           : undefined
         const found = await chosen(address, flags, environment, pick)
-        if (found.auth === "oauth" && flags.auth === "app-password")
-          throw new CliError("validation_error", `${found.provider} accepts only OAuth, never an app password`, {
-            param: "auth",
-          })
-        auth = flags.auth ?? found.auth
+        auth = flags.clientFile ? "oauth" : found.auth
         endpoint = { ...found.imap, login: found.login }
         provider = found.provider
         prepare = found.prepare
@@ -285,13 +275,10 @@ export const sessionStartCommand = () =>
           throw new CliError(
             "validation_error",
             `${provider} has no OAuth sign-in in ${IDENTITY.command}; it works for Outlook, Microsoft 365 and Gmail`,
-            { param: "auth" },
+            { param: flags.clientFile ? "client-file" : "address" },
           )
-        output.renderer.note(
-          `Server: ${endpoint.host}:${endpoint.port} (${endpoint.security}), login ${endpoint.login}`,
-        )
-        output.renderer.note(prepareText(provider, prepare))
         return signInWithOAuth(this, context, {
+          provider,
           endpoint,
           address,
           kind,

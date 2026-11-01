@@ -82,7 +82,8 @@ const harness = async (
     })
   }) as typeof globalThis.fetch
   const authorizeUrls: URL[] = []
-  const openBrowser = async (url: string) => {
+  const browser = { opened: 0 }
+  const consent = async (url: string) => {
     const authorize = new URL(url)
     authorizeUrls.push(authorize)
     const callback = new URL(authorize.searchParams.get("redirect_uri") ?? "")
@@ -92,12 +93,27 @@ const harness = async (
     }).toString()
     await globalThis.fetch(callback)
   }
+  const openBrowser = async (url: string) => {
+    browser.opened += 1
+    await consent(url)
+  }
   const streams: string[] = []
+  /** Follows the printed sign-in link, as a person does after `--no-browser`. */
+  const followLink = (text: string) => {
+    const link = /sign-in: (\S+)/.exec(text)?.[1]
+    if (link) void consent(link)
+  }
   const mail = async (argv: string[]) => {
     const out: string[] = []
     const err: string[] = []
     const code = await run(argv, {
-      streams: { data: (text) => out.push(text), diagnostic: (text) => err.push(text) },
+      streams: {
+        data: (text) => out.push(text),
+        diagnostic: (text) => {
+          err.push(text)
+          if (argv.includes("--no-browser")) followLink(text)
+        },
+      },
       tty: false,
       env,
       keyring,
@@ -125,10 +141,12 @@ const harness = async (
   const config = () => JSON.parse(readFileSync(join(env.MAIL_CONFIG_DIR as string, "config.json"), "utf8"))
   const entry = (kind = "microsoft") => keyring.get("mail-cli", `oauth:${kind}:work`)
   const leaked = () => streams.join("\n").match(/synthetic-(access|refresh)/)
-  return { mail, env, config, entry, leaked, server, accepted, sendable, tokenCalls, authorizeUrls, keyring }
+  return { mail, env, config, entry, leaked, server, accepted, sendable, tokenCalls, authorizeUrls, keyring, browser }
 }
 
 const item = (text: string) => JSON.parse(text).item
+/** The error is the last line of stderr; notes may come before it. */
+const failure = (err: string) => JSON.parse(err.trim().split("\n").at(-1) ?? "{}").error
 
 const ownApp = async (mail: Awaited<ReturnType<typeof harness>>["mail"]) => {
   const set = await mail(["config", "set", "--defaults", "microsoft_client_id", CLIENT, "--json"])
@@ -167,6 +185,15 @@ describe("Microsoft sign-in", { timeout: 20_000 }, () => {
     expect(leaked()).toBeNull()
   })
 
+  it("prints the link instead of opening the browser with --no-browser", async () => {
+    const { mail, browser } = await harness()
+    await ownApp(mail)
+    const started = await mail(["work", "session", "start", "--address", "me@outlook.com", "--no-browser", "--json"])
+    expect(started.code, started.err).toBe(0)
+    expect(started.err).toContain("Open Microsoft sign-in: https://login.microsoftonline.com/common/oauth2/v2.0/")
+    expect(browser.opened).toBe(0)
+  })
+
   it("saves neither the sign-in nor the profile when the server refuses the new token", async () => {
     const { mail, env, entry, server } = await harness()
     await ownApp(mail)
@@ -193,7 +220,7 @@ describe("Microsoft sign-in", { timeout: 20_000 }, () => {
     server.accepts = false
     const again = await mail(["work", "sync", "--json"])
     expect(again.code).not.toBe(0)
-    expect(JSON.parse(again.err).error).toMatchObject({ reason: "mail.oauth-refused" })
+    expect(failure(again.err)).toMatchObject({ reason: "mail.oauth-refused" })
     expect(again.err).toContain("mail work session start")
     expect(tokenCalls).toHaveLength(3)
     expect(leaked()).toBeNull()
@@ -203,7 +230,7 @@ describe("Microsoft sign-in", { timeout: 20_000 }, () => {
     const { mail, entry } = await harness()
     const started = await mail(["work", "session", "start", "--address", "me@outlook.com", "--json"])
     expect(started.code).not.toBe(0)
-    expect(JSON.parse(started.err).error).toMatchObject({ reason: "mail.oauth-no-client" })
+    expect(failure(started.err)).toMatchObject({ reason: "mail.oauth-no-client" })
     expect(started.err).toContain("config set --defaults microsoft_client_id")
     expect(entry()).toBeNull()
   })
@@ -248,9 +275,10 @@ describe("Microsoft 365", { timeout: 20_000 }, () => {
     expect(started.code, started.err).toBe(0)
     expect(started.err).toContain("Authenticated SMTP")
     expect(config().profiles.work).toMatchObject({ imap_host: "outlook.office365.com", auth: "oauth" })
+    expect((await mail(["work", "sync", "--since-time", "2026-01-01", "--json"])).code).toBe(0)
     const sent = await mail(["work", "messages", "send", "--to", "me@contoso.example", "--subject", "S", "x", "--json"])
-    expect(sent.code).not.toBe(0)
-    expect(JSON.parse(sent.err).error).toMatchObject({ reason: "mail.smtp-auth-disabled" })
+    expect(sent.code, sent.err).not.toBe(0)
+    expect(failure(sent.err), sent.err).toMatchObject({ reason: "mail.smtp-auth-disabled" })
   })
 })
 
@@ -262,7 +290,7 @@ describe("Gmail with your own Google app", { timeout: 20_000 }, () => {
     chmodSync(file, mode)
     return file
   }
-  const start = ["work", "session", "start", "--address", "me@gmail.com", "--auth", "oauth", "--json"]
+  const start = ["work", "session", "start", "--address", "me@gmail.com", "--json"]
 
   it("signs in with the client file, keeps its secret to refresh, and checks the account", async () => {
     const { mail, entry, accepted, tokenCalls, config, leaked } = await gmail()
@@ -275,22 +303,22 @@ describe("Gmail with your own Google app", { timeout: 20_000 }, () => {
       clientSecret: "own-public-secret",
     })
     accepted.splice(0)
-    const synced = await mail(["work", "sync", "--since-time", "2026-01-01", "--json"])
-    expect(synced.code, synced.err).toBe(0)
+    const checked = await mail(["work", "session", "status", "--check", "--json"])
+    expect(checked.code, checked.err).toBe(0)
+    expect(tokenCalls[1]?.get("grant_type")).toBe("refresh_token")
     expect(tokenCalls[1]?.get("client_secret")).toBe("own-public-secret")
     expect(leaked()).toBeNull()
   })
 
-  it("refuses another Google account, an open client file, and no client at all, keeping nothing", async () => {
+  it("refuses another Google account and a client file others can read, keeping nothing", async () => {
     const { mail, entry, server } = await gmail()
-    expect(JSON.parse((await mail(start)).err).error).toMatchObject({ reason: "mail.oauth-no-client" })
     if (process.platform !== "win32")
-      expect(JSON.parse((await mail([...start, "--client-file", clientFile(0o644)])).err).error).toMatchObject({
+      expect(failure((await mail([...start, "--client-file", clientFile(0o644)])).err)).toMatchObject({
         reason: "sign-in.client-file-open",
       })
     server.account = "someone.else@gmail.com"
     const wrong = await mail([...start, "--client-file", clientFile()])
-    expect(JSON.parse(wrong.err).error).toMatchObject({ reason: "profile.wrong-account" })
+    expect(failure(wrong.err)).toMatchObject({ reason: "profile.wrong-account" })
     expect(entry("google")).toBeNull()
     expect(JSON.parse((await mail(["session", "list", "--json"])).out).items).toEqual([])
   })

@@ -80,7 +80,7 @@ desktop app has no secret.
 
    Both must end with `signed_in: true`. If Microsoft's page shows an error with `AADSTS50011` (the redirect URI does
    not match), the port is not ignored for `127.0.0.1`: keep the app, and tell the `mail` maintainers, who then switch
-   the sign-in to `http://localhost/callback` (cli-core's loopback host, a small change; RISK-2093 in the plan).
+   the sign-in to `http://localhost/callback` (a small change in cli-core's sign-in).
 9. For WireCat's own app: send the Application (client) ID to the maintainers. They put it into
    `WIRECAT_MICROSOFT_CLIENT_ID` in `src/oauth.ts`, and the next release signs in without any config.
 

@@ -75,5 +75,12 @@
     "reason": "Lists the few files of one email, which has nothing to filter; download takes their numbers. Review if an email commonly carries more files than fit one screen.",
     "owner": "@WireCatLabs",
     "review_after": "2027-01-28"
+  },
+  {
+    "rule": "option-role",
+    "target": "session start --client-file",
+    "reason": "Names the owner's own Google OAuth Desktop client file for Gmail over OAuth; mail bundles no Google app (no CASA review). gcal-cli and drive-cli have the same option. Review when the vocabulary names an app-credential file: https://github.com/WireCatLabs/cli-base/issues/424",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
   }
 ]

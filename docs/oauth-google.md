@@ -64,10 +64,11 @@ the tokens in the keyring.
 A new profile:
 
 ```sh
-mail gm session start --address me@gmail.com --auth oauth --client-file ~/Downloads/client_secret_XXXX.json
+mail gm session start --address me@gmail.com --client-file ~/Downloads/client_secret_XXXX.json
 ```
 
-A Gmail profile that has an app password now: switch it first, in a terminal (an agent cannot change `auth`):
+`--client-file` is what makes a new Gmail profile sign in with OAuth. A Gmail profile that has an app password now:
+switch it first, in a terminal (an agent cannot change `auth`):
 
 ```sh
 mail gm config set auth oauth
@@ -75,7 +76,8 @@ mail gm session start --client-file ~/Downloads/client_secret_XXXX.json
 ```
 
 The browser opens Google's page. Choose the account, allow access, and `mail` checks the address and logs in to IMAP
-before it saves anything. `MAIL_GOOGLE_CLIENT_ID` and `MAIL_GOOGLE_CLIENT_SECRET` can stand in for `--client-file`.
+before it saves anything. On a profile already switched to OAuth, `MAIL_GOOGLE_CLIENT_ID` and
+`MAIL_GOOGLE_CLIENT_SECRET` can stand in for `--client-file`.
 
 ## Signing out
 

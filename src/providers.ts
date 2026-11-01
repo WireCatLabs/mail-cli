@@ -65,7 +65,7 @@ export interface Provider {
   imap: Endpoint
   smtp: Smtp
   auth: "app-password" | "oauth"
-  /** Signs in with this OAuth provider: only way when `auth` is `oauth`, else with `session start --auth oauth`. */
+  /** Signs in with this OAuth provider: the only way when `auth` is `oauth`, else with `session start --client-file`. */
   oauth?: "microsoft" | "google"
   note?: string
   sync?: SyncFolders
