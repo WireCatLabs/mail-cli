@@ -77,10 +77,10 @@ const wholeNumberFor =
   }
 
 /** The provider's folders by role (INBOX and Sent, All Mail on Gmail), unless the profile or `--folder` names some. */
-const foldersFor = async (
+export const foldersFor = async (
   explicit: string[] | undefined,
   configured: string[] | undefined,
-  defaults: SyncFolders,
+  defaults: Pick<SyncFolders, "roles" | "otherwise">,
   list: () => Promise<{ path: string; role: string | null }[]>,
 ): Promise<string[]> => {
   if (explicit?.length) return explicit

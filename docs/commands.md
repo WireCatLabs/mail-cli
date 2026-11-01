@@ -195,7 +195,7 @@ find stored emails
 
 ### `mail search messages`
 
-search this profile's mail in the local store — what sync read — by words, people, folders, lists and dates; best match first
+search this profile's mail in the local store and, by default, on the mail server for mail sync has not read yet (--backend); the server's finds are stored, then one strict query decides; best match first
 
 ```sh
 mail search messages <query> [options]
@@ -213,6 +213,8 @@ mail search messages <query> [options]
 | `--exact` | bare words and quotes match their exact form only, as exact:word does. |
 | `--plain-order` | best first by the words alone, without moving mail from suspicious senders down. |
 | `--timezone <zone>` | the IANA timezone for calendar date boundaries. |
+| `--backend <archive\|server\|both>` | where to search: the local archive, the mail server (default: both), or both. |
+| `--server-time <duration>` | stop waiting for the server after this long (default: 5s). |
 
 **Returns:** message hit — ref, timestamp, sender_name, sender_is_me, chat_title, excerpt, matched_in, score, and 8 more; every field: mail commands info search messages
 

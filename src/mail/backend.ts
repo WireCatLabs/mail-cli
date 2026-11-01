@@ -1,4 +1,5 @@
-import type { MailSource } from "@wirecat/cli-core/mail"
+import type { MailCriteria, MailSource, Searched } from "@wirecat/cli-core/mail"
+import type { SearchSyntax } from "./imap/search.js"
 
 export interface MailEndpoint {
   host: string
@@ -37,6 +38,8 @@ export interface AccountCheck {
 export interface MailBackend extends MailSource {
   check(): Promise<AccountCheck>
   folderList(): Promise<FolderInfo[]>
+  /** The UIDs the server's own search finds in `folder`, in the provider's syntax. */
+  serverQuery?(criteria: MailCriteria, folder: string, syntax: SearchSyntax): Promise<Searched>
   /** After this, every call fails; nothing reconnects. */
   close(): Promise<void>
 }

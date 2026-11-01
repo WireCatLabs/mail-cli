@@ -40,6 +40,8 @@ export interface FakeOptions {
   hangFetches?: boolean
   /** Changes the folder's UIDVALIDITY after this many connections have been dropped by `dropFetches`. */
   validityAfterDrop?: number
+  /** Answers a UID SEARCH by criteria, literals inlined, as a server's own search does; `undefined` falls through. */
+  search?: (criteria: string, folder: string) => number[] | undefined
 }
 
 export interface FakeImap {
@@ -185,7 +187,9 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
             }
             const all = (selected?.messages ?? []).map((message) => message.uid)
             const wanted = /^UID (\S+)$/i.exec(more.join(" "))?.[1]
-            const found = wanted ? uidsIn(wanted, all) : all
+            const found =
+              (wanted ? undefined : options.search?.(more.join(" "), selected?.name ?? "")) ??
+              (wanted ? uidsIn(wanted, all) : all)
             send(`* SEARCH ${found.join(" ")}`.trimEnd())
             return send(`${tag} OK done`)
           }
@@ -254,13 +258,31 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
       }
     }
 
+    // A non-ASCII search value comes as a literal: `{n}`, the go-ahead, then n bytes and the rest of the line.
+    let pending = ""
+    let literalBytes = 0
     socket.on("data", (chunk) => {
       buffer = Buffer.concat([buffer, chunk])
       for (;;) {
+        if (literalBytes > 0) {
+          if (buffer.length < literalBytes) return
+          pending += JSON.stringify(buffer.subarray(0, literalBytes).toString("utf8"))
+          buffer = buffer.subarray(literalBytes)
+          literalBytes = 0
+        }
         const end = buffer.indexOf("\r\n")
         if (end === -1) return
-        const text = buffer.subarray(0, end).toString("utf8")
+        const line = buffer.subarray(0, end).toString("utf8")
         buffer = buffer.subarray(end + 2)
+        const size = /\{(\d+)\+?\}$/.exec(line)
+        if (size) {
+          pending += line.slice(0, size.index)
+          literalBytes = Number(size[1])
+          if (!line.endsWith("+}")) send("+ go ahead")
+          continue
+        }
+        const text = pending + line
+        pending = ""
         const [tag = "", ...words] = text.split(" ")
         if (tag) handle(tag, words.join(" "))
       }

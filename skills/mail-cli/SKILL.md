@@ -32,8 +32,10 @@ Find your way with the tool itself, not this file:
   If a command says there is no app password, tell the owner to run `mail <profile> session start`.
 - `mail ya search messages '<query>' --json` searches the profile's stored mail (`from:`, `to:`, `subject:`, `label:`,
   `list:`, `is:unread`, `has:attachment`, `content:`, `date>7d`); each hit's `ref` goes to
-  `mail ya messages show <ref>`, its `email.thread` to `mail ya conversations show <thread>`. It reads only what sync
-  stored; for mail with messages and notes together, memo's `search all`.
+  `mail ya messages show <ref>`, its `email.thread` to `mail ya conversations show <thread>`. It also asks the mail
+  server for mail sync has not read yet and stores what it finds; each hit's `found_in` says `archive`, `server` or
+  `both`, and `meta.complete: false` means the server answered in part. `--backend archive` keeps to the store. For
+  mail with messages and notes together, memo's `search all`.
 - `mail ya sync` reads new mail into the store (`--since-time`, `--limit`, `--folder`).
   A big mailbox does not fit one run: when the answer says `state: "partial"`, run the command in `next` again (it is
   safe) until it says `complete`; `mail ya status` says how far it is. Stop when a run moves nothing on, and tell the owner.
