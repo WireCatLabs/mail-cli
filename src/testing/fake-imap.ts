@@ -36,8 +36,8 @@ export interface FakeOptions {
   brokenBodies?: number[]
   /** UIDs whose headers Yandex can never read either: a header FETCH that names any of them is refused whole. */
   brokenHeaders?: number[]
-  /** Sleeps this long before answering a UID FETCH, to make a request time out. */
-  fetchDelayMs?: number
+  /** Never answers a UID FETCH, so the request can only time out. */
+  hangFetches?: boolean
   /** Changes the folder's UIDVALIDITY after this many connections have been dropped by `dropFetches`. */
   validityAfterDrop?: number
 }
@@ -241,7 +241,7 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
               }
               return send(`${tag} OK done`)
             }
-            return options.fetchDelayMs ? void setTimeout(reply, options.fetchDelayMs) : reply()
+            return options.hangFetches ? undefined : reply()
           }
           return send(`${tag} BAD unknown UID command`)
         }

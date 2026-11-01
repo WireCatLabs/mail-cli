@@ -12,7 +12,7 @@ import { Command } from "commander"
 import * as v from "valibot"
 import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
-import { contextOf, openSource, refuseOffline } from "./context.js"
+import { contextOf, openMail, refuseOffline } from "./context.js"
 
 const mailFolder = v.strictObject({
   path: v.string(),
@@ -36,16 +36,16 @@ const listCommand = () =>
     .action(async function (this: Command) {
       const context = contextOf(this)
       refuseOffline(context.flags)
-      const { source } = await openSource(context)
+      const { backend } = await openMail(context)
       try {
-        const folders = await baseContext(this, configuration.resolveSettings).run(() => source.folderList())
+        const folders = await baseContext(this, configuration.resolveSettings).run(() => backend.folderList())
         renderAnswer(
           this,
           outputFor(this),
           listOf("folders list", { items: folders, limit: Math.max(1, folders.length), has_more: false }),
         )
       } finally {
-        await source.close()
+        await backend.close()
       }
     })
 

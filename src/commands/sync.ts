@@ -17,8 +17,9 @@ import { Command } from "commander"
 import * as v from "valibot"
 import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
+import { DEFAULT_SYNC, providerFor, type SyncFolders } from "../providers.js"
 import { openMailStore } from "../store.js"
-import { collect, contextOf, openSource, refuseOffline } from "./context.js"
+import { collect, contextOf, openMail, refuseOffline } from "./context.js"
 
 const DAY_MS = 86_400_000
 const DEFAULT_DAYS = 30
@@ -74,19 +75,18 @@ const wholeNumberFor =
     return Number(value)
   }
 
-/** INBOX and the folder the server marks as Sent, unless the profile or `--folder` says otherwise. */
+/** The provider's folders by role (INBOX and Sent, All Mail on Gmail), unless the profile or `--folder` names some. */
 const foldersFor = async (
   explicit: string[] | undefined,
   configured: string[] | undefined,
+  defaults: SyncFolders,
   list: () => Promise<{ path: string; role: string | null }[]>,
 ): Promise<string[]> => {
   if (explicit?.length) return explicit
   if (configured?.length) return configured
   const found = await list()
-  const chosen = found
-    .filter((folder) => folder.role === "inbox" || folder.role === "sent")
-    .map((folder) => folder.path)
-  return chosen.length ? chosen : ["INBOX"]
+  const chosen = found.filter((folder) => folder.role && defaults.roles.includes(folder.role)).map(({ path }) => path)
+  return chosen.length ? chosen : [defaults.otherwise]
 }
 
 const mailSync = v.strictObject({
@@ -95,7 +95,7 @@ const mailSync = v.strictObject({
   timezone: v.string(),
   folders: v.array(v.string()),
   state: v.picklist(["partial", "complete"]),
-  stopped: v.optional(v.picklist(["requests", "deadline", "cancelled"])),
+  stopped: v.optional(v.picklist(["requests", "deadline", "cancelled", "limit"])),
   requests: v.number(),
   listed: v.number(),
   saved: v.number(),
@@ -137,7 +137,7 @@ export const syncCommand = (): Command =>
     )
     .option(
       "--folder <folder>",
-      "a folder to read; repeat it for more (default: the profile's folders, else INBOX and Sent)",
+      "a folder to read; repeat it for more (default: the profile's folders, else INBOX and Sent; All Mail on Gmail)",
       collect,
     )
     .option("--rescan", "list every message in the window again, not only those an earlier run left")
@@ -150,15 +150,17 @@ export const syncCommand = (): Command =>
       const since = sinceOf(args.sinceTime, zone, Date.now())
       const { signal } = environmentOf(this)
       const budget = runBudgetOf(this, args.maxPages)
-      // A retry is a request of the budget; openSource keeps it from ending after the deadline.
-      const { source } = await openSource(context, { canRetry: () => budget.take() === null })
+      // A retry is a request of the budget; openMail keeps it from ending after the deadline.
+      const { backend } = await openMail(context, { canRetry: () => budget.take() === null })
       try {
         const report = await baseContext(this, configuration.resolveSettings).run(async () => {
-          const folders = await foldersFor(args.folder, context.settings.mailbox.folders, () => source.folderList())
+          const { mailbox } = context.settings
+          const defaults = providerFor(address, mailbox.host)?.sync ?? DEFAULT_SYNC
+          const folders = await foldersFor(args.folder, mailbox.folders, defaults, () => backend.folderList())
           const store = await openMailStore(context.env)
           environmentOf(this).trackCloseable?.(store)
           try {
-            return await syncMail(source, store, {
+            return await syncMail(backend, store, {
               account: { address, mode: "imap", folders },
               since,
               budget,
@@ -171,7 +173,10 @@ export const syncCommand = (): Command =>
           }
         })
         const issues = issuesOf(report)
-        const partial = report.state === "partial"
+        // cli-core reports a run its `max` cut short only as incomplete, with no reason and nothing remaining.
+        const limited = args.limit !== undefined && !report.complete && !report.stopped && report.saved >= args.limit
+        const stopped = report.stopped ?? (limited ? "limit" : undefined)
+        const partial = (report.state ?? (report.complete ? "complete" : "partial")) === "partial" || limited
         const moved = report.saved + report.alreadyStored + report.skipped + report.envelopes > 0
         const timeout = this.optsWithGlobals<{ timeout?: string }>().timeout
         const next: NextStep[] =
@@ -190,7 +195,9 @@ export const syncCommand = (): Command =>
                       folder: args.folder,
                     }).filter(([, value]) => value !== undefined),
                   ),
-                  why: "the sync stopped before its end to answer in time; running it again goes on from where it stopped",
+                  why: limited
+                    ? `the run saved the ${args.limit} new emails --limit allows; running it again saves the next ones`
+                    : "the sync stopped before its end to answer in time; running it again goes on from where it stopped",
                   safe_to_auto_execute: true,
                 },
               ]
@@ -209,8 +216,8 @@ export const syncCommand = (): Command =>
               since: report.since,
               timezone: zone,
               folders: report.coverage?.folders ?? [],
-              state: report.state ?? (report.complete ? "complete" : "partial"),
-              ...(report.stopped ? { stopped: report.stopped } : {}),
+              state: partial ? "partial" : "complete",
+              ...(stopped ? { stopped } : {}),
               requests: report.requests ?? 0,
               listed: report.listed,
               saved: report.saved,
@@ -234,6 +241,6 @@ export const syncCommand = (): Command =>
           ),
         )
       } finally {
-        await source.close()
+        await backend.close()
       }
     })

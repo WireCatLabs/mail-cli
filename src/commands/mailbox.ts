@@ -1,6 +1,6 @@
 import { CliError } from "@wirecat/cli-base"
-import { type Discovery, discover, discoverByName, domainOf, type Security } from "../discovery.js"
-import { GENERIC_PREPARE } from "../providers.js"
+import { type Discovery, discover, discoverByName, domainOf } from "../discovery.js"
+import { GENERIC_PREPARE, type Security } from "../providers.js"
 import type { MailEnvironment } from "./context.js"
 
 export interface MailboxFlags {

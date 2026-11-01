@@ -35,8 +35,8 @@ You need Node.js 22.16 or a later 22.x, or 24 or later. To try it with no instal
 
 ## What you can do
 
-- **Sync a mailbox into the shared store.** `sync` reads INBOX and Sent, or the folders you name, newest first, and
-  skips what is already stored. `--since-time 2026-10-01` reads from local midnight of that day.
+- **Sync a mailbox into the shared store.** `sync` reads INBOX and Sent (All Mail on Gmail), or the folders you name,
+  newest first, and skips what is already stored. `--since-time 2026-10-01` reads from local midnight of that day.
 - **Search and read the mail with memo.** `mail` only fills the store;
   [memo](https://github.com/WireCatLabs/cli-memo) searches your mail together with your messages and notes.
 - **Sync a big mailbox in parts.** A run stops before its deadline, keeps what it read and tells you to run it again;

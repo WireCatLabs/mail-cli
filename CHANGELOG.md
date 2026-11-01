@@ -10,6 +10,34 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   before the skill works, as with the other WireCat skills.
 - **mail's MCP server is listed in the official MCP Registry** as `dev.wirecat/mail-cli`: `server.json`, `mcpName`,
   and the registry jobs from cli-template 0.12.0.
+- **`session start` prints the server it found before it sends the password**: host, port, security and login, so
+  a wrong guess of discovery is seen before the password goes to it.
+- **A new profile saves how it signs in (`auth`).** A profile saved before keeps working with its `imap_*` settings and
+  signs in with an app password, with nothing to migrate.
+
+### Changed — may break callers
+
+- **`sync` reads All Mail on Gmail when the profile names no folders.** Archived Gmail mail leaves INBOX, so a sync of
+  INBOX alone took it for deleted. All Mail is found by its role, so a Gmail account in another language works too.
+- **Headers are read by cli-core, as memo reads them.** A mailing list's `List-Id` is stored without its angle
+  brackets and in lower case, and Reply-To, Gmail's SPF, DKIM and DMARC verdicts and the attachment hint are read at
+  list time, so the owner's rules see the same fields in both tools.
+
+### Fixed
+
+- **A reply is stored in its conversation on servers without thread ids, such as Yandex and Mail.ru.** The thread is
+  the first email named in References, else in In-Reply-To. Mail synced before keeps the thread it was stored with.
+  Gmail keeps its own ids.
+- **Every command that asks the server is bound by the run's deadline and Ctrl-C.** `session start` and
+  `session status --check` opened the mailbox on their own, without the deadline or the abort the other commands
+  had, and a source could reconnect after it was closed.
+- **`sync` asks for at most 20 MB of message bodies in one request**, as well as at most 15 messages, so a batch of
+  large attachments does not hold a connection for minutes or fill memory.
+- **The schemas of `account check` and `session status` name `file` as a password source.** A password kept in the
+  private file was answered as `file` while the published schema allowed only `environment`, `keyring` and
+  `himalaya`, so a client that checks answers against the schema refused it.
+- **A `sync` that `--limit` stopped says so.** It answers `stopped: "limit"`, and its next step says the run saved
+  the emails `--limit` allows, instead of saying it stopped to answer in time.
 
 ## 0.1.1 — 01.11.2026
 

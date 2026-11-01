@@ -8,6 +8,7 @@ const PROFILE_ENTRIES = {
   imap_host: v.optional(v.string()),
   imap_port: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(65535))),
   imap_security: v.optional(v.picklist(["tls", "starttls"])),
+  auth: v.optional(v.picklist(["app-password", "oauth"])),
   folders: v.optional(v.array(v.string())),
 }
 
@@ -17,6 +18,8 @@ export interface Mailbox {
   host?: string
   port?: number
   security?: "tls" | "starttls"
+  /** How the profile signs in; a profile saved before this key existed uses an app password. */
+  auth: "app-password" | "oauth"
   folders?: string[]
 }
 
@@ -31,6 +34,7 @@ export const configuration = settingsFor<{ mailbox: Mailbox }>(IDENTITY, {
     const port = pick<number>("imap_port")
     const security = pick<"tls" | "starttls">("imap_security")
     const folders = pick<string[]>("folders")
+    const auth = pick<Mailbox["auth"]>("auth")
     const defined = <T>(key: string, value: T | undefined) => (value === undefined ? {} : { [key]: value })
     return {
       values: {
@@ -41,6 +45,7 @@ export const configuration = settingsFor<{ mailbox: Mailbox }>(IDENTITY, {
           ...defined("port", port.value),
           ...defined("security", security.value),
           ...defined("folders", folders.value),
+          auth: auth.value ?? "app-password",
         },
       },
       sources: {
@@ -50,6 +55,7 @@ export const configuration = settingsFor<{ mailbox: Mailbox }>(IDENTITY, {
         imap_port: port.from,
         imap_security: security.from,
         folders: folders.from,
+        auth: auth.from,
       },
     }
   },

@@ -3,6 +3,7 @@
   "import": ["./config/wirecat/cspell.json"],
   "ignorePaths": ["docs/commands.md", "docs/dev/**"],
   "words": [
+    "DMARC",
     "Fastmail",
     "Himalaya",
     "ISPDB",

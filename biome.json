@@ -13,7 +13,7 @@
   "extends": ["./config/wirecat/biome.base.json"],
   "overrides": [
     {
-      "includes": ["src/**", "!src/testing/mcp.ts", "!src/mail/imap.ts", "!src/mail/imap-messages.ts", "!**/*.test.ts"],
+      "includes": ["src/**", "!src/testing/mcp.ts", "!src/mail/imap/**", "!**/*.test.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -27,7 +27,7 @@
                   },
                   {
                     "group": ["imapflow", "imapflow/**"],
-                    "message": "only the IMAP adapter, src/mail/imap.ts and the mapping in src/mail/imap-messages.ts, imports imapflow; everything above it speaks cli-core's MailSource (WC-ARCH-3)"
+                    "message": "only the IMAP adapter in src/mail/imap/ imports imapflow; everything above it speaks the MailBackend port in src/mail/backend.ts (WC-ARCH-3)"
                   }
                 ]
               }
@@ -37,7 +37,7 @@
       }
     },
     {
-      "includes": ["src/mail/imap.ts", "src/mail/imap-messages.ts"],
+      "includes": ["src/mail/imap/**"],
       "linter": {
         "rules": {
           "style": {
@@ -67,7 +67,7 @@
                 "patterns": [
                   {
                     "group": ["imapflow", "imapflow/**"],
-                    "message": "only the IMAP adapter, src/mail/imap.ts and the mapping in src/mail/imap-messages.ts, imports imapflow; everything above it speaks cli-core's MailSource (WC-ARCH-3)"
+                    "message": "only the IMAP adapter in src/mail/imap/ imports imapflow; everything above it speaks the MailBackend port in src/mail/backend.ts (WC-ARCH-3)"
                   }
                 ]
               }

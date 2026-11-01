@@ -12,14 +12,15 @@ import { Command } from "commander"
 import * as v from "valibot"
 import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
-import { contextOf, openSource, refuseOffline } from "./context.js"
+import { PASSWORD_SOURCES } from "../secret.js"
+import { contextOf, openMail, refuseOffline } from "./context.js"
 
 const mailAccountCheck = v.strictObject({
   profile: v.string(),
   host: v.string(),
   port: v.number(),
   security: v.picklist(["tls", "starttls", "plain"]),
-  password_from: v.picklist(["environment", "keyring", "himalaya"]),
+  password_from: v.picklist(PASSWORD_SOURCES),
   login: v.string(),
   capabilities: v.array(v.string()),
   features: v.record(v.string(), v.boolean()),
@@ -40,9 +41,9 @@ const checkCommand = () =>
     .action(async function (this: Command) {
       const context = contextOf(this)
       refuseOffline(context.flags)
-      const { source, endpoint, passwordFrom } = await openSource(context)
+      const { backend, endpoint, passwordFrom } = await openMail(context)
       try {
-        const checked = await baseContext(this, configuration.resolveSettings).run(() => source.check())
+        const checked = await baseContext(this, configuration.resolveSettings).run(() => backend.check())
         renderAnswer(
           this,
           outputFor(this),
@@ -56,7 +57,7 @@ const checkCommand = () =>
           }),
         )
       } finally {
-        await source.close()
+        await backend.close()
       }
     })
 

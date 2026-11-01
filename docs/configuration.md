@@ -10,7 +10,8 @@ mail ya config unset limit
 ```
 
 A profile made by `session start` also holds the mailbox: `address`, `login` (when it is not the address), `imap_host`,
-`imap_port`, `imap_security` (`tls` or `starttls`) and `folders` (the folders `sync` reads). The app password is not
+`imap_port`, `imap_security` (`tls` or `starttls`), `auth` (`app-password`; a profile saved without it signs in with an
+app password too) and `folders` (the folders `sync` reads). The app password is not
 a setting: it lives in the keyring, or in `MAIL_PASSWORD` for a run that has no keyring.
 
 `config show` lists each setting and where it came from: the file, a variable or the default.

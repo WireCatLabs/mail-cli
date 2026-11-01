@@ -1,9 +1,8 @@
 import type { Quick, Searched } from "@wirecat/cli-core/mail"
 import { ImapFlow } from "imapflow"
 import { afterEach, expect, it, vi } from "vitest"
-import { type FakeImap, type FakeMessage, type FakeOptions, startFakeImap } from "../testing/fake-imap.js"
-import { type ImapTuning, imapSource } from "./imap.js"
-import { mapImapError } from "./imap-errors.js"
+import { type FakeImap, type FakeMessage, type FakeOptions, startFakeImap } from "../../testing/fake-imap.js"
+import { type ImapTuning, imapBackend, mapImapError } from "./index.js"
 
 const raw = (id: string, subject: string, extra = "") =>
   `Message-ID: <${id}@example.com>\r\nDate: Tue, 27 Oct 2026 10:00:00 +0000\r\nFrom: Ann <ann@example.com>\r\nTo: me@example.com\r\nSubject: ${subject}\r\n${extra}\r\n\r\nHello ${subject}\r\n`
@@ -35,7 +34,7 @@ const serve = (throttleBodies = false, dropSearches = 0, extra: Partial<FakeOpti
   })
 
 const sourceOf = (port: number, password = "app-secret-1", tuning: ImapTuning = {}) =>
-  imapSource({ host: "127.0.0.1", port, security: "plain", login: "me@example.com" }, password, {
+  imapBackend({ host: "127.0.0.1", port, security: "plain", login: "me@example.com" }, password, {
     sleep: async () => {},
     ...tuning,
   })
@@ -87,7 +86,7 @@ it("reads UIDVALIDITY on open, lists envelopes and never asks for a body without
   expect(listed[0]?.headers).toMatchObject({
     from: "ann@example.com",
     fromName: "Ann",
-    listId: "<news.example.com>",
+    listId: "news.example.com",
     bulk: true,
   })
   expect(listed[1]?.headers?.bulk).toBe(false)
@@ -138,7 +137,7 @@ it("reconnects with a growing, jittered wait when the connection drops during a 
   const found = await source.search?.(SINCE, "INBOX")
   await source.close()
   expect(found?.uids).toEqual(["4", "7"])
-  expect(waits).toEqual([1000, 3000])
+  expect(waits).toEqual([500, 1000])
 })
 
 it("fails with the raw error code kept when the attempts run out", async () => {
@@ -156,7 +155,11 @@ it("makes no retry the run's budget or deadline does not allow", async () => {
   expect((await failureOf(noBudget.search?.(SINCE, "INBOX") as Promise<unknown>))?.code).toBe("network_error")
   await noBudget.close()
   const waits: number[] = []
-  const late = sourceOf(fake.port, undefined, { timeLeftMs: () => 500, sleep: async (ms) => void waits.push(ms) })
+  const late = sourceOf(fake.port, undefined, {
+    timeLeftMs: () => 500,
+    random: () => 0.9,
+    sleep: async (ms) => void waits.push(ms),
+  })
   expect((await failureOf(late.search?.(SINCE, "INBOX") as Promise<unknown>))?.code).toBe("network_error")
   await late.close()
   expect(waits).toEqual([])
@@ -233,12 +236,44 @@ it("lists the rest of a batch whose headers Yandex refuses for one message it ca
 })
 
 it("times a command out on its own and reports the transport code", async () => {
-  fake = await serve(false, 0, { fetchDelayMs: 600 })
-  const source = sourceOf(fake.port, undefined, { requestTimeoutMs: 200, maxAttempts: 2 })
+  fake = await serve(false, 0, { hangFetches: true })
+  const server = fake
+  const timers = new Set<() => void>()
+  const expireAfter = (_ms: number, fire: () => void) => {
+    timers.add(fire)
+    return () => timers.delete(fire)
+  }
+  const source = sourceOf(server.port, undefined, { maxAttempts: 2, expireAfter })
   const searched = await source.search?.(SINCE, "INBOX")
-  const failure = await failureOf(source.list(SINCE, "INBOX", searched ? { searched } : {}))
+  const failure = failureOf(source.list(SINCE, "INBOX", searched ? { searched } : {}))
+  const fetches = () => server.commands.filter((command) => command.startsWith("UID FETCH")).length
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    while (fetches() < attempt) await new Promise((resolve) => setImmediate(resolve))
+    for (const fire of timers) fire()
+  }
+  expect(await failure).toMatchObject({ code: "timeout", details: { cause_code: "RequestTimeout" } })
   await source.close()
-  expect(failure).toMatchObject({ code: "timeout", details: { cause_code: "RequestTimeout" } })
+})
+
+it("refuses every call after close instead of opening a new connection", async () => {
+  fake = await serve()
+  const source = sourceOf(fake.port)
+  await source.check()
+  await source.close()
+  const sent = fake.commands.length
+  expect(await failureOf(source.folderList())).toMatchObject({ code: "cancelled" })
+  expect(fake.commands).toHaveLength(sent)
+})
+
+it("caps a body FETCH by bytes as well as by count, and sends a larger message alone", async () => {
+  fake = await serve()
+  const source = sourceOf(fake.port, undefined, { fetchBytes: 1 })
+  const listed = await source.list(SINCE, "INBOX")
+  const raws = await source.fetchRaw(listed)
+  await source.close()
+  expect(raws.every((one) => one instanceof Uint8Array)).toBe(true)
+  const bodies = fake.commands.filter((command) => command.startsWith("UID FETCH") && /BODY\.PEEK\[\]/i.test(command))
+  expect(bodies.map((command) => command.split(" ")[2])).toEqual(["4", "7"])
 })
 
 it("spreads a call over its connections and keeps the order", async () => {
@@ -375,4 +410,42 @@ it("gives mail read as bytes the id the envelope listing gives it, a folded or m
     full.map(({ messageId, threadId }) => ({ messageId, threadId })),
   )
   expect(new Set(full.map(({ messageId }) => messageId)).size).toBe(3)
+})
+
+it("threads a reply under its first email by References, the same way from a listing and from the bytes", async () => {
+  fake = await serveMessages([
+    { uid: 4, raw: raw("root", "question") },
+    { uid: 5, raw: raw("r1", "Re: question", "In-Reply-To: <root@example.com>\r\n") },
+    {
+      uid: 6,
+      raw: raw(
+        "r2",
+        "Re: Re: question",
+        "In-Reply-To: <r1@example.com>\r\nReferences: <root@example.com>\r\n <r1@example.com>\r\n",
+      ),
+    },
+    { uid: 7, raw: raw("other", "another") },
+  ])
+  const source = sourceOf(fake.port)
+  const searched = (await source.search?.(FROM, "INBOX")) as Searched
+  const full = await source.list(FROM, "INBOX", { searched })
+  const quick = (await source.quick?.(FROM, "INBOX", { searched })) as Quick[]
+  const raws = await source.fetchRaw(quick)
+  await source.close()
+  const [root, first, second, other] = full.map(({ threadId }) => threadId)
+  expect([first, second]).toEqual([root, root])
+  expect(other).not.toBe(root)
+  expect(quick.map((item, index) => source.identify?.(raws[index] as Uint8Array, item)?.threadId)).toEqual(
+    full.map(({ threadId }) => threadId),
+  )
+})
+
+it("keeps the server's own thread and message ids where it gives them, as Gmail does", async () => {
+  fake = await serveMessages([
+    { uid: 5, raw: raw("r1", "Re: question", "References: <root@example.com>\r\n"), emailId: "E5", threadId: "T9" },
+  ])
+  const source = sourceOf(fake.port)
+  const [listed] = await source.list(FROM, "INBOX")
+  await source.close()
+  expect(listed).toMatchObject({ messageId: "E5", threadId: "T9" })
 })
