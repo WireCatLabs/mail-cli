@@ -5,6 +5,22 @@ import { IDENTITY } from "./identity.js"
 /** Checked beside `messages.send` and `messages.forward` when the mail reaches anyone but the owner. */
 export const SEND_OTHERS_KEY = "messages.send.others"
 
+/** Where the app password goes, and who an agent may mail: an agent holding `mcp.authority` changes neither. */
+export const OWNER_ONLY = {
+  settings: [
+    "address",
+    "login",
+    "imap_host",
+    "imap_port",
+    "imap_security",
+    "smtp_host",
+    "smtp_port",
+    "smtp_security",
+    "auth",
+  ],
+  permissions: [SEND_OTHERS_KEY],
+}
+
 const PROFILE_ENTRIES = {
   address: v.optional(v.string()),
   login: v.optional(v.string()),

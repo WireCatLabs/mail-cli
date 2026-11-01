@@ -3,6 +3,7 @@ import { metaOf } from "@wirecat/cli-base/commands"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { discover, domainOf, parseAutoconfig } from "./discovery.js"
 import { mapImapError } from "./mail/imap/index.js"
+import { safeName } from "./mail/save.js"
 import { createProgram } from "./program.js"
 import { secretToolLookup } from "./secret.js"
 
@@ -77,5 +78,14 @@ describe("sync", () => {
   it("is cooperative, so the 30 s command default does not cut a long sync", () => {
     const sync = createProgram().commands.find((command) => command.name() === "sync")
     expect(sync && metaOf(sync).cooperative).toBe(true)
+  })
+})
+
+describe("safeName", () => {
+  it("cleans a sender's file name as cli-core's downloads do, and falls back when nothing safe is left", () => {
+    expect(safeName("../../notes.txt", "attachment-1")).toBe("notes.txt")
+    expect(safeName("invoice\u202Efdp.exe", "attachment-1")).toBe("invoicefdp.exe")
+    expect(safeName("zero\u200Bwidth.pdf", "attachment-1")).toBe("zerowidth.pdf")
+    expect(safeName("..", "attachment-2")).toBe("attachment-2")
   })
 })

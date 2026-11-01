@@ -91,10 +91,14 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 - **On a server with OBJECTID (Fastmail, Cyrus) an email's id is the hash of its Message-ID, as memo makes it**, not
   the server's EMAILID, and its thread comes from References. Ids come from cli-core's `mailIds`, which memo uses too,
   so the two never store one email twice. Gmail keeps its own ids; Yandex and Mail.ru ids do not change.
+- **An agent cannot change where the app password goes, nor who it may mail.** Over MCP, `config set` and
+  `config unset` refuse `address`, `login`, `imap_host`, `imap_port`, `imap_security`, `smtp_host`, `smtp_port`,
+  `smtp_security`, `auth` and `permissions.messages.send.others` even with `mcp.authority`; the owner changes them in a
+  terminal (cli-core 0.530.0).
 
 ### Fixed
 
-- **Built on cli-core 0.529.0 and cli-base 0.71.0.** The command lint now knows `drafts`, `--cc`, `--bcc` and
+- **Built on cli-core 0.530.0 and cli-base 0.71.0.** The command lint now knows `drafts`, `--cc`, `--bcc` and
   `--reply-all`, and accepts `--to <address>` and `--subject <text>` beside the messengers' `<chat>` and `<ref>`, so
   thirteen lint overrides are gone and the budget is 11. The audit compares mail in cli-base's `mail-shared` group and
   runs without `--complete`. cli-core also stops hiding a locked store when it scores senders.
@@ -102,7 +106,8 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 - **`sync` says when it leaves stored rules out**: `rules_unread` and `rules_unread_why` (such as `condition label`)
   in the answer and a `mail.rules-unreadable` issue, when the rules hold a condition this mail does not know.
 - **`sync --rescan` fails on a locked or broken store** instead of reporting the rethreading done.
-- On cli-core 0.526.0, the version memo uses too, so both read the stored rules and make ids alike.
+- **An attachment's file name is cleaned as cli-core's downloads clean it**: direction and zero-width characters
+  that disguise an extension go, and on Windows a reserved name (CON, NUL, …) falls back to `attachment-<n>`.
 
 ## 0.5.0 — 01.11.2026
 

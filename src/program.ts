@@ -32,7 +32,7 @@ import { statsCommand } from "./commands/stats.js"
 import { statusCommand } from "./commands/status.js"
 import { syncCommand } from "./commands/sync.js"
 import { tagsCommand } from "./commands/tags.js"
-import { configuration } from "./config.js"
+import { configuration, OWNER_ONLY } from "./config.js"
 import { IDENTITY, PACKAGE, SKILL } from "./identity.js"
 import { changesCheck } from "./mail/doctor.js"
 
@@ -86,7 +86,7 @@ export const definition = (): ProgramDefinition => ({
       latest: () => update.latest({}),
       install: (argv) => update.runUpdate(argv, {}),
     })),
-    configCommand(IDENTITY, configuration),
+    configCommand(IDENTITY, configuration, { ownerOnly: OWNER_ONLY }),
     runsCommand(IDENTITY),
     scheduleCommandFor({
       app: IDENTITY,
