@@ -5,7 +5,7 @@ import { IDENTITY } from "./identity.js"
 /** Checked beside `messages.send` and `messages.forward` when the mail reaches anyone but the owner. */
 export const SEND_OTHERS_KEY = "messages.send.others"
 
-/** Where the app password goes, and who an agent may mail: an agent holding `mcp.authority` changes neither. */
+/** Where the app password goes, which app signs in, and who an agent may mail: an agent holding `mcp.authority` changes neither. */
 export const OWNER_ONLY = {
   settings: [
     "address",
@@ -17,6 +17,7 @@ export const OWNER_ONLY = {
     "smtp_port",
     "smtp_security",
     "auth",
+    "microsoft_client_id",
   ],
   permissions: [SEND_OTHERS_KEY],
 }
@@ -31,6 +32,7 @@ const PROFILE_ENTRIES = {
   smtp_port: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(65535))),
   smtp_security: v.optional(v.picklist(["tls", "starttls"])),
   auth: v.optional(v.picklist(["app-password", "oauth"])),
+  microsoft_client_id: v.optional(v.pipe(v.string(), v.trim(), v.minLength(1))),
   folders: v.optional(v.array(v.string())),
 }
 
@@ -44,6 +46,8 @@ export interface Mailbox {
   smtp?: { host?: string; port?: number; security?: "tls" | "starttls" }
   /** How the profile signs in; a profile saved before this key existed uses an app password. */
   auth: "app-password" | "oauth"
+  /** The owner's own Microsoft app, in place of WireCat's, for every OAuth sign-in after it is set. */
+  microsoftClientId?: string
   folders?: string[]
 }
 
@@ -73,6 +77,7 @@ export const configuration = settingsFor<{ mailbox: Mailbox }>(IDENTITY, {
     const smtpPort = pick<number>("smtp_port")
     const smtpSecurity = pick<"tls" | "starttls">("smtp_security")
     const auth = pick<Mailbox["auth"]>("auth")
+    const microsoftClientId = pick<string>("microsoft_client_id")
     const defined = <T>(key: string, value: T | undefined) => (value === undefined ? {} : { [key]: value })
     return {
       values: {
@@ -93,6 +98,7 @@ export const configuration = settingsFor<{ mailbox: Mailbox }>(IDENTITY, {
                 },
               }),
           auth: auth.value ?? "app-password",
+          ...defined("microsoftClientId", microsoftClientId.value),
         },
       },
       sources: {
@@ -106,6 +112,7 @@ export const configuration = settingsFor<{ mailbox: Mailbox }>(IDENTITY, {
         smtp_port: smtpPort.from,
         smtp_security: smtpSecurity.from,
         auth: auth.from,
+        microsoft_client_id: microsoftClientId.from,
       },
     }
   },

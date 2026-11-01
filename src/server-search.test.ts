@@ -4,7 +4,7 @@ import { join } from "node:path"
 import { memoryKeyring } from "@wirecat/cli-base"
 import { afterEach, describe, expect, it } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
-import type { MailEndpoint, RunBounds } from "./mail/backend.js"
+import type { MailCredential, MailEndpoint, RunBounds } from "./mail/backend.js"
 import { imapBackend } from "./mail/imap/index.js"
 import { run } from "./program.js"
 import { type FakeFolder, type FakeImap, type FakeOptions, startFakeImap } from "./testing/fake-imap.js"
@@ -59,7 +59,7 @@ const harness = async (
       keyring,
       himalaya: async () => undefined,
       discovery: { mx: async () => ["mx.yandex.net"], fetch: async () => new Response("", { status: 404 }) },
-      backend: (endpoint: MailEndpoint, password: string, bounds: RunBounds = {}) =>
+      backend: (endpoint: MailEndpoint, password: MailCredential, bounds: RunBounds = {}) =>
         imapBackend({ ...endpoint, host: "127.0.0.1", port, security: "plain" }, password, {
           sleep: async () => {},
           ...bounds,

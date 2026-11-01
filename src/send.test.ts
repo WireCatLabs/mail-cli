@@ -15,7 +15,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
 import { configuration } from "./config.js"
 import { IDENTITY } from "./identity.js"
-import type { MailEndpoint, RunBounds } from "./mail/backend.js"
+import type { MailCredential, MailEndpoint, RunBounds } from "./mail/backend.js"
 import { imapBackend } from "./mail/imap/index.js"
 import { createProgram, run } from "./program.js"
 import { type FakeFolder, type FakeImap, type FakeOptions, startFakeImap } from "./testing/fake-imap.js"
@@ -101,7 +101,7 @@ const harness = async (
       himalaya: async () => undefined,
       discovery: { mx: async () => [mx], fetch: async () => new Response("", { status: 404 }) },
       stdin: Readable.from([]),
-      backend: (endpoint: MailEndpoint, secret: string, bounds: RunBounds = {}) =>
+      backend: (endpoint: MailEndpoint, secret: MailCredential, bounds: RunBounds = {}) =>
         imapBackend(
           {
             ...endpoint,
@@ -835,6 +835,7 @@ describe("settings an agent cannot change", { timeout: 20_000 }, () => {
       for (const [setting, value] of [
         ["smtp_host", "smtp.evil.example"],
         ["imap_host", "imap.evil.example"],
+        ["microsoft_client_id", "evil.example-app"],
         ["permissions.messages.send.others", "allow"],
         ["permissions", '{"messages.send.others":"allow"}'],
       ]) {

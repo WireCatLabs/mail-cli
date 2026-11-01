@@ -3,6 +3,7 @@ import type { Quick, Searched } from "@wirecat/cli-core/mail"
 import { type FetchMessageObject, ImapFlow } from "imapflow"
 import { afterEach, expect, it, vi } from "vitest"
 import { type FakeImap, type FakeMessage, type FakeOptions, startFakeImap } from "../../testing/fake-imap.js"
+import { passwordCredential } from "../backend.js"
 import { type ImapTuning, imapBackend, mapImapError } from "./index.js"
 import { quickOf } from "./messages.js"
 
@@ -36,7 +37,7 @@ const serve = (throttleBodies = false, dropSearches = 0, extra: Partial<FakeOpti
   })
 
 const sourceOf = (port: number, password = "app-secret-1", tuning: ImapTuning = {}) =>
-  imapBackend({ host: "127.0.0.1", port, security: "plain", login: "me@example.com" }, password, {
+  imapBackend({ host: "127.0.0.1", port, security: "plain", login: "me@example.com" }, passwordCredential(password), {
     sleep: async () => {},
     ...tuning,
   })

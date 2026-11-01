@@ -125,4 +125,26 @@ export interface MailBackend extends MailSource {
   close(): Promise<void>
 }
 
-export type OpenBackend = (endpoint: MailEndpoint, password: string, bounds?: RunBounds) => MailBackend
+/** What one IMAP connect or SMTP login sends: an app password or an OAuth access token. */
+export type MailLogin = { pass: string } | { accessToken: string }
+
+/** Where a backend gets its login; the backend never learns where the secret came from. */
+export interface MailCredential {
+  kind: "app-password" | "oauth"
+  /** `microsoft` or `google` for an OAuth credential, so a refusal can name the likely cause. */
+  provider?: string
+  /**
+   * Called at every IMAP connect and SMTP login. `refresh`: the server refused the token the last call gave though it
+   * looked fresh, so an OAuth credential gets a new one; a password stays the same.
+   */
+  login(options?: { refresh?: boolean }): Promise<MailLogin>
+  /** Named when a refreshed token is refused too: the sign-in itself is gone. */
+  signInCommand?: string
+}
+
+export const passwordCredential = (pass: string): MailCredential => ({
+  kind: "app-password",
+  login: async () => ({ pass }),
+})
+
+export type OpenBackend = (endpoint: MailEndpoint, credential: MailCredential, bounds?: RunBounds) => MailBackend

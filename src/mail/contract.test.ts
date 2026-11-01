@@ -6,6 +6,7 @@ import { CONTRACT_MAIL, mailSourceContract, mailSyncContract, rawOf } from "@wir
 import { afterEach, describe, it } from "vitest"
 import { openMailStore } from "../store.js"
 import { type FakeImap, startFakeImap } from "../testing/fake-imap.js"
+import { passwordCredential } from "./backend.js"
 import { imapBackend } from "./imap/index.js"
 
 const LOGIN = "owner@example.test"
@@ -40,7 +41,10 @@ const serve = async (): Promise<FakeImap> => {
 
 const adapter = async () => {
   const fake = await serve()
-  const source = imapBackend({ host: "127.0.0.1", port: fake.port, security: "plain", login: LOGIN }, "app-secret-1")
+  const source = imapBackend(
+    { host: "127.0.0.1", port: fake.port, security: "plain", login: LOGIN },
+    passwordCredential("app-secret-1"),
+  )
   cleanups.push(() => source.close())
   return source
 }

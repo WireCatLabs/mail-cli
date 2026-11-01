@@ -5,6 +5,7 @@ import { resumeKey, syncMail } from "@wirecat/cli-core/mail"
 import { afterEach, expect, it } from "vitest"
 import { openMailStore } from "../store.js"
 import { type FakeImap, startFakeImap } from "../testing/fake-imap.js"
+import { passwordCredential } from "./backend.js"
 import { imapBackend } from "./imap/index.js"
 
 const LOGIN = "me@example.com"
@@ -32,7 +33,10 @@ const harness = async () => {
   })
   const dir = await mkdtemp(join(tmpdir(), "mail-quick-"))
   const store = await openMailStore({ ...process.env, MESSAGING_STORE: join(dir, "wirecat.db") })
-  const source = imapBackend({ host: "127.0.0.1", port: fake.port, security: "plain", login: LOGIN }, "app-secret-1")
+  const source = imapBackend(
+    { host: "127.0.0.1", port: fake.port, security: "plain", login: LOGIN },
+    passwordCredential("app-secret-1"),
+  )
   cleanups.push(
     () => fake.close(),
     () => source.close(),

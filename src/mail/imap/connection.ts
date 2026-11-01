@@ -1,6 +1,6 @@
 import { backoffMs, CliError, realSleep } from "@wirecat/cli-base"
 import { ImapFlow } from "imapflow"
-import type { MailEndpoint, RunBounds } from "../backend.js"
+import type { MailCredential, MailEndpoint, RunBounds } from "../backend.js"
 import { mapImapError } from "./errors.js"
 
 /**
@@ -103,8 +103,25 @@ export interface Connections {
   close(): Promise<void>
 }
 
-/** The connections of one source, opened on first use; the password never leaves this closure. */
-export const imapConnections = (endpoint: MailEndpoint, password: string, tuning: ImapTuning = {}): Connections => {
+const refusedLogin = (error: unknown) => (error as { authenticationFailed?: boolean }).authenticationFailed === true
+
+const oauthRefused = (credential: MailCredential) =>
+  new CliError(
+    "authentication_error",
+    "the mail server refused the OAuth token even after a refresh; sign in again" +
+      (credential.signInCommand ? `: \`${credential.signInCommand}\`` : ""),
+    { reason: "mail.oauth-refused" },
+  )
+
+/**
+ * The connections of one source, opened on first use. Each login asks the credential, so a reconnect an hour later
+ * gets a refreshed token; the secret never leaves this closure.
+ */
+export const imapConnections = (
+  endpoint: MailEndpoint,
+  credential: MailCredential,
+  tuning: ImapTuning = {},
+): Connections => {
   const { connections, requestTimeoutMs, backoff, maxAttempts } = { ...IMAP_DEFAULTS, ...tuning }
   const { canRetry, timeLeftMs, signal, sleep = realSleep, random = Math.random, expireAfter = realTimer } = tuning
   const clients: (ImapFlow | undefined)[] = []
@@ -126,13 +143,17 @@ export const imapConnections = (endpoint: MailEndpoint, password: string, tuning
     return attempt
   }
 
-  const login = async (slot: number): Promise<ImapFlow> => {
+  const open = async (refresh: boolean): Promise<ImapFlow> => {
+    const given = await credential.login(refresh ? { refresh } : undefined)
     const next = new ImapFlow({
       host: endpoint.host,
       port: endpoint.port,
       secure: endpoint.security === "tls",
       doSTARTTLS: endpoint.security === "starttls",
-      auth: { user: endpoint.login, pass: password },
+      auth:
+        "pass" in given
+          ? { user: endpoint.login, pass: given.pass }
+          : { user: endpoint.login, accessToken: given.accessToken },
       logger: false,
       disableAutoIdle: true,
       connectionTimeout: 15000,
@@ -142,6 +163,22 @@ export const imapConnections = (endpoint: MailEndpoint, password: string, tuning
     // An 'error' event with no listener would end the process, and the failing call already rejects.
     next.on("error", () => {})
     await next.connect()
+    return next
+  }
+
+  // A token can be revoked while it still looks fresh: one forced refresh, then the sign-in itself is gone.
+  const login = async (slot: number): Promise<ImapFlow> => {
+    let next: ImapFlow
+    try {
+      next = await open(false)
+    } catch (error) {
+      if (credential.kind !== "oauth" || !refusedLogin(error)) throw error
+      try {
+        next = await open(true)
+      } catch (again) {
+        throw refusedLogin(again) ? oauthRefused(credential) : again
+      }
+    }
     // A close that ran while this one was logging in found nothing to close.
     if (closed) {
       next.close()

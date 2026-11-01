@@ -65,6 +65,8 @@ export interface Provider {
   imap: Endpoint
   smtp: Smtp
   auth: "app-password" | "oauth"
+  /** Signs in with this OAuth provider: the only way when `auth` is `oauth`, else with `session start --client-file`. */
+  oauth?: "microsoft" | "google"
   note?: string
   sync?: SyncFolders
   search?: ServerSearch
@@ -77,6 +79,13 @@ const tls = (host: string, port = 993): Endpoint => ({ host, port, security: "tl
 const YANDEX_CLIENTS = "https://yandex.ru/support/mail/mail-clients/others.html"
 const OUTLOOK_SETTINGS =
   "https://support.microsoft.com/en-us/office/pop-imap-and-smtp-settings-for-outlook-com-d088b986-291d-42b8-9564-9c414e2aa040"
+const MICROSOFT_OAUTH =
+  "https://learn.microsoft.com/en-us/exchange/client-developer/legacy-protocols/how-to-authenticate-an-imap-pop-smtp-application-by-using-oauth"
+const M365_SMTP =
+  "https://learn.microsoft.com/en-us/exchange/mail-flow-best-practices/how-to-set-up-a-multifunction-device-or-application-to-send-email-using-microsoft-365-or-office-365"
+const M365_SMTP_AUTH =
+  "https://learn.microsoft.com/en-us/exchange/clients-and-mobile-in-exchange-online/authenticated-client-smtp-submission"
+const M365_CONSENT = "https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-user-consent"
 
 const TABLE = {
   yandex: {
@@ -124,6 +133,7 @@ const TABLE = {
       ],
     },
     auth: "app-password",
+    oauth: "google",
     note: "needs 2-step verification and an app password; IMAP downloads are capped at 2500 MB a day",
     // Archived mail leaves INBOX; read from INBOX alone it would look deleted.
     sync: { mode: "gmail", roles: ["all"], otherwise: GMAIL_ALL_MAIL },
@@ -224,24 +234,45 @@ const TABLE = {
       sources: ["https://www.fastmail.help/hc/en-us/articles/360058752854-App-passwords"],
     },
   },
+  // Before outlook: a custom domain on outlook.office365.com is a Microsoft 365 tenant, and providerFor takes the first.
+  microsoft365: {
+    name: "Microsoft 365",
+    domains: [],
+    mx: /\.mail\.protection\.outlook\.com$/,
+    imap: tls("outlook.office365.com"),
+    smtp: { host: "smtp.office365.com", port: 587, security: "starttls", sources: [M365_SMTP] },
+    auth: "oauth",
+    oauth: "microsoft",
+    prepare: {
+      steps: [
+        "Nothing to prepare in the mailbox: `mail` opens Microsoft's sign-in page in the browser; sign in with the work or school account and allow access.",
+      ],
+      notes: [
+        "Your organisation may let only an admin allow a new app. If Microsoft says an admin must approve it, ask your admin to grant consent, or to register the organisation's own app and give you its id.",
+        'Sending needs "Authenticated SMTP" on for your mailbox; organisations with security defaults, and those created after January 2020, have it off until an admin turns it on. Reading works either way.',
+        "The IMAP server for Microsoft 365 is not named on an official page: outlook.office365.com is the one Outlook.com uses.",
+      ],
+      refused:
+        "Microsoft refused the token: an admin may have to allow the app for your organisation, or IMAP may be off for your mailbox.",
+      sources: [MICROSOFT_OAUTH, M365_SMTP, M365_SMTP_AUTH, M365_CONSENT],
+    },
+  },
   outlook: {
     name: "Outlook",
     domains: ["outlook.com", "hotmail.com", "live.com"],
-    mx: /\.mail\.protection\.outlook\.com$/,
     imap: tls("outlook.office365.com"),
     smtp: { host: "smtp-mail.outlook.com", port: 587, security: "starttls", sources: [OUTLOOK_SETTINGS] },
     auth: "oauth",
-    note: "Microsoft accepts only OAuth for IMAP; an app password cannot work, wait for OAuth sign-in",
+    oauth: "microsoft",
     prepare: {
       steps: [
         'Outlook.com: open Settings (the cog), "Mail", "Forwarding and IMAP", turn on "Let devices and apps use IMAP" and save.',
-        "Microsoft's page lists only OAuth2 (Modern Auth) for IMAP and does not list app passwords for it. OAuth sign-in comes in a later phase of `mail`, so a profile cannot be saved yet.",
+        "Then `mail` opens Microsoft's sign-in page in the browser: sign in and allow access. Outlook.com takes only OAuth for IMAP and SMTP, never an app password.",
       ],
-      notes: [
-        "Microsoft 365 work and school accounts were not read from an official page: their steps are unverified.",
-      ],
-      refused: "Microsoft accepts only OAuth for IMAP, which this version cannot do yet.",
-      sources: [OUTLOOK_SETTINGS],
+      notes: [],
+      refused:
+        'IMAP may be off: turn on "Let devices and apps use IMAP" in Outlook.com\'s settings, then sign in again.',
+      sources: [OUTLOOK_SETTINGS, MICROSOFT_OAUTH],
     },
   },
 } satisfies Record<string, Provider>

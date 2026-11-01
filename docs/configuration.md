@@ -13,11 +13,17 @@ A profile made by `session start` also holds the mailbox: `address`, `login` (wh
 `imap_port`, `imap_security` (`tls` or `starttls`), `auth` (`app-password`; a profile saved without it signs in with an
 app password too) and `folders` (the folders `sync` reads). `smtp_host`, `smtp_port` and `smtp_security` name the
 server `messages send` submits to; set them only for a provider the [built-in list](providers.md) does not know. The app password is not
-a setting: it lives in the keyring, or in `MAIL_PASSWORD` for a run that has no keyring.
+a setting: it lives in the keyring, or in `MAIL_PASSWORD` for a run that has no keyring. Nor is an OAuth sign-in: its
+tokens live in the keyring too.
+
+`microsoft_client_id` is the Microsoft app that Outlook.com and Microsoft 365 sign in with, when you use your own instead
+of WireCat's. Set it once for every profile with `mail config set --defaults microsoft_client_id <id>`; how to get an
+id is in [register a Microsoft app](oauth-microsoft.md). A profile already signed in keeps refreshing with the app it
+signed in with.
 
 An agent over MCP that holds `mcp.authority` may change settings with `config set`, but never these: the mailbox
-settings above, which decide where the app password goes, and `permissions.messages.send.others`, which lets an agent
-mail other people. Only you change them, at a terminal.
+settings above, which decide where the app password goes, `microsoft_client_id`, which decides which app you sign in
+to, and `permissions.messages.send.others`, which lets an agent mail other people. Only you change them, at a terminal.
 
 `config show` lists each setting and where it came from: the file, a variable or the default.
 

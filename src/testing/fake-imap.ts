@@ -24,6 +24,12 @@ export interface FakeFolder {
 export interface FakeOptions {
   login: string
   password: string
+  /**
+   * OAuth access tokens the server takes, as Microsoft and Gmail do: AUTHENTICATE XOAUTH2 with SASL-IR, plus
+   * OAUTHBEARER with `oauthBearer`. The test may change the list while the server runs, as a revocation does.
+   */
+  tokens?: string[]
+  oauthBearer?: boolean
   folders: FakeFolder[]
   capabilities?: string[]
   /** Answers every UID FETCH of message bodies with `NO [THROTTLED]`, as Gmail does under load. */
@@ -63,10 +69,12 @@ export interface FakeOptions {
 
 export interface FakeImap {
   port: number
-  /** Every command line received, with the LOGIN line left out. */
+  /** Every command line received, with the LOGIN and AUTHENTICATE lines left out. */
   commands: string[]
   /** Client connections still open. */
   connections(): number
+  /** The access token of each AUTHENTICATE, accepted or not, in order. */
+  tokensTried: string[]
   close(): Promise<void>
 }
 
@@ -211,8 +219,10 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
       : options.folders.some(({ messages }) => messages.some(({ emailId }) => emailId))
         ? ["OBJECTID"]
         : []),
+    ...(options.tokens ? ["SASL-IR", "AUTH=XOAUTH2", ...(options.oauthBearer ? ["AUTH=OAUTHBEARER"] : [])] : []),
     ...(options.capabilities ?? []),
   ]
+  const tokensTried: string[] = []
   for (const folder of options.folders) folder.uidNext ??= Math.max(0, ...folder.messages.map(({ uid }) => uid)) + 1
   const sockets = new Set<Socket>()
   let dropsLeft = options.dropSearches ?? 0
@@ -268,6 +278,20 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
           ok
             ? `${tag} OK [CAPABILITY ${capabilities.join(" ")}] logged in`
             : `${tag} NO [AUTHENTICATIONFAILED] Invalid credentials`,
+        )
+      }
+      if (command === "AUTHENTICATE") {
+        const fields = Buffer.from(rest[1] ?? "", "base64")
+          .toString("utf8")
+          .split("\u0001")
+        const user = fields[0]?.startsWith("user=") ? fields[0].slice(5) : /^n,a=([^,]*),/.exec(fields[0] ?? "")?.[1]
+        const token = fields.find((field) => field.startsWith("auth=Bearer "))?.slice("auth=Bearer ".length) ?? ""
+        tokensTried.push(token)
+        const ok = user === options.login && (options.tokens ?? []).includes(token)
+        return send(
+          ok
+            ? `${tag} OK [CAPABILITY ${capabilities.join(" ")}] authenticated`
+            : `${tag} NO [AUTHENTICATIONFAILED] AUTHENTICATE failed.`,
         )
       }
       commands.push(`${command} ${tail}`.trim())
@@ -558,6 +582,7 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
     port,
     commands,
     connections: () => sockets.size,
+    tokensTried,
     close: () =>
       new Promise((resolve) => {
         for (const socket of sockets) socket.destroy()

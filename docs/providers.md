@@ -2,7 +2,7 @@
 
 <!-- Generated from src/providers.ts by pnpm generate. Do not edit. -->
 
-Use this page before `mail <profile> session start`, which asks for the app password. Each provider needs IMAP on and, for most, an app password:
+Use this page before `mail <profile> session start`, which asks for the app password, or for Outlook.com and Microsoft 365 opens Microsoft's sign-in in the browser. Each provider needs IMAP on and, for most, an app password:
 a password made only for this program. At the end you have an app password ready to type at the prompt.
 
 `mail <profile> session start` prints these same steps and repeats the
@@ -81,16 +81,26 @@ Read from: <https://www.fastmail.help/hc/en-us/articles/360058752854-App-passwor
 
 Sending: `smtp.fastmail.com` port 465, TLS, with the same app password. Its help does not say it files SMTP mail in Sent, so `mail` appends the copy unless Sent has it already. Read from: <https://www.fastmail.help/hc/en-us/articles/1500000278342-Server-names-and-ports>
 
+## Microsoft 365
+
+1. Nothing to prepare in the mailbox: `mail` opens Microsoft's sign-in page in the browser; sign in with the work or school account and allow access.
+
+- Your organisation may let only an admin allow a new app. If Microsoft says an admin must approve it, ask your admin to grant consent, or to register the organisation's own app and give you its id.
+- Sending needs "Authenticated SMTP" on for your mailbox; organisations with security defaults, and those created after January 2020, have it off until an admin turns it on. Reading works either way.
+- The IMAP server for Microsoft 365 is not named on an official page: outlook.office365.com is the one Outlook.com uses.
+
+Read from: <https://learn.microsoft.com/en-us/exchange/client-developer/legacy-protocols/how-to-authenticate-an-imap-pop-smtp-application-by-using-oauth>, <https://learn.microsoft.com/en-us/exchange/mail-flow-best-practices/how-to-set-up-a-multifunction-device-or-application-to-send-email-using-microsoft-365-or-office-365>, <https://learn.microsoft.com/en-us/exchange/clients-and-mobile-in-exchange-online/authenticated-client-smtp-submission>, <https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-user-consent>
+
+Sending: `smtp.office365.com` port 587, STARTTLS, with the same OAuth sign-in. Its help does not say it files SMTP mail in Sent, so `mail` appends the copy unless Sent has it already. Read from: <https://learn.microsoft.com/en-us/exchange/mail-flow-best-practices/how-to-set-up-a-multifunction-device-or-application-to-send-email-using-microsoft-365-or-office-365>
+
 ## Outlook
 
 1. Outlook.com: open Settings (the cog), "Mail", "Forwarding and IMAP", turn on "Let devices and apps use IMAP" and save.
-2. Microsoft's page lists only OAuth2 (Modern Auth) for IMAP and does not list app passwords for it. OAuth sign-in comes in a later phase of `mail`, so a profile cannot be saved yet.
+2. Then `mail` opens Microsoft's sign-in page in the browser: sign in and allow access. Outlook.com takes only OAuth for IMAP and SMTP, never an app password.
 
-- Microsoft 365 work and school accounts were not read from an official page: their steps are unverified.
+Read from: <https://support.microsoft.com/en-us/office/pop-imap-and-smtp-settings-for-outlook-com-d088b986-291d-42b8-9564-9c414e2aa040>, <https://learn.microsoft.com/en-us/exchange/client-developer/legacy-protocols/how-to-authenticate-an-imap-pop-smtp-application-by-using-oauth>
 
-Read from: <https://support.microsoft.com/en-us/office/pop-imap-and-smtp-settings-for-outlook-com-d088b986-291d-42b8-9564-9c414e2aa040>
-
-Sending: `smtp-mail.outlook.com` port 587, STARTTLS, once OAuth sign-in comes. Its help does not say it files SMTP mail in Sent, so `mail` appends the copy unless Sent has it already. Read from: <https://support.microsoft.com/en-us/office/pop-imap-and-smtp-settings-for-outlook-com-d088b986-291d-42b8-9564-9c414e2aa040>
+Sending: `smtp-mail.outlook.com` port 587, STARTTLS, with the same OAuth sign-in. Its help does not say it files SMTP mail in Sent, so `mail` appends the copy unless Sent has it already. Read from: <https://support.microsoft.com/en-us/office/pop-imap-and-smtp-settings-for-outlook-com-d088b986-291d-42b8-9564-9c414e2aa040>
 
 ## Any other provider
 

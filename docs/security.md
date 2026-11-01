@@ -22,7 +22,15 @@ restore: `drafts delete` and `drafts send` expunge the draft, undoing `messages 
 never gets it, so it deletes only an empty folder and only previews `drafts delete`. `messages delete --rules` refuses to run from a schedule.
 
 An agent that holds `mcp.authority` may change settings, but not the mailbox's server settings (`imap_host`,
-`smtp_host` and the rest), which decide where the app password goes, nor `permissions.messages.send.others`.
+`smtp_host` and the rest), which decide where the app password or token goes, nor `microsoft_client_id`, nor
+`permissions.messages.send.others`.
+
+An Outlook.com or Microsoft 365 profile signs in with OAuth: the browser goes to Microsoft, which sends the answer back
+to `mail` on `127.0.0.1` only, checked with PKCE and a random `state`. The new token logs in to IMAP before anything is
+saved. The access and refresh tokens are kept like the app password, in the keyring entry `oauth:microsoft:<profile>`
+(or the private file when no keyring works), and are never printed, logged or passed on the command line. A refresh
+happens under a lock every `mail` process shares. `session end` removes the entry; Microsoft has no way for a desktop
+app to revoke it, so remove the app at <https://account.live.com/consent/Manage> or <https://myapps.microsoft.com>.
 Each change run keeps, under `mail`'s state folder and readable by you only, the folder, UID, flags, Gmail labels and
 Message-ID of each message it changed, so `messages restore` can undo it; never a subject or a body.
 
