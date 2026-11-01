@@ -15,6 +15,7 @@ export const profileOf = (discovery: Discovery, folders?: string[]) => ({
   imap_host: discovery.imap.host,
   imap_port: discovery.imap.port,
   imap_security: discovery.imap.security,
+  auth: discovery.auth,
   ...(folders?.length ? { folders } : {}),
 })
 

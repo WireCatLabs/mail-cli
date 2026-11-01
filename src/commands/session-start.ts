@@ -15,11 +15,11 @@ import {
 } from "@wirecat/cli-core/cli"
 import { Command } from "commander"
 import { configuration } from "../config.js"
-import { PROVIDER_NAMES, prepareFor } from "../discovery.js"
+import { PROVIDER_NAMES } from "../discovery.js"
 import { IDENTITY } from "../identity.js"
 import type { MailEndpoint } from "../mail/backend.js"
 import { profileOf, writeProfile } from "../profile.js"
-import { PROVIDERS_URL, type Prepare, prepareText } from "../providers.js"
+import { GENERIC_PREPARE, PROVIDERS_URL, type Prepare, prepareText, providerFor } from "../providers.js"
 import {
   collect,
   contextOf,
@@ -108,7 +108,9 @@ export const sessionStartCommand = () =>
           )
         endpoint = endpointOf(context.settings)
         address = context.settings.mailbox.address ?? endpoint.login
-        ;({ provider, prepare } = prepareFor(address, endpoint.host))
+        const hosting = providerFor(address, endpoint.host)
+        provider = hosting?.name ?? address.split("@")[1] ?? "this"
+        prepare = hosting?.prepare ?? GENERIC_PREPARE
       } else {
         const typedAddress = flags.address ?? (asking ? (await ask("Mail address: ", { echo: true })).trim() : "")
         if (!typedAddress)

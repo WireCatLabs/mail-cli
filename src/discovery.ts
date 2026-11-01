@@ -1,14 +1,16 @@
 import { resolveMx } from "node:dns/promises"
 import { CliError } from "@wirecat/cli-base"
-import { GENERIC_PREPARE, PROVIDER_PREPARE, type Prepare, type ProviderKey } from "./providers.js"
-
-export type Security = "tls" | "starttls"
-
-export interface Endpoint {
-  host: string
-  port: number
-  security: Security
-}
+import {
+  type Endpoint,
+  GENERIC_PREPARE,
+  PROVIDER_KEYS,
+  PROVIDERS,
+  type Prepare,
+  type Provider,
+  type ProviderKey,
+  providerByDomain,
+  type Security,
+} from "./providers.js"
 
 export interface Discovery {
   address: string
@@ -16,87 +18,11 @@ export interface Discovery {
   imap: Endpoint
   /** What the server wants as the login name. */
   login: string
-  auth: "app-password" | "oauth"
+  auth: Provider["auth"]
   found_by: "built-in" | "mx" | "ispdb" | "autoconfig"
   note?: string
   prepare: Prepare
 }
-
-interface Known {
-  provider: string
-  imap: Endpoint
-  auth: Discovery["auth"]
-  note?: string
-}
-
-const tls = (host: string): Endpoint => ({ host, port: 993, security: "tls" })
-
-const KNOWN: Record<ProviderKey, Known> = {
-  yandex: {
-    provider: "Yandex",
-    imap: tls("imap.yandex.com"),
-    auth: "app-password",
-    note: "turn on IMAP and app passwords in Yandex settings, then make a password of type Mail",
-  },
-  gmail: {
-    provider: "Gmail",
-    imap: tls("imap.gmail.com"),
-    auth: "app-password",
-    note: "needs 2-step verification and an app password; IMAP downloads are capped at 2500 MB a day",
-  },
-  icloud: {
-    provider: "iCloud",
-    imap: tls("imap.mail.me.com"),
-    auth: "app-password",
-    note: "needs an app-specific password",
-  },
-  mailru: {
-    provider: "Mail.ru",
-    imap: tls("imap.mail.ru"),
-    auth: "app-password",
-    note: "needs an app password for external programs",
-  },
-  fastmail: { provider: "Fastmail", imap: tls("imap.fastmail.com"), auth: "app-password" },
-  outlook: {
-    provider: "Outlook",
-    imap: tls("outlook.office365.com"),
-    auth: "oauth",
-    note: "Microsoft accepts only OAuth for IMAP; an app password cannot work, wait for OAuth sign-in",
-  },
-}
-
-const BY_DOMAIN: Record<string, ProviderKey> = {
-  "yandex.ru": "yandex",
-  "yandex.com": "yandex",
-  "ya.ru": "yandex",
-  "yandex.by": "yandex",
-  "yandex.kz": "yandex",
-  "yandex.ua": "yandex",
-  "gmail.com": "gmail",
-  "googlemail.com": "gmail",
-  "icloud.com": "icloud",
-  "me.com": "icloud",
-  "mac.com": "icloud",
-  "mail.ru": "mailru",
-  "inbox.ru": "mailru",
-  "list.ru": "mailru",
-  "bk.ru": "mailru",
-  "internet.ru": "mailru",
-  "fastmail.com": "fastmail",
-  "fastmail.fm": "fastmail",
-  "outlook.com": "outlook",
-  "hotmail.com": "outlook",
-  "live.com": "outlook",
-}
-
-// A domain with its own name can still be hosted at one of these: its MX record says where.
-const BY_MX: [RegExp, ProviderKey][] = [
-  [/(^|\.)mx\.yandex\.(net|ru)$|(^|\.)yandex\.(net|ru)$/, "yandex"],
-  [/(^|\.)(aspmx\.l\.google\.com|googlemail\.com|google\.com)$/, "gmail"],
-  [/\.mail\.protection\.outlook\.com$/, "outlook"],
-  [/(^|\.)messagingengine\.com$/, "fastmail"],
-  [/(^|\.)mail\.ru$/, "mailru"],
-]
 
 export const ADDRESS = /^[^\s@<>()[\]\\,;:"]+@([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)$/
 
@@ -107,44 +33,32 @@ export const domainOf = (address: string): string => {
   return domain.toLowerCase()
 }
 
-const isProviderKey = (name: string): name is ProviderKey => Object.hasOwn(KNOWN, name)
-
-const KEYS: ProviderKey[] = Object.keys(KNOWN).filter(isProviderKey)
-
 const found = (address: string, key: ProviderKey, found_by: Discovery["found_by"]): Discovery => {
-  const known = KNOWN[key]
+  const provider = PROVIDERS[key]
   return {
     address,
-    provider: known.provider,
-    imap: known.imap,
-    // Every provider in the table logs in with the full address.
+    provider: provider.name,
+    imap: provider.imap,
     login: address,
-    auth: known.auth,
+    auth: provider.auth,
     found_by,
-    ...(known.note ? { note: known.note } : {}),
-    prepare: PROVIDER_PREPARE[key],
+    ...(provider.note ? { note: provider.note } : {}),
+    prepare: provider.prepare,
   }
-}
-
-/** The steps for a saved profile: its address domain first, then its server host (a domain of its own on Yandex). */
-export const prepareFor = (address: string, host: string): { provider: string; prepare: Prepare } => {
-  const domain = address.split("@")[1]?.toLowerCase() ?? ""
-  const key = BY_DOMAIN[domain] ?? KEYS.find((name) => KNOWN[name].imap.host === host)
-  return key
-    ? { provider: KNOWN[key].provider, prepare: PROVIDER_PREPARE[key] }
-    : { provider: domain || "this", prepare: GENERIC_PREPARE }
 }
 
 const slug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, "")
 
 /** The names `--provider` and the interactive choice accept, in table order. */
-export const PROVIDER_NAMES: string[] = KEYS.map((key) => KNOWN[key].provider)
+export const PROVIDER_NAMES: string[] = PROVIDER_KEYS.map((key) => PROVIDERS[key].name)
 
 /** A built-in provider picked by name, for an address whose own domain says nothing about its host. */
 export const discoverByName = (input: string, name: string): Discovery => {
   const address = input.trim().toLowerCase()
   domainOf(address)
-  const key = KEYS.find((candidate) => slug(candidate) === slug(name) || slug(KNOWN[candidate].provider) === slug(name))
+  const key = PROVIDER_KEYS.find(
+    (candidate) => slug(candidate) === slug(name) || slug(PROVIDERS[candidate].name) === slug(name),
+  )
   if (!key)
     throw new CliError("validation_error", `unknown provider ${name}; choose one of ${PROVIDER_NAMES.join(", ")}`, {
       param: "provider",
@@ -197,19 +111,22 @@ const ask = async (url: string, deps: DiscoveryDeps): Promise<string | undefined
 }
 
 /**
- * Built-in table by domain, then the MX record, then Thunderbird's ISPDB, then the domain's own autoconfig file.
- * The result is only a proposal: `setup` shows it and the owner confirms.
+ * The built-in providers by domain, then the MX record, then Thunderbird's ISPDB, then the domain's own autoconfig
+ * file. `session start` prints what it found and sends the password there only to check it.
  */
 export const discover = async (input: string, deps: DiscoveryDeps = {}): Promise<Discovery> => {
   const address = input.trim().toLowerCase()
   const domain = domainOf(address)
-  const key = BY_DOMAIN[domain]
+  const key = providerByDomain(domain)
   if (key) return found(address, key, "built-in")
 
   try {
-    const exchanges = await (deps.mx ?? defaultMx)(domain)
-    for (const [pattern, name] of BY_MX)
-      if (exchanges.some((host) => pattern.test(host.toLowerCase()))) return found(address, name, "mx")
+    const exchanges = (await (deps.mx ?? defaultMx)(domain)).map((host) => host.toLowerCase())
+    const hosted = PROVIDER_KEYS.find((name) => {
+      const pattern = PROVIDERS[name].mx
+      return pattern !== undefined && exchanges.some((host) => pattern.test(host))
+    })
+    if (hosted) return found(address, hosted, "mx")
   } catch {
     // No MX record, or no network: the file lookups below may still answer.
   }

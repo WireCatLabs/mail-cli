@@ -1,18 +1,8 @@
-import { GENERIC_PREPARE, PROVIDER_PREPARE } from "../dist/providers.js"
+import { GENERIC_PREPARE, PROVIDER_KEYS, PROVIDERS, type ProviderKey } from "../dist/providers.js"
 
-const NAMES: Record<keyof typeof PROVIDER_PREPARE, string> = {
-  yandex: "Yandex",
-  gmail: "Gmail",
-  icloud: "iCloud",
-  mailru: "Mail.ru",
-  fastmail: "Fastmail",
-  outlook: "Outlook",
-}
-
-const isProvider = (key: string): key is keyof typeof PROVIDER_PREPARE => Object.hasOwn(PROVIDER_PREPARE, key)
-
-const section = (name: string, key: keyof typeof PROVIDER_PREPARE): string => {
-  const { steps, notes, sources } = PROVIDER_PREPARE[key]
+const section = (key: ProviderKey): string => {
+  const { name, prepare } = PROVIDERS[key]
+  const { steps, notes, sources } = prepare
   return [
     `## ${name}`,
     "",
@@ -39,9 +29,7 @@ export const providersPage = (): string =>
     "named under every provider. Labels are quoted in the language of the provider's interface. A provider can change",
     "its screens; the help page is the source of truth.",
     "",
-    ...Object.keys(NAMES)
-      .filter(isProvider)
-      .map((key) => section(NAMES[key], key)),
+    ...PROVIDER_KEYS.map(section),
     "## Any other provider",
     "",
     GENERIC_PREPARE.notes.join(" "),

@@ -26,6 +26,13 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   brackets and in lower case, and Reply-To, Gmail's SPF, DKIM and DMARC verdicts and the attachment hint are read at
   list time, so the owner's rules see the same fields in both tools.
 
+- **`sync` reads All Mail on Gmail when the profile names no folders.** Archived Gmail mail leaves INBOX, so a sync of
+  INBOX alone took it for deleted. All Mail is found by its role, so a Gmail account in another language works too.
+- **A new profile saves how it signs in (`auth`).** A profile saved before keeps working with its `imap_*` settings and
+  signs in with an app password, with nothing to migrate.
+- **One entry per built-in provider holds its domains, MX pattern, IMAP and SMTP servers, sign-in and setup steps**,
+  in place of two tables that had to be kept in step.
+
 ### Fixed
 
 - **Every command that asks the server is bound by the run's deadline and Ctrl-C.** `session start` and

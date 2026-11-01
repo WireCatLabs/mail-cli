@@ -17,6 +17,7 @@ import { Command } from "commander"
 import * as v from "valibot"
 import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
+import { DEFAULT_SYNC, providerFor, type SyncFolders } from "../providers.js"
 import { openMailStore } from "../store.js"
 import { collect, contextOf, openMail, refuseOffline } from "./context.js"
 
@@ -74,19 +75,18 @@ const wholeNumberFor =
     return Number(value)
   }
 
-/** INBOX and the folder the server marks as Sent, unless the profile or `--folder` says otherwise. */
+/** The provider's folders by role (INBOX and Sent, All Mail on Gmail), unless the profile or `--folder` names some. */
 const foldersFor = async (
   explicit: string[] | undefined,
   configured: string[] | undefined,
+  defaults: SyncFolders,
   list: () => Promise<{ path: string; role: string | null }[]>,
 ): Promise<string[]> => {
   if (explicit?.length) return explicit
   if (configured?.length) return configured
   const found = await list()
-  const chosen = found
-    .filter((folder) => folder.role === "inbox" || folder.role === "sent")
-    .map((folder) => folder.path)
-  return chosen.length ? chosen : ["INBOX"]
+  const chosen = found.filter((folder) => folder.role && defaults.roles.includes(folder.role)).map(({ path }) => path)
+  return chosen.length ? chosen : [defaults.otherwise]
 }
 
 const mailSync = v.strictObject({
@@ -137,7 +137,7 @@ export const syncCommand = (): Command =>
     )
     .option(
       "--folder <folder>",
-      "a folder to read; repeat it for more (default: the profile's folders, else INBOX and Sent)",
+      "a folder to read; repeat it for more (default: the profile's folders, else INBOX and Sent; All Mail on Gmail)",
       collect,
     )
     .option("--rescan", "list every message in the window again, not only those an earlier run left")
@@ -154,7 +154,9 @@ export const syncCommand = (): Command =>
       const { backend } = await openMail(context, { canRetry: () => budget.take() === null })
       try {
         const report = await baseContext(this, configuration.resolveSettings).run(async () => {
-          const folders = await foldersFor(args.folder, context.settings.mailbox.folders, () => backend.folderList())
+          const { mailbox } = context.settings
+          const defaults = providerFor(address, mailbox.host)?.sync ?? DEFAULT_SYNC
+          const folders = await foldersFor(args.folder, mailbox.folders, defaults, () => backend.folderList())
           const store = await openMailStore(context.env)
           environmentOf(this).trackCloseable?.(store)
           try {

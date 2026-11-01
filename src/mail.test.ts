@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events"
-import { mkdtempSync, readFileSync, statSync } from "node:fs"
+import { mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import {
@@ -60,7 +60,7 @@ const harness = async (options: { throttle?: boolean; fake?: Partial<FakeOptions
     throttleBodies: options.throttle === true,
     capabilities: ["CONDSTORE"],
     ...options.fake,
-    folders: [
+    folders: options.fake?.folders ?? [
       {
         name: "INBOX",
         messages: [
@@ -191,6 +191,7 @@ describe("session start of a new profile", () => {
       imap_host: "imap.yandex.com",
       imap_port: 993,
       imap_security: "tls",
+      auth: "app-password",
     })
     if (process.platform !== "win32") expect(statSync(config(env)).mode & 0o777).toBe(0o600)
     expect(keyring.entries.size).toBe(1)
@@ -293,6 +294,7 @@ describe("session start of a new profile", () => {
       imap_host: "mail.own.test",
       imap_port: 143,
       imap_security: "starttls",
+      auth: "app-password",
       folders: ["INBOX"],
     })
     const base = ["x", "session", "start", "--address", ADDRESS, "--host", "mail.own.test", "--json"]
@@ -630,6 +632,37 @@ describe("account check, folders and sync", () => {
     const throttled = await mail(["ya", "sync", "--since-time", "2026-10-01", "--folder", "INBOX", "--json"])
     expect(throttled.code).not.toBe(0)
     expect(throttled.err).toContain("rate_limited")
+  })
+
+  it("reads a profile saved before the auth key, with its flat imap_ keys, as it is", async () => {
+    const { mail, env } = await harness()
+    const old = { address: ADDRESS, imap_host: "imap.yandex.com", imap_port: 993, imap_security: "tls" }
+    writeFileSync(join(env.MAIL_CONFIG_DIR ?? "", "config.json"), JSON.stringify({ profiles: { ya: old } }))
+    const checked = await mail(["ya", "account", "check", "--json"], typed(PASSWORD))
+    expect(checked.code).toBe(0)
+    expect(item(checked.out)).toMatchObject({ host: "imap.yandex.com", port: 993, password_from: "environment" })
+  })
+
+  it("syncs Gmail's All Mail by default, since archived mail leaves INBOX", async () => {
+    const { mail } = await harness({
+      fake: {
+        folders: [
+          { name: "INBOX", messages: [] },
+          {
+            name: "[Gmail]/Alle Nachrichten",
+            attributes: ["\\All"],
+            messages: [{ uid: 1, raw: raw("g1", "archived", "") }],
+          },
+        ],
+      },
+    })
+    const started = await mail(
+      ["g", "session", "start", "--address", ADDRESS, "--provider", "gmail", "--json"],
+      typed(PASSWORD),
+    )
+    expect(started.code).toBe(0)
+    const synced = await mail(["g", "sync", "--since-time", "2026-10-01", "--json"])
+    expect(item(synced.out)).toMatchObject({ folders: ["[Gmail]/Alle Nachrichten"], saved: 1 })
   })
 
   it("reads the folders the profile names, and nothing is fetched with --offline", async () => {
