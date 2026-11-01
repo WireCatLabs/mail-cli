@@ -9,6 +9,7 @@ import {
   FETCH,
   itemOf,
   outputFor,
+  positiveCount,
   renderAnswer,
   runBudgetOf,
 } from "@wirecat/cli-core/cli"
@@ -24,7 +25,7 @@ import { IDENTITY } from "../identity.js"
 import { DEFAULT_SYNC, providerFor } from "../providers.js"
 import { openMailStore } from "../store.js"
 import { collect, contextOf, openMail, refuseOffline } from "./context.js"
-import { foldersFor, wholeNumberFor } from "./sync.js"
+import { foldersFor } from "./sync.js"
 
 const PAGE = 100
 const FETCH_SLICE = 50
@@ -95,11 +96,11 @@ export const exportLeaf = (): Command =>
       "only mail filed in this folder; repeat it for more (default: the folders sync reads)",
       collect,
     )
-    .option("--limit <n>", "write at most this many messages in this run, newest first", wholeNumberFor("limit"))
+    .option("--limit <n>", "write at most this many messages in this run, newest first", positiveCount("--limit"))
     .option(
       "--max-pages <pages>",
       "at most this many requests to the mail server in this run; as many as fit the deadline if not given",
-      wholeNumberFor("max-pages"),
+      positiveCount("--max-pages"),
     )
     .option("--resume", "go on with the export already in the folder, skipping what it holds")
     .option("--replace", "write into a folder that has something in it, over files of the same name")

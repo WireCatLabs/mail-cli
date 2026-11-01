@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs"
 import { CliError } from "@wirecat/cli-base"
 import { baseContext } from "@wirecat/cli-core/cli"
+import { mailAccountKey } from "@wirecat/cli-core/mail"
 import { type MailReads, mailReadCommands } from "@wirecat/cli-core/mail/cli"
 import { storePath } from "@wirecat/cli-core/store"
 import { configuration } from "../config.js"
@@ -30,7 +31,7 @@ const reads: MailReads = {
       const store = await openMailStore(context.env)
       context.environment.trackCloseable?.(store)
       try {
-        return await work(store, { provider: "email", account: address.toLowerCase() })
+        return await work(store, mailAccountKey(address))
       } finally {
         await store.close()
       }

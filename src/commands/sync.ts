@@ -9,10 +9,11 @@ import {
   FETCH,
   itemOf,
   outputFor,
+  positiveCount,
   renderAnswer,
   runBudgetOf,
 } from "@wirecat/cli-core/cli"
-import { type MailSyncResult, storedMailRuleSet, syncMail } from "@wirecat/cli-core/mail"
+import { type MailSyncResult, mailAccountKey, storedMailRuleSet, syncMail } from "@wirecat/cli-core/mail"
 import { Command } from "commander"
 import * as v from "valibot"
 import { configuration } from "../config.js"
@@ -65,16 +66,6 @@ const issuesOf = (report: MailSyncResult) => [
     ? [{ code: BUDGET_CODES[report.stopped], reason: `budget.${report.stopped}`, source: "sync" }]
     : []),
 ]
-
-export const wholeNumberFor =
-  (flag: string) =>
-  (value: string): number => {
-    if (!/^\d+$/.test(value.trim()) || Number(value) < 1)
-      throw new CliError("validation_error", `--${flag} takes a whole number from 1 upwards, not "${value}"`, {
-        param: flag,
-      })
-    return Number(value)
-  }
 
 /** The provider's folders by role (INBOX and Sent, All Mail on Gmail), unless the profile or `--folder` names some. */
 export const foldersFor = async (
@@ -136,11 +127,11 @@ export const syncCommand = (): Command =>
       "--since-time <time>",
       "only mail received since this date or time; a date alone starts at local midnight, a time without a zone is local (default: 30 days)",
     )
-    .option("--limit <n>", "save at most this many new emails in this run, newest first", wholeNumberFor("limit"))
+    .option("--limit <n>", "save at most this many new emails in this run, newest first", positiveCount("--limit"))
     .option(
       "--max-pages <pages>",
       "at most this many requests to the mail server in this run; as many as fit the deadline if not given",
-      wholeNumberFor("max-pages"),
+      positiveCount("--max-pages"),
     )
     .option(
       "--folder <folder>",
@@ -181,7 +172,7 @@ export const syncCommand = (): Command =>
                 ...(args.rescan ? { rescan: true } : {}),
                 ...(signal ? { signal } : {}),
               })
-              const key = { provider: "email", account: address.toLowerCase() }
+              const key = mailAccountKey(address)
               const rethreaded =
                 args.rescan && !report.stopped
                   ? await rethreadStored(backend, store, key, folders, since, () => budget.take() === null)
