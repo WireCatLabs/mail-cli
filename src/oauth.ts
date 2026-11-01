@@ -292,15 +292,15 @@ export const recordSignIn = async (env: NodeJS.ProcessEnv, profile: string, reco
 }
 
 /** The system browser; the sign-in link is printed too, so a failure here only means opening it by hand. */
-export const systemBrowser = (url: string): Promise<void> =>
+export const systemBrowser = (url: string, platform = process.platform, start = spawn): Promise<void> =>
   new Promise((resolve, reject) => {
     const [command, args]: [string, string[]] =
-      process.platform === "darwin"
+      platform === "darwin"
         ? ["open", [url]]
-        : process.platform === "win32"
+        : platform === "win32"
           ? ["rundll32.exe", ["url.dll,FileProtocolHandler", url]]
           : ["xdg-open", [url]]
-    const child = spawn(command, args, { detached: true, stdio: "ignore", windowsHide: true })
+    const child = start(command, args, { detached: true, stdio: "ignore", windowsHide: true })
     child.once("error", () => reject(new CliError("configuration_error", `could not start ${command}`)))
     child.once("spawn", () => {
       child.unref()

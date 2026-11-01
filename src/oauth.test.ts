@@ -1,3 +1,5 @@
+import type { spawn } from "node:child_process"
+import { EventEmitter } from "node:events"
 import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -7,7 +9,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
 import type { MailCredential, MailEndpoint, RunBounds } from "./mail/backend.js"
 import { imapBackend } from "./mail/imap/index.js"
-import { GOOGLE_MAIL_SCOPE, MICROSOFT_IMAP_SCOPE, MICROSOFT_SMTP_SCOPE } from "./oauth.js"
+import { GOOGLE_MAIL_SCOPE, MICROSOFT_IMAP_SCOPE, MICROSOFT_SMTP_SCOPE, systemBrowser } from "./oauth.js"
 import { run } from "./program.js"
 import { providerFor } from "./providers.js"
 import { type FakeImap, startFakeImap } from "./testing/fake-imap.js"
@@ -59,10 +61,21 @@ const harness = async (
     MESSAGING_STORE: join(mkdtempSync(join(tmpdir(), "store-")), "wirecat.db"),
   }
   delete env.CI
-  const server = { accepts: true, sends: true, issued: 0, account: address, revoked: 0 }
+  const server = {
+    accepts: true,
+    sends: true,
+    issued: 0,
+    account: address,
+    revoked: 0,
+    lookup: "ok" as "ok" | "refused" | "down" | "unverified",
+  }
   const tokenCalls: URLSearchParams[] = []
   const fetch = (async (url: string | URL | Request, init?: RequestInit) => {
-    if (String(url).includes("/userinfo")) return Response.json({ email: server.account, email_verified: true })
+    if (String(url).includes("/userinfo")) {
+      if (server.lookup === "down") throw new TypeError("fetch failed")
+      if (server.lookup === "refused") return new Response("", { status: 401 })
+      return Response.json({ email: server.account, email_verified: server.lookup !== "unverified" })
+    }
     if (String(url).includes("/revoke")) {
       server.revoked += 1
       return new Response("", { status: 200 })
@@ -103,7 +116,7 @@ const harness = async (
     const link = /sign-in: (\S+)/.exec(text)?.[1]
     if (link) void consent(link)
   }
-  const mail = async (argv: string[]) => {
+  const mail = async (argv: string[], more: NodeJS.ProcessEnv = {}) => {
     const out: string[] = []
     const err: string[] = []
     const code = await run(argv, {
@@ -115,7 +128,7 @@ const harness = async (
         },
       },
       tty: false,
-      env,
+      env: { ...env, ...more },
       keyring,
       himalaya: async () => undefined,
       discovery: { mx: async () => [mx], fetch: async () => new Response("", { status: 404 }) },
@@ -340,5 +353,59 @@ describe("Gmail with your own Google app", { timeout: 20_000 }, () => {
     expect(ended.err).toContain("every sign-in of this Google project")
     expect(server.revoked).toBe(1)
     expect(entry("google")).toBeNull()
+  })
+})
+
+describe("Google sign-in edges", { timeout: 20_000 }, () => {
+  const gmail = () => harness("me@gmail.com", "aspmx.l.google.com", `openid email ${GOOGLE_MAIL_SCOPE}`)
+  const file = () => {
+    const path = join(mkdtempSync(join(tmpdir(), "client-")), "client.json")
+    writeFileSync(path, JSON.stringify({ installed: { client_id: "own-client" } }), { mode: 0o600 })
+    return path
+  }
+  const start = ["work", "session", "start", "--address", "me@gmail.com", "--json"]
+
+  it("fails the sign-in when Google's account lookup is down, refused or unverified", async () => {
+    const { mail, server, entry } = await gmail()
+    for (const [lookup, code] of [
+      ["down", "provider_unavailable"],
+      ["refused", "authentication_error"],
+      ["unverified", "authentication_error"],
+    ] as const) {
+      server.lookup = lookup
+      expect(failure((await mail([...start, "--client-file", file()])).err), lookup).toMatchObject({ code })
+    }
+    expect(entry("google")).toBeNull()
+  })
+
+  it("signs an OAuth Gmail profile in again with MAIL_GOOGLE_CLIENT_ID, and names the guide without one", async () => {
+    const { mail, authorizeUrls } = await gmail()
+    expect((await mail([...start, "--client-file", file()])).code).toBe(0)
+    const again = await mail(["work", "session", "start", "--json"], { MAIL_GOOGLE_CLIENT_ID: "env-client" })
+    expect(again.code, again.err).toBe(0)
+    expect(authorizeUrls.at(-1)?.searchParams.get("client_id")).toBe("env-client")
+    const none = await mail(["work", "session", "start", "--json"])
+    expect(failure(none.err)).toMatchObject({ reason: "mail.oauth-no-client" })
+    expect(none.err).toContain("oauth-google.md")
+  })
+})
+
+describe("the system browser", () => {
+  const fakeSpawn = (event: "spawn" | "error", seen: string[][]) =>
+    ((command: string, args: string[]) => {
+      seen.push([command, ...args])
+      const child = Object.assign(new EventEmitter(), { unref: () => {} })
+      queueMicrotask(() => child.emit(event))
+      return child
+    }) as unknown as typeof spawn
+
+  it("opens the link with each platform's opener, and says so when none starts", async () => {
+    const seen: string[][] = []
+    for (const platform of ["linux", "darwin", "win32"] as const)
+      await systemBrowser("https://example.test/x", platform, fakeSpawn("spawn", seen))
+    expect(seen.map(([command]) => command)).toEqual(["xdg-open", "open", "rundll32.exe"])
+    await expect(systemBrowser("https://example.test/x", "linux", fakeSpawn("error", seen))).rejects.toMatchObject({
+      code: "configuration_error",
+    })
   })
 })
