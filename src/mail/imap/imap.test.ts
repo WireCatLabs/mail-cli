@@ -1,8 +1,9 @@
 import type { Quick, Searched } from "@wirecat/cli-core/mail"
-import { ImapFlow } from "imapflow"
+import { type FetchMessageObject, ImapFlow } from "imapflow"
 import { afterEach, expect, it, vi } from "vitest"
 import { type FakeImap, type FakeMessage, type FakeOptions, startFakeImap } from "../../testing/fake-imap.js"
 import { type ImapTuning, imapBackend, mapImapError } from "./index.js"
+import { quickOf } from "./messages.js"
 
 const raw = (id: string, subject: string, extra = "") =>
   `Message-ID: <${id}@example.com>\r\nDate: Tue, 27 Oct 2026 10:00:00 +0000\r\nFrom: Ann <ann@example.com>\r\nTo: me@example.com\r\nSubject: ${subject}\r\n${extra}\r\n\r\nHello ${subject}\r\n`
@@ -448,4 +449,14 @@ it("keeps the server's own thread and message ids where it gives them, as Gmail 
   const [listed] = await source.list(FROM, "INBOX")
   await source.close()
   expect(listed).toMatchObject({ messageId: "E5", threadId: "T9" })
+})
+
+it("names Gmail labels as memo does, so stored label:Inbox mailboxes keep matching", () => {
+  const message = {
+    uid: 1,
+    seq: 1,
+    flags: new Set(["\\Flagged"]),
+    labels: new Set(["\\Inbox", "\\Important", "&BCAEMAQxBD4EQgQw-"]),
+  } as unknown as FetchMessageObject
+  expect(quickOf(message, "[Gmail]/All Mail").labels).toEqual(["Important", "Inbox", "Starred", "Работа"])
 })

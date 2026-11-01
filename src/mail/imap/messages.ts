@@ -1,5 +1,11 @@
 import { createHash } from "node:crypto"
-import { headersOf, type Listed, HEADER_FIELDS as MAIL_HEADER_FIELDS, type Quick } from "@wirecat/cli-core/mail"
+import {
+  headersOf,
+  type Listed,
+  labelName,
+  HEADER_FIELDS as MAIL_HEADER_FIELDS,
+  type Quick,
+} from "@wirecat/cli-core/mail"
 import type { FetchMessageObject, ListResponse } from "imapflow"
 
 /** cli-core's fields for the owner's rules and the probe, and the two that tie a reply to its thread. */
@@ -26,6 +32,13 @@ const threadRootOf = (head: string): string | undefined =>
   /<[^<>\s]+>/.exec(fieldOf(head, "references") ?? "")?.[0] ??
   /<[^<>\s]+>/.exec(fieldOf(head, "in-reply-to") ?? "")?.[0]
 
+/** As memo names them, so the store's `label:Inbox` mailboxes keep matching; a flagged message is Starred anywhere. */
+const labelsOf = (raw: Set<string> | undefined, flagged: boolean): string[] => {
+  const names = new Set([...(raw ?? [])].map(labelName))
+  if (flagged) names.add("Starred")
+  return [...names].sort()
+}
+
 export const quickOf = (message: FetchMessageObject, folder: string): Quick => {
   const flags = message.flags ?? new Set<string>()
   const received = message.internalDate instanceof Date ? message.internalDate : new Date(message.internalDate ?? 0)
@@ -36,7 +49,7 @@ export const quickOf = (message: FetchMessageObject, folder: string): Quick => {
     ...(message.size === undefined ? {} : { size: message.size }),
     seen: flags.has("\\Seen"),
     flagged: flags.has("\\Flagged"),
-    labels: message.labels ? [...message.labels] : flags.has("\\Flagged") ? ["Starred"] : [],
+    labels: labelsOf(message.labels, flags.has("\\Flagged")),
   }
 }
 
