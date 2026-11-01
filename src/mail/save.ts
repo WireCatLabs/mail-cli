@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto"
 import { closeSync, linkSync, lstatSync, mkdirSync, openSync, renameSync, rmSync, writeFileSync } from "node:fs"
-import { basename, dirname, extname, join } from "node:path"
+import { dirname, extname, join } from "node:path"
 import { CliError } from "@wirecat/cli-base"
+import { safeName as plainName } from "@wirecat/cli-core/files"
 
 const exists = (path: string) =>
   new CliError("validation_error", `${path} already exists; pass --replace to overwrite it`, {
@@ -49,16 +50,8 @@ export const refuseExisting = (path: string): void => {
   if (present(path)) throw exists(path)
 }
 
-/** A sender's file name as a plain name in the folder: no path, no hidden file, nothing a file system refuses. */
-export const safeName = (name: string, fallback: string): string => {
-  const plain = basename(name.replace(/\\/g, "/"))
-    .replace(/[<>:"|?*]/g, "_")
-    .replace(/\p{Cc}/gu, "_")
-    .replace(/^\.+/, "")
-    .trim()
-    .slice(0, 200)
-  return plain || fallback
-}
+/** A sender's file name as cli-core's downloads clean it, or `fallback` when nothing safe is left of it. */
+export const safeName = (name: string, fallback: string): string => plainName(name)?.slice(0, 200) || fallback
 
 /** `report.pdf`, then `report (2).pdf` for the second of the same name in one message. */
 export const distinctNames = (names: readonly string[]): string[] => {

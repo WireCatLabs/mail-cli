@@ -747,6 +747,38 @@ describe("sending over MCP", { timeout: 20_000 }, () => {
   })
 })
 
+describe("settings an agent cannot change", { timeout: 20_000 }, () => {
+  it("refuses an agent with mcp.authority the mail servers and permissions.messages.send.others", async () => {
+    const { mail, options, env } = await harness()
+    expect((await mail(["ya", "config", "set", "permissions.mcp.authority", "allow"])).code).toBe(0)
+    const { client, close } = await mcpClient(options() as Parameters<typeof mcpClient>[0], [], "ya")
+    try {
+      const set = (setting: string, value: string) =>
+        client.callTool({
+          name: "mail_write",
+          arguments: { command: "config set", arguments: { setting, value } },
+        }) as Promise<{ isError?: boolean; content?: { text?: string }[] }>
+      for (const [setting, value] of [
+        ["smtp_host", "smtp.evil.example"],
+        ["imap_host", "imap.evil.example"],
+        ["permissions.messages.send.others", "allow"],
+        ["permissions", '{"messages.send.others":"allow"}'],
+      ]) {
+        const refused = await set(setting as string, value as string)
+        expect(refused.isError, setting).toBe(true)
+        expect(JSON.stringify(refused.content), setting).toContain("the owner sets it in a terminal")
+      }
+      expect((await set("limit", "5")).isError).not.toBe(true)
+    } finally {
+      expect(await close()).toBe(0)
+    }
+    const config = JSON.parse(readFileSync(join(env.MAIL_CONFIG_DIR as string, "config.json"), "utf8"))
+    expect(JSON.stringify(config)).not.toContain("evil.example")
+    expect(JSON.stringify(config)).not.toContain("send.others")
+    expect((await mail(["ya", "config", "set", "smtp_host", "smtp.example.com"])).code).toBe(0)
+  })
+})
+
 describe("drafts send", { timeout: 20_000 }, () => {
   it("sends a saved draft through the same guard as messages send, then takes it out of Drafts", async () => {
     const folders = yandex()
