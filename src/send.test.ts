@@ -761,6 +761,7 @@ describe("settings an agent cannot change", { timeout: 20_000 }, () => {
       for (const [setting, value] of [
         ["smtp_host", "smtp.evil.example"],
         ["imap_host", "imap.evil.example"],
+        ["microsoft_client_id", "evil.example-app"],
         ["permissions.messages.send.others", "allow"],
         ["permissions", '{"messages.send.others":"allow"}'],
       ]) {

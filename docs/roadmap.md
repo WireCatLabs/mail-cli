@@ -19,7 +19,7 @@ AI agents the same commands. Every command is in the [command reference](command
 
 ## Next
 
-- **OAuth sign-in for Outlook, Microsoft 365 and Google Workspace.** Microsoft accepts only OAuth for IMAP, so these
-  mailboxes cannot be added yet, and a Workspace domain that turns app passwords off needs it too.
+- **OAuth sign-in for Gmail and Google Workspace** with your own Google app, for a domain that turns app passwords off.
+  Outlook.com and Microsoft 365 sign in with OAuth already.
 
 What each released version changed is in the [changelog](../CHANGELOG.md).

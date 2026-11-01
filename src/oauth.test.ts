@@ -1,0 +1,243 @@
+import { mkdtempSync, readFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { Readable } from "node:stream"
+import { memoryKeyring } from "@wirecat/cli-base"
+import { afterEach, describe, expect, it } from "vitest"
+import type { MailEnvironment } from "./commands/context.js"
+import type { MailCredential, MailEndpoint, RunBounds } from "./mail/backend.js"
+import { imapBackend } from "./mail/imap/index.js"
+import { MICROSOFT_IMAP_SCOPE, MICROSOFT_SMTP_SCOPE } from "./oauth.js"
+import { run } from "./program.js"
+import { providerFor } from "./providers.js"
+import { type FakeImap, startFakeImap } from "./testing/fake-imap.js"
+import { type FakeSmtp, startFakeSmtp } from "./testing/fake-smtp.js"
+
+const CLIENT = "11111111-2222-3333-4444-555555555555"
+
+let imap: FakeImap | undefined
+let smtp: FakeSmtp | undefined
+afterEach(async () => {
+  await imap?.close()
+  await smtp?.close()
+  imap = undefined
+  smtp = undefined
+})
+
+const message = (address: string) =>
+  `Message-ID: <hello@example.com>\r\nDate: Tue, 27 Oct 2026 10:00:00 +0000\r\nFrom: Ann <ann@example.com>\r\n` +
+  `To: ${address}\r\nSubject: Hello\r\n\r\nHi there\r\n`
+
+/** Fake Microsoft: a token endpoint, a browser that consents at once, and IMAP and SMTP that take only its tokens. */
+const harness = async (address = "me@outlook.com", mx = "mx.example.net") => {
+  const accepted: string[] = []
+  const sendable: string[] = []
+  imap = await startFakeImap({
+    login: address,
+    password: "no-password-here",
+    tokens: accepted,
+    folders: [
+      { name: "INBOX", messages: [{ uid: 1, raw: message(address), flags: [] }] },
+      { name: "Sent Items", attributes: ["\\Sent"], messages: [] },
+    ],
+  })
+  smtp = await startFakeSmtp({ login: address, password: "no-password-here", tokens: sendable })
+  const ports = { imap: imap.port, smtp: smtp.port }
+  const keyring = memoryKeyring()
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    MAIL_CONFIG_DIR: mkdtempSync(join(tmpdir(), "config-")),
+    MAIL_STATE_DIR: mkdtempSync(join(tmpdir(), "state-")),
+    MEMO_STATE_DIR: mkdtempSync(join(tmpdir(), "memo-state-")),
+    MESSAGING_STORE: join(mkdtempSync(join(tmpdir(), "store-")), "wirecat.db"),
+  }
+  delete env.CI
+  const server = { accepts: true, sends: true, issued: 0 }
+  const tokenCalls: URLSearchParams[] = []
+  const fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
+    const body = new URLSearchParams(String(init?.body))
+    tokenCalls.push(body)
+    server.issued += 1
+    const access = `synthetic-access-${server.issued}`
+    if (server.accepts) accepted.push(access)
+    if (server.sends) sendable.push(access)
+    return Response.json({
+      access_token: access,
+      refresh_token: `synthetic-refresh-${server.issued}`,
+      expires_in: 3600,
+      scope: `${MICROSOFT_IMAP_SCOPE} ${MICROSOFT_SMTP_SCOPE}`,
+      token_type: "Bearer",
+    })
+  }) as typeof globalThis.fetch
+  const authorizeUrls: URL[] = []
+  const openBrowser = async (url: string) => {
+    const authorize = new URL(url)
+    authorizeUrls.push(authorize)
+    const callback = new URL(authorize.searchParams.get("redirect_uri") ?? "")
+    callback.search = new URLSearchParams({
+      code: "synthetic-code",
+      state: authorize.searchParams.get("state") ?? "",
+    }).toString()
+    await globalThis.fetch(callback)
+  }
+  const streams: string[] = []
+  const mail = async (argv: string[]) => {
+    const out: string[] = []
+    const err: string[] = []
+    const code = await run(argv, {
+      streams: { data: (text) => out.push(text), diagnostic: (text) => err.push(text) },
+      tty: false,
+      env,
+      keyring,
+      himalaya: async () => undefined,
+      discovery: { mx: async () => [mx], fetch: async () => new Response("", { status: 404 }) },
+      stdin: Readable.from([]),
+      fetch,
+      openBrowser,
+      backend: (endpoint: MailEndpoint, credential: MailCredential, bounds: RunBounds = {}) =>
+        imapBackend(
+          {
+            ...endpoint,
+            host: "127.0.0.1",
+            port: ports.imap,
+            security: "plain",
+            ...(endpoint.smtp ? { smtp: { host: "127.0.0.1", port: ports.smtp, security: "plain" } } : {}),
+          },
+          credential,
+          { sleep: async () => {}, ...bounds },
+        ),
+    } as MailEnvironment & Record<string, unknown>)
+    streams.push(...out, ...err)
+    return { code, out: out.join("\n"), err: err.join("\n") }
+  }
+  const config = () => JSON.parse(readFileSync(join(env.MAIL_CONFIG_DIR as string, "config.json"), "utf8"))
+  const entry = () => keyring.get("mail-cli", "oauth:microsoft:work")
+  const leaked = () => streams.join("\n").match(/synthetic-(access|refresh)/)
+  return { mail, env, config, entry, leaked, server, accepted, sendable, tokenCalls, authorizeUrls, keyring }
+}
+
+const item = (text: string) => JSON.parse(text).item
+
+const ownApp = async (mail: Awaited<ReturnType<typeof harness>>["mail"]) => {
+  const set = await mail(["config", "set", "--defaults", "microsoft_client_id", CLIENT, "--json"])
+  expect(set.code, set.err).toBe(0)
+}
+
+describe("Microsoft sign-in", { timeout: 20_000 }, () => {
+  it("signs in to Outlook in the browser, checks IMAP before saving, then syncs and sends with the token", async () => {
+    const { mail, config, entry, leaked, tokenCalls, authorizeUrls, sendable } = await harness()
+    await ownApp(mail)
+    const started = await mail(["work", "session", "start", "--address", "me@outlook.com", "--json"])
+    expect(started.code, started.err).toBe(0)
+    expect(item(started.out)).toMatchObject({
+      signed_in: true,
+      auth: "oauth",
+      provider: "microsoft",
+      client: "own",
+      created: true,
+      scopes: [MICROSOFT_IMAP_SCOPE, MICROSOFT_SMTP_SCOPE],
+    })
+    expect(started.err).toContain("read and change your mail over IMAP")
+    expect(authorizeUrls[0]?.searchParams.get("client_id")).toBe(CLIENT)
+    expect(authorizeUrls[0]?.searchParams.get("login_hint")).toBe("me@outlook.com")
+    expect(authorizeUrls[0]?.searchParams.get("scope")).toContain("offline_access")
+    expect(tokenCalls[0]?.get("code_verifier")).toBeTruthy()
+    expect(tokenCalls[0]?.has("client_secret")).toBe(false)
+    expect(config().profiles.work).toMatchObject({ address: "me@outlook.com", auth: "oauth" })
+    expect(JSON.parse(entry() ?? "{}")).toMatchObject({ provider: "microsoft", clientId: CLIENT })
+
+    const synced = await mail(["work", "sync", "--since-time", "2026-01-01", "--json"])
+    expect(synced.code, synced.err).toBe(0)
+    const sent = await mail(["work", "messages", "send", "--to", "me@outlook.com", "--subject", "Self", "Hi", "--json"])
+    expect(sent.code, sent.err).toBe(0)
+    expect(item(sent.out)).toMatchObject({ sent: true, accepted: 1 })
+    expect(smtp?.tokensTried).toEqual([sendable[0]])
+    expect(leaked()).toBeNull()
+  })
+
+  it("saves neither the sign-in nor the profile when the server refuses the new token", async () => {
+    const { mail, env, entry, server } = await harness()
+    await ownApp(mail)
+    server.accepts = false
+    const refused = await mail(["work", "session", "start", "--address", "me@outlook.com", "--json"])
+    expect(refused.code).not.toBe(0)
+    expect(entry()).toBeNull()
+    const profiles = await mail(["session", "list", "--json"])
+    expect(JSON.parse(profiles.out).items).toEqual([])
+    expect(readFileSync(join(env.MAIL_CONFIG_DIR as string, "config.json"), "utf8")).not.toContain("outlook.com")
+  })
+
+  it("refreshes once when the server refuses a token that still looks fresh, then asks for a new sign-in", async () => {
+    const { mail, accepted, server, tokenCalls, leaked } = await harness()
+    await ownApp(mail)
+    expect((await mail(["work", "session", "start", "--address", "me@outlook.com", "--json"])).code).toBe(0)
+    accepted.splice(0)
+    const synced = await mail(["work", "sync", "--since-time", "2026-01-01", "--json"])
+    expect(synced.code, synced.err).toBe(0)
+    expect(tokenCalls.map((call) => call.get("grant_type"))).toEqual(["authorization_code", "refresh_token"])
+    expect(tokenCalls[1]?.get("refresh_token")).toBe("synthetic-refresh-1")
+
+    accepted.splice(0)
+    server.accepts = false
+    const again = await mail(["work", "sync", "--json"])
+    expect(again.code).not.toBe(0)
+    expect(JSON.parse(again.err).error).toMatchObject({ reason: "mail.oauth-refused" })
+    expect(again.err).toContain("mail work session start")
+    expect(tokenCalls).toHaveLength(3)
+    expect(leaked()).toBeNull()
+  })
+
+  it("says how to set an app id when this build has none, and keeps nothing", async () => {
+    const { mail, entry } = await harness()
+    const started = await mail(["work", "session", "start", "--address", "me@outlook.com", "--json"])
+    expect(started.code).not.toBe(0)
+    expect(JSON.parse(started.err).error).toMatchObject({ reason: "mail.oauth-no-client" })
+    expect(started.err).toContain("config set --defaults microsoft_client_id")
+    expect(entry()).toBeNull()
+  })
+
+  it("shows the sign-in without tokens, and session end forgets it and names where Microsoft lists the app", async () => {
+    const { mail, entry, leaked } = await harness()
+    await ownApp(mail)
+    expect((await mail(["work", "session", "start", "--address", "me@outlook.com", "--json"])).code).toBe(0)
+    const status = await mail(["work", "session", "status", "--check", "--json"])
+    expect(status.code, status.err).toBe(0)
+    expect(item(status.out)).toMatchObject({
+      state: "saved",
+      auth: "oauth",
+      verified: true,
+      oauth: { provider: "microsoft", client: "own", scopes: [MICROSOFT_IMAP_SCOPE, MICROSOFT_SMTP_SCOPE] },
+    })
+    expect(item(status.out).oauth.signed_in_at).toBeTruthy()
+
+    const doctor = await mail(["doctor", "--json"])
+    expect(item(doctor.out).oauth).toEqual([
+      { profile: "work", client: "own", signed_in_at: expect.any(String), sends: true },
+    ])
+
+    const ended = await mail(["work", "session", "end", "--json"])
+    expect(item(ended.out)).toMatchObject({ ended: true, mail: "retained" })
+    expect(ended.err).toContain("account.live.com")
+    expect(entry()).toBeNull()
+    expect(item((await mail(["work", "session", "status", "--json"])).out)).toMatchObject({ state: "missing" })
+    expect((await mail(["doctor", "--json"])).err).toContain("no OAuth sign-in on record")
+    expect(leaked()).toBeNull()
+  })
+})
+
+describe("Microsoft 365", { timeout: 20_000 }, () => {
+  it("is found by its MX, sends through smtp.office365.com, and names SMTP AUTH when sending is refused", async () => {
+    expect(providerFor("me@contoso.example", "outlook.office365.com")?.smtp.host).toBe("smtp.office365.com")
+    expect(providerFor("me@outlook.com", "outlook.office365.com")?.smtp.host).toBe("smtp-mail.outlook.com")
+    const { mail, config, server } = await harness("me@contoso.example", "contoso-example.mail.protection.outlook.com")
+    await ownApp(mail)
+    server.sends = false
+    const started = await mail(["work", "session", "start", "--address", "me@contoso.example", "--json"])
+    expect(started.code, started.err).toBe(0)
+    expect(started.err).toContain("Authenticated SMTP")
+    expect(config().profiles.work).toMatchObject({ imap_host: "outlook.office365.com", auth: "oauth" })
+    const sent = await mail(["work", "messages", "send", "--to", "me@contoso.example", "--subject", "S", "x", "--json"])
+    expect(sent.code).not.toBe(0)
+    expect(JSON.parse(sent.err).error).toMatchObject({ reason: "mail.smtp-auth-disabled" })
+  })
+})

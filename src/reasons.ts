@@ -3,6 +3,9 @@ import { defineReasons } from "@wirecat/cli-base/standards"
 const ENTRIES: [reason: string, code: string, message: string][] = [
   ["mail.login-refused", "authentication_error", "the mail server refused the login"],
   ["mail.no-password", "authentication_error", "no app password is stored for this profile"],
+  ["mail.oauth-refused", "authentication_error", "the mail server refused the OAuth token even after a refresh"],
+  ["mail.smtp-auth-disabled", "authentication_error", "Microsoft refused the OAuth login for sending"],
+  ["mail.oauth-no-client", "configuration_error", "no Microsoft app id is set up for OAuth sign-in"],
   ["mail.uidvalidity-changed", "invalid_response", "the folder's UIDVALIDITY changed during the run"],
   ["mail.not-returned", "not_found", "the server did not return the email"],
   ["mail.rules-file-invalid", "validation_error", "the rules file is not one rules export writes"],

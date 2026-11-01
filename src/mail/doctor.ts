@@ -1,4 +1,6 @@
+import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
+import { MICROSOFT_SMTP_SCOPE, microsoftClient, OAUTH_GUIDE, signInRecords } from "../oauth.js"
 import { runSummaries } from "./changes.js"
 
 const DAY_MS = 86_400_000
@@ -44,4 +46,63 @@ export const changesCheck = (env: NodeJS.ProcessEnv, now = Date.now()) => {
       ),
     ],
   }
+}
+
+/**
+ * Each OAuth profile from disk alone: the app it signs in with and what its last sign-in allowed. The tokens are in
+ * the keyring, which doctor never opens; `session status --check` proves one still works.
+ */
+export const oauthCheck = (env: NodeJS.ProcessEnv) => {
+  const { configuredProfiles } = configuration.resolveSettings({}, { env, needsProfile: false })
+  const records = signInRecords(env)
+  const profiles = configuredProfiles.flatMap((profile) => {
+    const { mailbox } = configuration.resolveSettings({ profile }, { env })
+    if (mailbox.auth !== "oauth") return []
+    let client: "wirecat" | "own" | null
+    try {
+      client = microsoftClient(mailbox).source
+    } catch {
+      client = null
+    }
+    const record = records[profile]
+    return [
+      {
+        profile,
+        client,
+        signed_in_at: record?.signed_in_at ?? null,
+        sends: record ? record.scopes.includes(MICROSOFT_SMTP_SCOPE) : null,
+      },
+    ]
+  })
+  const sign = (profile: string) => `\`${IDENTITY.command} ${profile} session start\``
+  return {
+    fields: { oauth: profiles },
+    notes: profiles.flatMap(({ profile, client, signed_in_at, sends }) => [
+      ...(client === null
+        ? [
+            `profile ${profile} has no Microsoft app to sign in with again: set one with ` +
+              `\`${IDENTITY.command} config set --defaults microsoft_client_id <id>\` (${OAUTH_GUIDE})`,
+          ]
+        : []),
+      ...(signed_in_at === null
+        ? [`profile ${profile} has no OAuth sign-in on record here; run ${sign(profile)}`]
+        : []),
+      ...(sends === false
+        ? [`profile ${profile} was not allowed to send at its last sign-in; ${sign(profile)} asks again`]
+        : []),
+    ]),
+  }
+}
+
+/** Every check doctor reads from disk, as one `local` hook. */
+export const localChecks = (env: NodeJS.ProcessEnv) => {
+  const changes = changesCheck(env)
+  let oauth: ReturnType<typeof oauthCheck>
+  try {
+    oauth = oauthCheck(env)
+  } catch {
+    // A config file doctor cannot read is reported as `config.issues` already.
+    oauth = { fields: { oauth: [] }, notes: [] }
+  }
+  return { fields: { ...changes.fields, ...oauth.fields }, notes: [...changes.notes, ...oauth.notes] }
 }

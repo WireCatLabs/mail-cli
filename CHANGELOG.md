@@ -2,6 +2,29 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Added
+
+- **Outlook.com and Microsoft 365 sign in with OAuth.** `mail <profile> session start --address <you>@outlook.com`
+  shows what it will ask for, opens Microsoft's page in the browser, logs in to IMAP with the new token, and only then
+  saves the profile and the tokens (keyring entry `oauth:microsoft:<profile>`). Sync and `messages send` use the token
+  over IMAP and SMTP (XOAUTH2), refreshing it as needed; a token the server refuses is refreshed once, then the error
+  `mail.oauth-refused` asks for a new sign-in. `session status` shows the app, scopes and expiry, never a token;
+  `session end` forgets the sign-in and names where Microsoft lists the app. `--auth app-password|oauth` picks the
+  method, `--no-browser` prints the link only.
+- **`microsoft_client_id`**: the Microsoft app to sign in with, set by you once (`config set --defaults`); an agent
+  over MCP cannot change it. WireCat's own app is not registered yet, so for now this is required;
+  [register a Microsoft app](docs/oauth-microsoft.md) gives the steps.
+- **`mail doctor` lists each OAuth profile** with its app and last sign-in, from disk only.
+
+### Changed
+
+- **Microsoft 365 is its own provider**, found by its MX record, and sends through `smtp.office365.com:587`
+  ([Microsoft](https://learn.microsoft.com/en-us/exchange/mail-flow-best-practices/how-to-set-up-a-multifunction-device-or-application-to-send-email-using-microsoft-365-or-office-365));
+  Outlook.com keeps `smtp-mail.outlook.com`.
+- `session status` and `session list` answer `auth` too.
+
 ## 0.6.0 — 01.11.2026
 
 ### Added

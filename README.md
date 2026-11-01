@@ -108,8 +108,10 @@ profiles.
 
 `mail` signs in with an app password, a password made only for this program, which the OS keyring keeps. For a domain
 it does not know, `session start` looks for the server through the MX record, Thunderbird's ISPDB and the domain's
-autoconfig file; `--provider` or `--host` skips that. **Outlook and Microsoft 365 are not supported yet**: Microsoft
-accepts only OAuth for IMAP, and `mail` does not do OAuth yet.
+autoconfig file; `--provider` or `--host` skips that. Outlook.com and Microsoft 365 accept only OAuth, so for them
+`session start` opens Microsoft's sign-in page in the browser instead of asking for a password, and keeps the tokens in
+the same keyring. Until WireCat's Microsoft app is registered, this needs an app of your own, set once with
+`mail config set --defaults microsoft_client_id <id>` ([register a Microsoft app](https://github.com/WireCatLabs/mail-cli/blob/main/docs/oauth-microsoft.md)).
 
 ## Settings and permissions
 
@@ -129,7 +131,8 @@ mail ya config show                            # every setting and where it came
   `folders delete --allow-dangerous` of a folder that holds mail (outside Gmail, its mail is gone).
   Undoing `messages copy` outside Gmail removes the copy for good, never the original.
 - Text and headers only: the text of attachments is stored, not the files, nor the original message.
-- No OAuth yet, so no Outlook or Microsoft 365, and no Google Workspace domain that turns app passwords off.
+- OAuth works for Outlook.com and Microsoft 365 only; a Google Workspace domain that turns app passwords off is not
+  supported yet.
 - Gmail caps IMAP downloads at 2,500 MB a day; a new Yandex app password can take 2 to 3 hours to work.
 - Search reads the store and asks the mail server for mail `sync` has not read yet; `--backend archive` keeps to
   the store.

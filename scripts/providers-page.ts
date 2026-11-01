@@ -12,7 +12,7 @@ const section = (key: ProviderKey): string => {
     ...(notes.length ? [""] : []),
     `Read from: ${sources.map((url) => `<${url}>`).join(", ")}`,
     "",
-    `Sending: \`${smtp.host}\` port ${smtp.port}, ${smtp.security === "tls" ? "TLS" : "STARTTLS"}, ${auth === "oauth" ? "once OAuth sign-in comes" : "with the same app password"}. ` +
+    `Sending: \`${smtp.host}\` port ${smtp.port}, ${smtp.security === "tls" ? "TLS" : "STARTTLS"}, ${auth === "oauth" ? "with the same OAuth sign-in" : "with the same app password"}. ` +
       (smtp.savesSent
         ? "The provider files sent mail in Sent itself."
         : "Its help does not say it files SMTP mail in Sent, so `mail` appends the copy unless Sent has it already.") +
@@ -27,7 +27,7 @@ export const providersPage = (): string =>
     "",
     "<!-- Generated from src/providers.ts by pnpm generate. Do not edit. -->",
     "",
-    "Use this page before `mail <profile> session start`, which asks for the app password. Each provider needs IMAP on and, for most, an app password:",
+    "Use this page before `mail <profile> session start`, which asks for the app password, or for Outlook.com and Microsoft 365 opens Microsoft's sign-in in the browser. Each provider needs IMAP on and, for most, an app password:",
     "a password made only for this program. At the end you have an app password ready to type at the prompt.",
     "",
     "`mail <profile> session start` prints these same steps and repeats the",
