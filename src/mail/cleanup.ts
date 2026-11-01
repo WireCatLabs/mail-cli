@@ -91,7 +91,8 @@ export const firstCleanup = (env: NodeJS.ProcessEnv, account: string): boolean =
   }
   if (existsSync(own))
     for (const name of readdirSync(own))
-      if (moved(join(own, name), (text) => text.includes("--by rules") && text.includes('"type":"done"'))) return false
+      if (moved(join(own, name), (text) => text.includes("delete --rules") && text.includes('"type":"done"')))
+        return false
   if (existsSync(memo))
     for (const folder of readdirSync(memo))
       for (const name of existsSync(join(memo, folder)) ? readdirSync(join(memo, folder)) : [])

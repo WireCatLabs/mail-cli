@@ -46,14 +46,14 @@ export const flagOf = (given: string): string => {
       "validation_error",
       "\\Deleted is how a server expunges mail; messages delete moves it to Trash",
       {
-        param: "add",
+        param: "flag",
       },
     )
   if (!KEYWORD.test(word))
     throw new CliError(
       "validation_error",
       `"${given}" is no flag: give read, flagged, answered, draft, or a keyword of letters, digits and $._-`,
-      { param: "add" },
+      { param: "flag" },
     )
   return word
 }

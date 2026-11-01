@@ -2,6 +2,36 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Added
+
+- **`mail <profile> messages mark-read|mark-unread|star|unstar <ref…>`** and **`messages update <ref…> --flag <flag>
+  --unflag <flag> [--replace]`** change flags and keywords on the server (read, flagged, answered, draft, `$Junk`, words
+  of your own); a folder that keeps no keywords answers `provider_unavailable`.
+- **`messages move|copy <ref…> --folder <folder|role>`** files mail by folder; on Gmail a move is a label added and
+  `Inbox` taken away, a copy a label added, `--folder archive` only `Inbox` taken away.
+- **`messages delete <ref…>`** moves mail to Trash, never expunges it; `--rules` is memo's envelope cleanup, moved
+  here: envelope mail the rules let go, each decided again, with Gmail's labels and stars read again just before the
+  move, a fresh store backup required and a first run of at most 100.
+- **`messages restore --run <id>`** undoes a change run, last step first: Trash back to where the mail was (on Gmail
+  with its labels), moves back, copies removed, flags as they were. memo's `mail delete` run ids restore here too.
+- **`folders create|rename|delete`**; `delete` refuses a folder that holds mail unless `--allow-dangerous`.
+- **`rules list|add|remove|apply|export|import`**, moved from memo with the same options: the profile is the mailbox,
+  so there is no account argument; the default import format is `mail`, the file memo's export writes.
+- Every message write takes the messages by `ref` or by `--filter '<query>'` (`--limit`, newest first). A deletion,
+  a `--filter` change and a change of more than 20 messages answer with a preview and the command with `--yes` in
+  `next`; `--dry-run` only previews. The store follows each server change at once: flags, folder and UID, Gmail labels,
+  deletion.
+- **Permissions:** `messages.delete`, `folders.delete` and `messages.bulk` (any change of many) ask; the rest of the
+  changes go ahead. `MAIL_READ_ONLY=1` refuses them all. Each attempt goes into the send journal (cli-core 0.522.0).
+- Error reasons (`mail.no-trash`, `mail.run-unknown`, `mail.archive-unverified`, …) now reach the JSON error.
+
+### Changed — may break callers
+
+- `mail` is no longer read-only: an MCP client with `--allow-writes` can change the mailbox through the `write` tool,
+  within the profile's permissions.
+
 ## 0.5.0 — 01.11.2026
 
 ### Fixed

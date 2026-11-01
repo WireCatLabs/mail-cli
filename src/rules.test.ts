@@ -120,6 +120,22 @@ describe("rules", () => {
     expect(missing.err + missing.out).toContain("rules list")
   })
 
+  it("removes a rule by each kind of condition it was added with", async () => {
+    const { mail } = await harness()
+    const conditions = [
+      ["--sender", "a@shop.example"],
+      ["--list-id", "deals.shop.example"],
+      ["--filter", "subject:sale"],
+      ["--kind", "newsletters"],
+    ]
+    for (const condition of conditions)
+      expect((await mail(["ya", "rules", "add", ...condition, "--do", "skip", "--json"])).code).toBe(0)
+    expect(body((await mail(["ya", "rules", "list", "--json"])).out).items).toHaveLength(4)
+    for (const condition of conditions)
+      expect((await mail(["ya", "rules", "remove", ...condition, "--json"])).code).toBe(0)
+    expect(body((await mail(["ya", "rules", "list", "--json"])).out).items).toEqual([])
+  })
+
   it("refuses a rule with no match condition", async () => {
     const { mail } = await harness()
     const refused = await mail(["ya", "rules", "add", "--do", "skip", "--json"])
@@ -141,7 +157,7 @@ describe("rules", () => {
     const other = await harness()
     const path = join(dir, "rules.json")
     writeFileSync(path, exported.out)
-    const imported = await other.mail(["ya", "rules", "import", path, "--json"])
+    const imported = await other.mail(["ya", "rules", "import", path, "--format", "memo", "--json"])
     expect(body(imported.out).items).toHaveLength(2)
     const again = body((await other.mail(["ya", "rules", "list", "--json"])).out).items
     expect(again.map(({ match }: { match: object }) => match)).toEqual(
@@ -171,6 +187,30 @@ describe("rules", () => {
     expect(body((await mail(["ya", "rules", "list", "--json"])).out).items).toMatchObject([
       { match: { from: "news@example.test" }, action: "envelope", source: "gmail-filter" },
     ])
+  })
+
+  it("prints rules, a Gmail filter preview and an apply as text for a person", async () => {
+    const { mail, dir } = await harness()
+    expect((await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])).code).toBe(0)
+    await mail(["ya", "rules", "add", "--list-id", "deals.shop.example", "--do", "envelope,tag:promo", "--json"])
+    await mail(["ya", "rules", "add", "--sender", "boss@example.com", "--do", "protect", "--reason", "boss", "--json"])
+    const listed = await mail(["ya", "rules", "list"], { tty: true })
+    expect(listed.out).toMatch(/PROTECTED\s+from boss@example\.com/)
+    expect(listed.out).toContain("tag promo")
+    const applied = await mail(["ya", "rules", "apply"], { tty: true })
+    expect(applied.code, applied.err).toBe(0)
+    expect(applied.out).toContain("would cut 1 emails to envelopes")
+    const path = join(dir, "Filters.json")
+    writeFileSync(
+      path,
+      JSON.stringify([
+        { criteria: { to: "me@example.test", subject: "(sale offer)" }, action: { removeLabelIds: ["INBOX"] } },
+        { criteria: { hasTheWord: "has:attachment", query: "has:drive" }, action: { removeLabelIds: ["INBOX"] } },
+      ]),
+    )
+    const preview = await mail(["ya", "rules", "import", path, "--format", "gmail"], { tty: true })
+    expect(preview.code, preview.err).toBe(0)
+    expect(preview.out).toContain("rules proposed")
   })
 
   it("cuts a stored email an envelope rule matches to its envelope only with --yes", async () => {

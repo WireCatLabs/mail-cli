@@ -366,13 +366,17 @@ const importCommand = () =>
     .summary("import saved rules, or preview Gmail filters")
     .description("import saved rules, or preview Gmail filters with --format gmail; same match replaces")
     .argument("<file>", "a rules JSON file from rules export, or Takeout Filters.json with --format gmail")
-    .addOption(new Option("--format <format>", "the file's format").choices(["mail", "gmail"]).default("mail"))
+    .addOption(
+      new Option("--format <format>", "the file's format: mail (memo's export is the same file) or gmail")
+        .choices(["mail", "memo", "gmail"])
+        .default("mail"),
+    )
     .addHelpText(
       "after",
       "\nWith --format gmail it only previews the rules the filters suggest; --yes adds them. A rules file is " +
         "imported at once.",
     )
-    .action(async function (this: Command, path: string, options: { format: "mail" | "gmail" }) {
+    .action(async function (this: Command, path: string, options: { format: "mail" | "memo" | "gmail" }) {
       const yes = this.optsWithGlobals<{ yes?: boolean }>().yes === true
       const text = readFileSync(path, "utf8")
       if (options.format === "gmail") {

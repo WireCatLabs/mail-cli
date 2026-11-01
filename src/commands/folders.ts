@@ -179,11 +179,13 @@ const deleteFolderCommand = () =>
     )
     .argument("<folder>", "the folder, by path or name")
     .option("--allow-dangerous", "delete a folder that still holds mail: that mail is gone for good, no restore")
-    .action(async function (this: Command, folder: string, options: { allowDangerous?: boolean }) {
+    .action(async function (this: Command, folder: string) {
+      // The shared program reads --allow-dangerous as its own flag, so the value is among the globals.
+      const dangerous = this.optsWithGlobals<{ allowDangerous?: boolean }>().allowDangerous === true
       await changeFolder(this, "delete", async (writes, folders) => {
         const found = existing(folders, folder)
         if (found.role) throw new CliError("validation_error", `${found.path} is the ${found.role} folder; it stays`)
-        if ((found.messages ?? 0) > 0 && !options.allowDangerous)
+        if ((found.messages ?? 0) > 0 && !dangerous)
           throw new CliError(
             "validation_error",
             `${found.path} holds ${found.messages} messages; move them out first (messages move --filter 'mailbox:"${found.path}"' --folder …), or --allow-dangerous to lose them`,

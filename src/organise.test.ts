@@ -158,6 +158,10 @@ describe("messages mark-read, star and update on an IMAP server", () => {
 
     const preview = item((await mail(["ya", "messages", "restore", "--run", answer.run, "--json"])).out)
     expect(preview).toMatchObject({ applied: false, restorable: 1, restored: 0 })
+    const dry = item(
+      (await mail(["ya", "messages", "restore", "--run", answer.run, "--yes", "--dry-run", "--json"])).out,
+    )
+    expect(dry).toMatchObject({ applied: false, restored: 0 })
     expect(folders[0]?.messages[0]?.flags).toContain("\\Seen")
     const restored = item((await mail(["ya", "messages", "restore", "--run", answer.run, "--yes", "--json"])).out)
     expect(restored).toMatchObject({ applied: true, restored: 1 })
@@ -172,20 +176,20 @@ describe("messages mark-read, star and update on an IMAP server", () => {
     const { mail, refOf } = await harness({ folders })
     const ref = await refOf("lunch")
     expect((await mail(["ya", "messages", "star", ref, "--json"])).code).toBe(0)
-    expect((await mail(["ya", "messages", "update", ref, "--add", "answered", "--add", "$Work", "--json"])).code).toBe(
-      0,
-    )
+    expect(
+      (await mail(["ya", "messages", "update", ref, "--flag", "answered", "--flag", "$Work", "--json"])).code,
+    ).toBe(0)
     expect(folders[0]?.messages[1]?.flags?.sort()).toEqual(["$Work", "\\Answered", "\\Flagged"])
-    expect((await mail(["ya", "messages", "update", ref, "--add", "read", "--replace", "--json"])).code).toBe(0)
+    expect((await mail(["ya", "messages", "update", ref, "--flag", "read", "--replace", "--json"])).code).toBe(0)
     expect(folders[0]?.messages[1]?.flags).toEqual(["\\Seen"])
-    const refused = await mail(["ya", "messages", "update", ref, "--add", "\\Deleted", "--json"])
+    const refused = await mail(["ya", "messages", "update", ref, "--flag", "\\Deleted", "--json"])
     expect(refused.code).not.toBe(0)
     expect(refused.err).toContain("Trash")
   })
 
   it("answers provider_unavailable for a keyword where the folder keeps none", async () => {
     const { mail, refOf } = await harness({ folders: yandex(), noKeywords: true })
-    const failed = await mail(["ya", "messages", "update", await refOf("lunch"), "--add", "$Work", "--json"])
+    const failed = await mail(["ya", "messages", "update", await refOf("lunch"), "--flag", "$Work", "--json"])
     expect(failed.code).not.toBe(0)
     expect(JSON.parse(failed.err).error.code).toBe("provider_unavailable")
   })
@@ -201,6 +205,105 @@ describe("messages mark-read, star and update on an IMAP server", () => {
     expect(commands().some((line) => line.startsWith("UID STORE"))).toBe(false)
     const done = item((await mail(["ya", "messages", "mark-read", "--filter", "is:unread", "--yes", "--json"])).out)
     expect(done).toMatchObject({ applied: true, changed: 2 })
+  })
+})
+
+describe("every message write", () => {
+  it("previews by --filter and --limit under --dry-run, even with --yes, and sends nothing", async () => {
+    const { mail, commands } = await harness()
+    const writes: string[][] = [
+      ["mark-read"],
+      ["mark-unread"],
+      ["star"],
+      ["unstar"],
+      ["update", "--flag", "answered"],
+      ["move", "--folder", "Archive"],
+      ["copy", "--folder", "Archive"],
+      ["delete"],
+    ]
+    for (const write of writes) {
+      const answer = await mail([
+        "ya",
+        "messages",
+        ...write,
+        "--filter",
+        "invoice",
+        "--limit",
+        "1",
+        "--dry-run",
+        "--yes",
+        "--json",
+      ])
+      expect(answer.code, `${write[0]}: ${answer.err}`).toBe(0)
+      expect(item(answer.out)).toMatchObject({ applied: false, selected: 1 })
+    }
+    expect(commands().some((line) => /^UID (STORE|MOVE|COPY|EXPUNGE)/.test(line))).toBe(false)
+  })
+
+  it("marks unread, unstars and removes a keyword, each only where it is set", async () => {
+    const folders = yandex()
+    const { mail, refOf } = await harness({ folders })
+    const ref = await refOf("offer")
+    expect(item((await mail(["ya", "messages", "mark-unread", ref, "--json"])).out)).toMatchObject({ changed: 1 })
+    expect(item((await mail(["ya", "messages", "mark-unread", ref, "--json"])).out)).toMatchObject({ changed: 0 })
+    expect((await mail(["ya", "messages", "star", ref, "--json"])).code).toBe(0)
+    expect((await mail(["ya", "messages", "update", ref, "--flag", "$Promo", "--json"])).code).toBe(0)
+    expect((await mail(["ya", "messages", "unstar", ref, "--json"])).code).toBe(0)
+    expect((await mail(["ya", "messages", "update", ref, "--unflag", "$Promo", "--json"])).code).toBe(0)
+    expect(folders[0]?.messages[2]?.flags).toEqual([])
+  })
+})
+
+describe("what a write refuses before it sends anything", () => {
+  it("refuses a bad flag, a bad selection, another mailbox's mail and a move to Trash", async () => {
+    const { mail, refOf, commands } = await harness()
+    const ref = await refOf("lunch")
+    const refusals: [string[], string][] = [
+      [["update", ref, "--flag", "no spaces"], "is no flag"],
+      [["update", ref], "give --flag or --unflag"],
+      [["update", ref, "--flag", "read", "--unflag", "flagged", "--replace"], "--replace takes --flag only"],
+      [["mark-read"], "name the messages"],
+      [["mark-read", ref, "--filter", "lunch"], "not both"],
+      [["mark-read", "chat:email/me%40example.com/t1"], "names no email"],
+      [["mark-read", ref.replace("me%40example.com", "other%40example.com")], "not mail of this profile"],
+      [["move", ref, "--folder", "trash"], "messages delete"],
+      [["delete", ref, "--rules"], "chooses the mail itself"],
+      [["delete", ref, "--since-time", "2026-01-01"], "goes with --rules"],
+      [["mark-read", "--filter", "lunch", "--limit", "0"], "--limit takes a whole number"],
+    ]
+    for (const [argv, text] of refusals) {
+      const refused = await mail(["ya", "messages", ...argv, "--json"])
+      expect(refused.code, argv.join(" ")).not.toBe(0)
+      expect(refused.err, argv.join(" ")).toContain(text)
+    }
+    const unknown = item((await mail(["ya", "messages", "mark-read", `${ref}x`, "--json"])).out)
+    expect(unknown).toMatchObject({ applied: false, missing: 1, located: 0 })
+    expect((await mail(["ya", "messages", "restore", "--run", "no-such-run", "--json"])).err).toContain("no change run")
+    expect((await mail(["ya", "messages", "restore", "--run", "bad id!", "--json"])).code).not.toBe(0)
+    expect(commands().some((line) => /^UID (STORE|MOVE|COPY)/.test(line))).toBe(false)
+  })
+
+  it("on Gmail refuses a copy to All Mail and a move to a special folder", async () => {
+    const { mail, refOf } = await harness({ folders: gmail(), gmail: true, provider: "gmail" })
+    const ref = await refOf("invoice")
+    expect((await mail(["ya", "messages", "copy", ref, "--folder", "archive", "--json"])).err).toContain("All Mail")
+    const archived = item((await mail(["ya", "messages", "move", ref, "--folder", "archive", "--json"])).out)
+    expect(archived).toMatchObject({ changed: 1 })
+    expect(item((await mail(["ya", "messages", "move", ref, "--folder", "inbox", "--json"])).out)).toMatchObject({
+      changed: 1,
+    })
+  })
+
+  it("counts a cleanup memo already ran on this mailbox, so the first-run cap is spent", async () => {
+    const { mail, env } = await harness()
+    const dir = join(resolvePaths({ appName: "cli-memo", prefix: "MEMO", env }).state, "mail-trash", "personal")
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(
+      join(dir, "old.jsonl"),
+      `${JSON.stringify({ type: "run", account: ADDRESS })}\n${JSON.stringify({ type: "batch", moved: ["1"] })}\n`,
+    )
+    const preview = item((await mail(["ya", "messages", "delete", "--rules", "--json"])).out)
+    expect(preview.cleanup).toMatchObject({ first_run: false, limit: 5000 })
   })
 })
 
@@ -391,7 +494,7 @@ describe("Gmail: labels, Trash and memo's runs", () => {
   })
 })
 
-describe("messages delete --by rules", () => {
+describe("messages delete --rules", () => {
   it("moves only the envelopes the rules let go, after a fresh backup, and a first run at most 100", async () => {
     const folders = yandex()
     const { mail, env, stored } = await harness({ folders })
@@ -409,22 +512,26 @@ describe("messages delete --by rules", () => {
     })
     // The envelope rule applies to mail the next listing reads, so the shop's offer is read again as an envelope.
     expect((await mail(["ya", "rules", "apply", "--since-time", "2026-01-01", "--yes", "--json"])).code).toBe(0)
-    const preview = item((await mail(["ya", "messages", "delete", "--by", "rules", "--json"])).out)
+    const preview = item((await mail(["ya", "messages", "delete", "--rules", "--json"])).out)
     expect(preview).toMatchObject({
       applied: false,
       located: 1,
       cleanup: { envelopes: 1, first_run: true, limit: 100 },
     })
-    const refused = await mail(["ya", "messages", "delete", "--by", "rules", "--yes", "--json"])
+    const refused = await mail(["ya", "messages", "delete", "--rules", "--yes", "--json"])
     expect(JSON.parse(refused.err).error.reason, refused.err).toBe("mail.archive-unverified")
     const marker = join(dirname(storePath(env)), "backups", "last.json")
     mkdirSync(dirname(marker), { recursive: true })
     writeFileSync(marker, JSON.stringify({ at: new Date().toISOString() }))
-    const done = item((await mail(["ya", "messages", "delete", "--by", "rules", "--yes", "--json"])).out)
+    const done = item((await mail(["ya", "messages", "delete", "--rules", "--yes", "--json"])).out)
     expect(done).toMatchObject({ applied: true, changed: 1 })
     expect(folders[2]?.messages).toHaveLength(1)
-    const again = item((await mail(["ya", "messages", "delete", "--by", "rules", "--json"])).out)
+    const again = item((await mail(["ya", "messages", "delete", "--rules", "--json"])).out)
     expect(again.cleanup).toMatchObject({ first_run: false, envelopes: 0 })
+    const recent = item(
+      (await mail(["ya", "messages", "delete", "--rules", "--since-time", "2026-10-01", "--json"])).out,
+    )
+    expect(recent).toMatchObject({ applied: false, located: 0 })
   })
 })
 
@@ -437,16 +544,25 @@ describe("folders create, rename and delete", () => {
     })
     expect((await mail(["ya", "folders", "rename", "Receipts", "Invoices", "--json"])).code).toBe(0)
     expect(folders.map(({ name }) => name)).toContain("Invoices")
-    const full = await mail(["ya", "folders", "delete", "INBOX", "--yes", "--json"])
-    expect(full.code).not.toBe(0)
+    const special = await mail(["ya", "folders", "delete", "INBOX", "--yes", "--json"])
+    expect(special.code).not.toBe(0)
     const asked = await mail(["ya", "folders", "delete", "Invoices", "--json"])
     expect(JSON.parse(asked.err).error.code).toBe("confirmation_required")
     expect((await mail(["ya", "folders", "delete", "Invoices", "--yes", "--json"])).code).toBe(0)
     expect(folders.map(({ name }) => name)).not.toContain("Invoices")
+    expect((await mail(["ya", "folders", "create", "Old", "--json"])).code).toBe(0)
+    folders.find(({ name }) => name === "Old")?.messages.push({ uid: 1, raw: raw("kept", "Kept", "Kept"), flags: [] })
+    const full = await mail(["ya", "folders", "delete", "Old", "--yes", "--json"])
+    expect(JSON.parse(full.err).error.reason).toBe("mail.folder-not-empty")
+    const dangerous = await mail(["ya", "folders", "delete", "Old", "--yes", "--allow-dangerous", "--json"])
+    expect(dangerous.code, dangerous.err).toBe(0)
+    expect(item(dangerous.out)).toMatchObject({ action: "delete", messages: 1 })
     expect(commands().filter((line) => /^(CREATE|RENAME|DELETE) /.test(line))).toEqual([
       "CREATE Receipts",
       "RENAME Receipts Invoices",
       "DELETE Invoices",
+      "CREATE Old",
+      "DELETE Old",
     ])
   })
 })

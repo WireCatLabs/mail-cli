@@ -379,30 +379,30 @@ const updateCommand = (): Command =>
       annotate(new Command("update"), {
         effects: REMOTE_WRITE,
         examples: [
-          `${IDENTITY.command} ya messages update ${REF} --add answered --remove '$Junk'`,
-          `${IDENTITY.command} ya messages update ${REF} --add read --add flagged --replace`,
+          `${IDENTITY.command} ya messages update ${REF} --flag answered --unflag '$Junk'`,
+          `${IDENTITY.command} ya messages update ${REF} --flag read --flag flagged --replace`,
         ],
       }),
     ),
     "mail_change",
     mailChange,
   )
-    .summary("add, remove or set flags and keywords")
+    .summary("set, unset or replace flags and keywords")
     .description(
-      "add and remove flags (read, flagged, answered, draft) and keywords ($Forwarded, $Junk, words of your own); " +
-        "--replace makes --add each message's whole set",
+      "set and unset flags (read, flagged, answered, draft) and keywords ($Forwarded, $Junk, words of your own); " +
+        "--replace makes --flag each message's whole set",
     )
-    .option("--add <flag>", "a flag or keyword to add; repeat it for more", collect)
-    .option("--remove <flag>", "a flag or keyword to take away; repeat it for more", collect)
-    .option("--replace", "--add is the whole set: every other flag and keyword is taken away")
+    .option("--flag <flag>", "a flag or keyword to set; repeat it for more", collect)
+    .option("--unflag <flag>", "a flag or keyword to take away; repeat it for more", collect)
+    .option("--replace", "--flag is the whole set: every other flag and keyword is taken away")
     .action(
       organiseAction("message-flag", "messages.update", async (_opened, options) => {
-        const add = ((options.add as string[] | undefined) ?? []).map(flagOf)
-        const remove = ((options.remove as string[] | undefined) ?? []).map(flagOf)
+        const add = ((options.flag as string[] | undefined) ?? []).map(flagOf)
+        const remove = ((options.unflag as string[] | undefined) ?? []).map(flagOf)
         if (options.replace && remove.length)
-          throw new CliError("validation_error", "--replace takes --add only: everything else is taken away")
+          throw new CliError("validation_error", "--replace takes --flag only: everything else is taken away")
         if (!options.replace && add.length === 0 && remove.length === 0)
-          throw new CliError("validation_error", "give --add or --remove, or --replace with --add")
+          throw new CliError("validation_error", "give --flag or --unflag, or --replace with --flag")
         return {
           name: "update",
           everywhere: true,
@@ -480,7 +480,7 @@ const deleteCommand = (): Command =>
         examples: [
           `${IDENTITY.command} ya messages delete ${REF} --yes`,
           `${IDENTITY.command} ya messages delete --filter 'from:shop@example.com date<2025-01-01'`,
-          `${IDENTITY.command} ya messages delete --by rules --yes`,
+          `${IDENTITY.command} ya messages delete --rules --yes`,
         ],
       }),
       CLEANUP_LIMIT,
@@ -492,31 +492,33 @@ const deleteCommand = (): Command =>
     .description(
       "move messages to Trash, where the provider keeps them for a while (Gmail: 30 days) and messages restore brings them back; a preview unless --yes",
     )
-    .option("--by <what>", "rules: the envelope mail the owner's rules let go, each decided again (memo's mail delete)")
-    .option("--since-time <time>", "with --by rules, only mail received from this time; older mail stays")
+    .option("--rules", "the envelope mail the owner's rules let go, each decided again (memo's mail delete)")
+    .option("--since-time <time>", "with --rules, only mail received from this time; older mail stays")
     .addHelpText(
       "after",
       `
 Nothing is expunged: mail goes to Trash and the run's record keeps where it was, its flags and its Gmail labels.
---by rules moves only envelope mail, each email decided again with today's rules: it stays when a protect or keep
+--rules moves only envelope mail, each email decided again with today's rules: it stays when a protect or keep
 rule matches, you replied to the sender, it is starred, important, sent or a draft, it carries a label of yours, or
 it is under 30 days old; Gmail's labels and stars are read again just before the move. It refuses until the store
 backup is under 8 days old, and a first run moves at most 100, to check by hand. Never run it from a timer.`,
     )
-    .action(async function (this: Command, refs: string[], options: Selection & { by?: string; sinceTime?: string }) {
-      if (options.by !== undefined && options.by !== "rules")
-        throw new CliError("validation_error", "--by takes rules", { param: "by" })
-      if (options.by && (refs.length || options.filter !== undefined))
-        throw new CliError("validation_error", "--by rules chooses the mail itself: give no references or --filter")
-      if (options.sinceTime !== undefined && !options.by)
-        throw new CliError("validation_error", "--since-time goes with --by rules", { param: "since-time" })
+    .action(async function (
+      this: Command,
+      refs: string[],
+      options: Selection & { rules?: boolean; sinceTime?: string },
+    ) {
+      if (options.rules && (refs.length || options.filter !== undefined))
+        throw new CliError("validation_error", "--rules chooses the mail itself: give no references or --filter")
+      if (options.sinceTime !== undefined && !options.rules)
+        throw new CliError("validation_error", "--since-time goes with --rules", { param: "since-time" })
       await organising(this, async (opened) => {
         const { mailbox } = opened
         const trash = await trashOf(mailbox)
         let cleanup: Cleanup | undefined
         let rulesOf = new Map<string, MailRule>()
         let selected: { ids: string[]; more: boolean }
-        if (options.by) {
+        if (options.rules) {
           const rules = await storedMailRules(mailbox.store, { address: mailbox.key.account })
           const since = sinceOf(options.sinceTime)
           cleanup = await cleanupOf(mailbox, rules, {
@@ -542,7 +544,7 @@ backup is under 8 days old, and a first run moves at most 100, to check by hand.
         const located = await locate(mailbox, selected.ids, { trash })
         const count = located.located.reduce((sum, { items }) => sum + items.length, 0)
         const planned: Planned = {
-          action: options.by ? "delete by rules" : "delete",
+          action: options.rules ? "delete by rules" : "delete",
           selected,
           located,
           to: trash,
@@ -550,7 +552,7 @@ backup is under 8 days old, and a first run moves at most 100, to check by hand.
         }
         const given = {
           ...givenArgs(refs, options),
-          ...(options.by ? { by: options.by } : {}),
+          ...(options.rules ? { rules: true } : {}),
           ...(options.sinceTime ? { since_time: options.sinceTime } : {}),
         }
         const preview = options.dryRun === true || !yesOf(this)
@@ -565,9 +567,9 @@ backup is under 8 days old, and a first run moves at most 100, to check by hand.
               : `the newest store backup is from ${cleanup.backup.at}, older than 8 days; run the backup first`,
             { reason: "mail.archive-unverified" },
           )
-        if (options.filter !== undefined || options.by || count > BULK) await checkBulk(opened.guard, count)
+        if (options.filter !== undefined || options.rules || count > BULK) await checkBulk(opened.guard, count)
         const log = opened.log("message-delete", {
-          ...(options.by ? { command: `${opened.line} --by rules` } : {}),
+          ...(options.rules ? { command: `${opened.line} --rules` } : {}),
           ...(mailbox.organise.labels ? { restorableUntil: new Date(Date.now() + 30 * 86_400_000).toISOString() } : {}),
         })
         const changer = new Changer(mailbox, opened.guard, log, "messages.delete", "message-delete")
@@ -576,7 +578,7 @@ backup is under 8 days old, and a first run moves at most 100, to check by hand.
             changer,
             located.located,
             trash,
-            options.by ? keptNow(rulesOf) : undefined,
+            options.rules ? keptNow(rulesOf) : undefined,
           )
           answer({ run: log.run.id, changed, kept })
         } finally {
