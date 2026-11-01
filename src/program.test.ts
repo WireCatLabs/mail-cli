@@ -204,7 +204,7 @@ it("schedules a profile's sync on a timer and lists it", async () => {
   expect(JSON.parse(out.join("")).items).toEqual([{ name: "mail-ya", kind: "command", when: "every 5m", last: null }])
 })
 
-it("runs the argv of a generated unit with no profile named", async () => {
+it.runIf(process.platform !== "win32")("runs the argv of a generated unit with no profile named", async () => {
   const entry = [process.execPath, "-e", "console.log(process.env.MAIL_PROFILE)"]
   const system = {
     platform: "linux" as const,
