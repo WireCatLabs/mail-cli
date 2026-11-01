@@ -424,6 +424,29 @@ describe("messages send over SMTP", { timeout: 20_000 }, () => {
     expect(errorOf(failed.err).code).toBe("network_error")
   })
 
+  it("sends where the mailbox has no Sent folder, and says the copy had nowhere to go", async () => {
+    const folders = yandex().filter(({ name }) => name !== "Sent")
+    const { mail } = await harness({ folders })
+    const sent = await mail(["ya", "messages", "send", "--to", ADDRESS, "--subject", "x", "y", "--json"])
+    expect(sent.code, sent.err).toBe(0)
+    expect(item(sent.out).sent_copy).toBe("no-sent-folder")
+  })
+
+  it("never saves attachments into a credential folder", async () => {
+    const { mail, refOf } = await harness()
+    const ssh = join(mkdtempSync(join(tmpdir(), "home-")), ".ssh")
+    const refused = await mail([
+      "ya",
+      "attachments",
+      "download",
+      await refOf("subject:Files"),
+      "--output-dir",
+      ssh,
+      "--json",
+    ])
+    expect(errorOf(refused.err).code).toBe("validation_error")
+  })
+
   it("answers people with a line, and the text of what it sent", async () => {
     const { mail, refOf } = await harness()
     const sent = await mail(["ya", "messages", "send", "--to", ADDRESS, "--subject", "Plain", "words"], {
