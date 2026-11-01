@@ -40,6 +40,9 @@ export const mboxFile = (folder: string): string => `${folder.replace(unsafe, ".
 export const maildirDir = (folder: string): string =>
   folder.toUpperCase() === "INBOX" ? "" : `.${folder.replace(unsafe, ".").replace(/^\.+/, "")}`
 
+/** Windows file names cannot hold a colon, so the info separator is a semicolon there, as mbsync's Windows builds use. */
+export const INFO_SEPARATOR = process.platform === "win32" ? ";" : ":"
+
 const flagsOf = (read: boolean | null, flagged: boolean | null): string => `${flagged ? "F" : ""}${read ? "S" : ""}`
 
 /** Unique and the same on every run for one message, so a resumed export finds what it already wrote. */
@@ -52,5 +55,5 @@ export const maildirName = (
 ): string => {
   const host = hostname().replace(/[^A-Za-z0-9-]/g, "-") || "localhost"
   const seconds = Math.floor((receivedAt ?? 0) / 1000)
-  return `${seconds}.V${validity}U${uid}.${host}:2,${flagsOf(read, flagged)}`
+  return `${seconds}.V${validity}U${uid}.${host}${INFO_SEPARATOR}2,${flagsOf(read, flagged)}`
 }

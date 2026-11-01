@@ -4,6 +4,7 @@ import { join } from "node:path"
 import { memoryKeyring } from "@wirecat/cli-base"
 import { afterEach, describe, expect, it } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
+import { INFO_SEPARATOR } from "./export/format.js"
 import type { MailEndpoint, RunBounds } from "./mail/backend.js"
 import { imapBackend } from "./mail/imap/index.js"
 import { run } from "./program.js"
@@ -100,7 +101,8 @@ const setup = async (crowded = 0) => {
 }
 
 const folderOf = () => mkdtempSync(join(tmpdir(), "export-"))
-const mode = (path: string) => statSync(path).mode & 0o777
+// Windows ignores POSIX modes (WC-SECR-10).
+const mode = (path: string, wanted: number) => (process.platform === "win32" ? wanted : statSync(path).mode & 0o777)
 
 describe("messages export", () => {
   it("writes the original bytes of the matching mail to one private mbox per folder, mboxrd-escaped", async () => {
@@ -111,9 +113,9 @@ describe("messages export", () => {
     expect(answer.item).toMatchObject({ format: "mbox", matched: 2, exported: 2, complete: true, unreadable: 0 })
 
     expect(readdirSync(out).sort()).toEqual([".mail-export.jsonl", "INBOX.mbox", "Sent.mbox"])
-    expect(mode(out)).toBe(0o700)
-    expect(mode(join(out, "INBOX.mbox"))).toBe(0o600)
-    expect(mode(join(out, ".mail-export.jsonl"))).toBe(0o600)
+    expect(mode(out, 0o700)).toBe(0o700)
+    expect(mode(join(out, "INBOX.mbox"), 0o600)).toBe(0o600)
+    expect(mode(join(out, ".mail-export.jsonl"), 0o600)).toBe(0o600)
 
     const inbox = readFileSync(join(out, "INBOX.mbox"), "latin1")
     expect(inbox).toMatch(/^From MAILER-DAEMON Tue Oct 27 10:00:00 2026\r\nMessage-ID: <invoice@example.com>/)
@@ -131,10 +133,10 @@ describe("messages export", () => {
     expect(readdirSync(out).sort()).toEqual([".Sent", ".mail-export.jsonl", "cur", "new", "tmp"])
     const names = readdirSync(join(out, "cur")).sort()
     expect(names).toHaveLength(3)
-    expect(names.map((name) => name.split(":2,")[1]).sort()).toEqual(["", "FS", "S"])
-    const flagged = names.find((name) => name.endsWith(":2,FS")) as string
+    expect(names.map((name) => name.split(`${INFO_SEPARATOR}2,`)[1]).sort()).toEqual(["", "FS", "S"])
+    const flagged = names.find((name) => name.endsWith(`${INFO_SEPARATOR}2,FS`)) as string
     expect(readFileSync(join(out, "cur", flagged), "latin1")).toBe(MAILS.invoice)
-    expect(mode(join(out, "cur", flagged))).toBe(0o600)
+    expect(mode(join(out, "cur", flagged), 0o600)).toBe(0o600)
     expect(readdirSync(join(out, ".Sent", "cur"))).toHaveLength(1)
     expect(readdirSync(join(out, "tmp"))).toEqual([])
   })
