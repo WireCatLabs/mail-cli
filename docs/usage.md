@@ -46,8 +46,8 @@ name). An existing Himalaya setup then needs no new password.
 `sync` reads INBOX and the Sent folder; on Gmail it reads All Mail, since archived mail leaves INBOX. `--folder` or the
 profile's `folders` setting names other folders. It reads the newest mail first. `--limit` caps the new mail of one
 run. `--rescan` lists the whole window again. It saves text and headers, and the text of each attachment it can read, not the files. The
-rules memo keeps for the account hold here too: mail a skip rule names is not read, and an envelope rule keeps only
-its sender, date and size.
+account's rules (`mail <profile> rules`, the same table memo reads) hold here too: mail a skip rule names is not read,
+and an envelope rule keeps only its sender, date and size.
 
 A big mailbox does not fit in one run. `sync` has a budget of requests to the server, set by its deadline: 15
 minutes at a terminal, 45 seconds over MCP. `--timeout` changes the deadline. `--max-pages` lowers the budget. The
@@ -87,9 +87,8 @@ leaves Hermes out. `mail personal mcp serve` serves the profile's commands over 
 claude mcp add mail -- mail personal mcp serve
 ```
 
-The server offers every command. A command that writes writes only to the local store, never to the mailbox. The
-profile's permissions decide what runs; see
-[settings](configuration.md#permissions).
+The server offers every command. `sync` writes only to the local store; the `messages` and `folders` writes change
+the mailbox. The profile's permissions decide what runs; see [settings](configuration.md#permissions).
 
 For ChatGPT and Claude in the browser,
 `mail personal mcp serve --http --public-url https://laptop.example.ts.net` serves on `127.0.0.1` (port 8765, or
@@ -142,3 +141,39 @@ mail ya stats messages top --by list --limit 10                          # which
   writes into any folder over files of the same name and deletes nothing.
 - **In parts.** A run stops at `--limit`, `--max-pages` or before its deadline and says `state: "partial"`; run it again
   with `--resume`. Mail the store has no UID for (sync again) or the server no longer has is counted, not written.
+
+## Organise the mailbox
+
+Every change goes to the server first and then into the store, so `search messages` shows it at once. The messages
+are named by the `ref` a search gives, or chosen by `--filter` with the same query:
+
+```sh
+mail ya messages mark-read '<ref>'                               # also mark-unread, star, unstar
+mail ya messages update '<ref>' --flag answered --unflag '$Junk'  # flags and keywords; --replace sets the whole set
+mail ya messages move '<ref>' --folder archive                   # a folder by path, name or role
+mail ya messages copy --filter 'list:github.com' --folder Lists --yes
+mail ya messages delete --filter 'from:shop@example.com date<2025-01-01'   # a preview: nothing moves
+mail ya messages delete --filter 'from:shop@example.com date<2025-01-01' --yes
+mail ya messages restore --run '<run id the change answered with>' --yes
+mail ya folders create Receipts                                  # also folders rename, folders delete
+```
+
+- **A preview first.** A deletion, a change chosen by `--filter`, and a change of more than 20 messages answer with
+  what would change and the same command with `--yes` in `next`; nothing changes until then. `--dry-run` always only
+  previews. One message's flag or move goes ahead at once.
+- **Undo.** Each change answers with a `run` id. Before it asks the server, the run records each message's place,
+  flags and Gmail labels; `messages restore --run <id>` puts back what is still where the run left it: Trash back to
+  its folder, a move moved back, a copy removed, flags as they were. The runs of memo's old `mail delete` restore here
+  too. Mail with text comes back to search with the next `sync`; an envelope at once.
+- **Gmail.** All mail is in All Mail and a folder is a label: `move --folder Work` adds the label `Work` and takes
+  `Inbox` away, `copy` only adds it, `--folder archive` only takes `Inbox` away, and `delete` moves the mail from All
+  Mail to Trash with its labels kept in the run, so a restore puts them back.
+- **Trash.** `delete` never expunges. It needs a Trash folder: the one the server marks `\Trash`, else the
+  provider's own names (Yandex: «Удалённые»). A message already in Trash is counted as `in_trash` and left alone.
+- **Rules.** `rules add --domain shop.example --do envelope` keeps only the envelope of that mail; `rules apply --yes`
+  cuts mail already stored. `messages delete --rules` then moves envelope mail to Trash, each email decided again:
+  it stays when a protect or keep rule matches, you replied to the sender, it is starred, important, sent or a draft,
+  it carries a label of yours, or it is under 30 days old; Gmail's labels and stars are read again just before the
+  move. It refuses until the store backup is under 8 days old, and a first run moves at most 100.
+- **Folders.** `folders delete` refuses a folder that still holds mail; `--allow-dangerous` deletes it with its mail,
+  for good. The inbox and the special folders keep their names.

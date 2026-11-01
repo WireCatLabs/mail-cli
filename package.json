@@ -2,7 +2,7 @@
   "name": "@wirecat/mail-cli",
   "version": "0.5.0",
   "mcpName": "dev.wirecat/mail-cli",
-  "description": "Read-only IMAP sync of a mailbox into the shared WireCat store, with offline search and the app password kept in the OS keyring — built for agents and scripts",
+  "description": "IMAP sync of a mailbox into the shared WireCat store, offline search, and flags, folders and Trash with undo on the server, the app password kept in the OS keyring — built for agents and scripts",
   "license": "Apache-2.0",
   "author": "Viacheslav Ptsarev",
   "repository": {
@@ -57,7 +57,7 @@
   },
   "dependencies": {
     "@wirecat/cli-base": "0.68.1",
-    "@wirecat/cli-core": "0.521.0",
+    "@wirecat/cli-core": "0.522.0",
     "commander": "15.0.0",
     "imapflow": "2.9.1",
     "valibot": "1.5.0"

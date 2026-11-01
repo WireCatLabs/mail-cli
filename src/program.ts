@@ -21,7 +21,9 @@ import { appUpdate } from "@wirecat/cli-core/update"
 import type { Command } from "commander"
 import { accountCommand } from "./commands/account.js"
 import { foldersCommand } from "./commands/folders.js"
+import { messageWrites } from "./commands/messages.js"
 import { readCommands } from "./commands/read.js"
+import { rulesCommand } from "./commands/rules.js"
 import { sessionCommand } from "./commands/session.js"
 import { statsCommand } from "./commands/stats.js"
 import { statusCommand } from "./commands/status.js"
@@ -40,6 +42,14 @@ const update = appUpdate({
   offVariables: [`${IDENTITY.envPrefix}_NO_UPDATE_CHECK`],
 })
 
+/** cli-core's `messages` group reads; the changes to a mailbox go beside `messages show`. */
+const withWrites = (reads: Command[]): Command[] => {
+  const messages = reads.find((one) => one.name() === "messages")
+  if (!messages) throw new Error("cli-core's mail reads have no messages group")
+  for (const write of messageWrites()) messages.addCommand(write)
+  return reads
+}
+
 export const definition = (): ProgramDefinition => ({
   app: IDENTITY,
   firstScreen: { start: `${IDENTITY.command} personal session start --address <email>` },
@@ -50,8 +60,9 @@ export const definition = (): ProgramDefinition => ({
     accountCommand(),
     foldersCommand(),
     syncCommand(),
+    rulesCommand(),
     statusCommand(),
-    ...readCommands(),
+    ...withWrites(readCommands()),
     statsCommand(),
     appDoctorCommand(IDENTITY, configuration, { packageName: PACKAGE }),
     skillCommand(IDENTITY, SKILL),

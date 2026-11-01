@@ -1,6 +1,6 @@
 ---
 name: mail-cli
-description: Read the owner's mailbox through mail, a WireCat CLI — sync mail over IMAP into the shared store, then search it, read an email whole with its attachments' text and follow its thread, with JSON answers. Use when a task needs the owner's mail. It never asks for or prints a password, and it cannot send.
+description: Read and organise the owner's mailbox through mail, a WireCat CLI — sync mail over IMAP into the shared store, search it, read an email whole with its attachments' text and follow its thread; mark, move, copy, delete to Trash and undo, and keep the owner's mail rules, with JSON answers. Use when a task needs the owner's mail. It never asks for or prints a password, and it cannot send.
 metadata:
   openclaw:
     requires:
@@ -37,6 +37,12 @@ Find your way with the tool itself, not this file:
 - `mail ya messages export '<query>' --output <folder> [--format mbox|maildir] [--limit n]` writes the original
   messages to a private folder for backup; a run can be partial: run it again with `--resume`. Never `--replace` unless
   the owner says so. `mail ya stats messages top --by sender|list|domain` ranks the stored mail.
+- Change the mailbox only when the owner asked for that change. `mail ya messages mark-read|star|move|copy|delete
+  <ref…>` (or `--filter '<query>'`) changes the server and the store; a deletion, a `--filter` change or one of more
+  than 20 messages answers with a preview (`applied: false`) and the same command with `yes` in `next`. Show the
+  owner the preview before you add `--yes`. Every change answers with a `run` id: `mail ya messages restore --run
+  <id> --yes` undoes it. Never `folders delete --allow-dangerous`: it loses mail for good.
+- The owner's rules on which mail to keep are `mail ya rules list|add|remove|apply`; memo no longer has them.
 - `mail ya sync` reads new mail into the store (`--since-time`, `--limit`, `--folder`).
   A big mailbox does not fit one run: when the answer says `state: "partial"`, run the command in `next` again (it is
   safe) until it says `complete`; `mail ya status` says how far it is. Stop when a run moves nothing on, and tell the owner.

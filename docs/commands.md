@@ -155,6 +155,65 @@ mail folders list
 
 **Example:** `mail ya folders list`, `mail ya folders list --json`
 
+### `mail folders create`
+
+make a folder on the server; on Gmail it is a label
+
+**Changes something in the service.**
+
+```sh
+mail folders create <folder>
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `folder` | required | the folder's path; the server's separator (usually / or .) makes a subfolder. |
+
+**Returns:** mail folder change — action, folder, to, messages; every field: mail commands info folders create
+
+**Example:** `mail ya folders create Receipts`, `mail ya folders create Work/2026`
+
+### `mail folders rename`
+
+rename a folder of your own on the server; the inbox and the special folders keep their names
+
+**Changes something in the service.**
+
+```sh
+mail folders rename <folder> <name>
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `folder` | required | the folder, by path or name. |
+| `name` | required | its new path. |
+
+**Returns:** mail folder change — action, folder, to, messages; every field: mail commands info folders rename
+
+**Example:** `mail ya folders rename Receipts Invoices`
+
+### `mail folders delete`
+
+delete a folder of your own; it must be empty (move or delete its mail first), unless --allow-dangerous, which loses that mail for good
+
+**Changes something in the service.**
+
+```sh
+mail folders delete <folder> [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `folder` | required | the folder, by path or name. |
+
+| Option | What it does |
+|---|---|
+| `--allow-dangerous` | delete a folder that still holds mail: that mail is gone for good, no restore. |
+
+**Returns:** mail folder change — action, folder, to, messages; every field: mail commands info folders delete
+
+**Example:** `mail ya folders delete Old --yes`
+
 ## `mail sync`
 
 read mail from the server into the shared store; mail already stored is skipped
@@ -176,6 +235,125 @@ mail sync [options]
 **Returns:** mail sync — address, since, timezone, folders, state, requests, listed, saved, and 9 more; every field: mail commands info sync
 
 **Example:** `mail ya sync`, `mail ya sync --since-time 2026-10-01 --limit 200`, `mail ya sync --folder INBOX`
+
+## `mail rules`
+
+the owner's decisions on which mail to keep, record, skip, tag or protect
+
+### `mail rules list`
+
+this mailbox's rules, protected ones first
+
+```sh
+mail rules list [query]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `query` | optional | field:value terms that narrow the list — the fields are below. |
+
+**Returns:** mail rule — match, action, decided_at, id, tags, reason, protected, source; every field: mail commands info rules list
+
+**Example:** `mail ya rules list`, `mail ya rules list protected:true --json`
+
+### `mail rules add`
+
+decide mail by sender, list, subject, age, size, label or kind; repeats replace
+
+**Changes something on this computer only.**
+
+```sh
+mail rules add [options]
+```
+
+| Option | What it does |
+|---|---|
+| `--sender <address>` | one sender address. |
+| `--domain <domain>` | a sender domain, and its subdomains. |
+| `--list-id <id>` | a mailing list, by its List-Id. |
+| `--filter <query>` | from:<address, domain or word>, to:<address>, subject:<word> (or a bare word), older:<n>d, larger:<size> (5MB, 300KB), has:attachment, label:<name> (label:"Two words"), is:unread, is:bulk, score:<n> (at least); all must hold. |
+| `--kind <kind>` | a built-in kind of mail. One of: `social`, `newsletters`, `developer`, `shopping`, `alerts`. |
+| `--do <actions>` | one of skip (never read or store), envelope (store only sender, date, size and labels: counted, out of search, cleanable later), keep (store in full even when a skip or envelope rule matches) or protect (keep, and no cleanup may ever cut, archive or trash it); add tag:<name> to also tag the mail, e.g. envelope,tag:promo. |
+| `--reason <text>` | why, for the owner later. |
+
+**Returns:** mail rule — match, action, decided_at, id, tags, reason, protected, source; every field: mail commands info rules add
+
+**Example:** `mail ya rules add --domain shop.example --do envelope,tag:promo`, `mail ya rules add --sender boss@example.com --do protect --reason "never lose these"`, `mail ya rules add --filter "older:365d larger:5MB" --do envelope`
+
+### `mail rules remove`
+
+drop the rule with exactly these conditions
+
+**Changes something on this computer only.**
+
+```sh
+mail rules remove [options]
+```
+
+| Option | What it does |
+|---|---|
+| `--sender <address>` | one sender address. |
+| `--domain <domain>` | a sender domain, and its subdomains. |
+| `--list-id <id>` | a mailing list, by its List-Id. |
+| `--filter <query>` | from:<address, domain or word>, to:<address>, subject:<word> (or a bare word), older:<n>d, larger:<size> (5MB, 300KB), has:attachment, label:<name> (label:"Two words"), is:unread, is:bulk, score:<n> (at least); all must hold. |
+| `--kind <kind>` | a built-in kind of mail. One of: `social`, `newsletters`, `developer`, `shopping`, `alerts`. |
+
+**Returns:** drop the rule with exactly these conditions
+
+**Example:** `mail ya rules remove --domain shop.example`, `mail ya rules remove --filter "older:365d larger:5MB"`
+
+### `mail rules apply`
+
+cut stored mail an envelope rule matches to its envelope; dry run unless --yes
+
+**Changes something on this computer only.**
+
+```sh
+mail rules apply [options]
+```
+
+| Option | What it does |
+|---|---|
+| `--since-time <time>` | only mail from this time, ISO 8601 or 30d ago (default: all mail). |
+| `--dry-run` | only say what would change, even with --yes; the read-only lock lets this through. |
+
+**Returns:** cut stored mail an envelope rule matches to its envelope; dry run unless --yes
+
+**Example:** `mail ya rules apply`, `mail ya rules apply --since-time 2026-01-01 --yes`
+
+### `mail rules export`
+
+print this mailbox's rules as JSON, to review, keep or move elsewhere
+
+```sh
+mail rules export
+```
+
+**Returns:** print this mailbox's rules as JSON, to review, keep or move elsewhere
+
+**Example:** `mail ya rules export`
+
+### `mail rules import`
+
+import saved rules, or preview Gmail filters with --format gmail; same match replaces
+
+**Changes something on this computer only.**
+
+```sh
+mail rules import <file> [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `file` | required | a rules JSON file from rules export, or Takeout Filters.json with --format gmail. |
+
+| Option | What it does |
+|---|---|
+| `--format <format>` | the file's format: mail (memo's export is the same file) or gmail. One of: `mail`, `memo`, `gmail`. Default: `mail`. |
+
+**Returns:** import saved rules, or preview Gmail filters
+
+**Example:** `mail ya rules import rules.json`, `mail ya rules import Filters.json --format gmail`, `mail ya rules import Filters.json --format gmail --yes`
 
 ## `mail status`
 
@@ -216,7 +394,7 @@ mail search messages <query> [options]
 
 **Returns:** message hit — ref, timestamp, sender_name, sender_is_me, chat_title, excerpt, matched_in, score, and 8 more; every field: mail commands info search messages
 
-**Next usually:** `mail messages show <message>`
+**Next usually:** `mail messages show <message>`, `mail messages mark-read [message]`, `mail messages mark-unread [message]`
 
 **Example:** `mail ya search messages invoice`, `mail ya search messages 'from:ann@example.com has:attachment date>30d'`, `mail ya search messages 'list:github.com is:unread' --newest`
 
@@ -272,6 +450,233 @@ mail messages export [query] [options]
 **Returns:** mail export — address, format, destination, folders, state, matched, exported, already_exported, and 5 more; every field: mail commands info messages export
 
 **Example:** `mail ya messages export 'from:ann@example.com' --output ~/mail-backup`, `mail ya messages export --folder INBOX --format maildir --output ~/Maildir`, `mail ya messages export 'date>30d' --limit 500 --output ~/mail-backup --resume`
+
+### `mail messages mark-read`
+
+mark messages read; on the server first, then in the store, so search shows it at once
+
+**Changes something in the service.**
+
+```sh
+mail messages mark-read [message] [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `message` | optional | msg:email/… references, as search messages shows them. |
+
+| Option | What it does |
+|---|---|
+| `--filter <query>` | the stored mail this query finds, instead of references (search messages syntax). |
+| `--limit <n>` | with --filter, at most this many, newest first (default 500, at most 5000). |
+| `--yes` | make the change; a deletion or a change of many is only a preview without it. |
+| `--dry-run` | only preview what would change, even with --yes. |
+
+**Returns:** mail change — action, applied, run, selected, located, changed, missing, already_deleted, and 6 more; every field: mail commands info messages mark-read
+
+**Example:** `mail ya messages mark-read msg:email/me%40example.com/t1/m1`, `mail ya messages mark-read --filter 'from:shop@example.com is:unread' --yes`
+
+### `mail messages mark-unread`
+
+mark messages unread; on the server first, then in the store, so search shows it at once
+
+**Changes something in the service.**
+
+```sh
+mail messages mark-unread [message] [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `message` | optional | msg:email/… references, as search messages shows them. |
+
+| Option | What it does |
+|---|---|
+| `--filter <query>` | the stored mail this query finds, instead of references (search messages syntax). |
+| `--limit <n>` | with --filter, at most this many, newest first (default 500, at most 5000). |
+| `--yes` | make the change; a deletion or a change of many is only a preview without it. |
+| `--dry-run` | only preview what would change, even with --yes. |
+
+**Returns:** mail change — action, applied, run, selected, located, changed, missing, already_deleted, and 6 more; every field: mail commands info messages mark-unread
+
+**Example:** `mail ya messages mark-unread msg:email/me%40example.com/t1/m1`, `mail ya messages mark-unread --filter 'from:shop@example.com is:unread' --yes`
+
+### `mail messages star`
+
+star messages (the \Flagged flag); on the server first, then in the store, so search shows it at once
+
+**Changes something in the service.**
+
+```sh
+mail messages star [message] [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `message` | optional | msg:email/… references, as search messages shows them. |
+
+| Option | What it does |
+|---|---|
+| `--filter <query>` | the stored mail this query finds, instead of references (search messages syntax). |
+| `--limit <n>` | with --filter, at most this many, newest first (default 500, at most 5000). |
+| `--yes` | make the change; a deletion or a change of many is only a preview without it. |
+| `--dry-run` | only preview what would change, even with --yes. |
+
+**Returns:** mail change — action, applied, run, selected, located, changed, missing, already_deleted, and 6 more; every field: mail commands info messages star
+
+**Example:** `mail ya messages star msg:email/me%40example.com/t1/m1`, `mail ya messages star --filter 'from:shop@example.com is:unread' --yes`
+
+### `mail messages unstar`
+
+take the star away; on the server first, then in the store, so search shows it at once
+
+**Changes something in the service.**
+
+```sh
+mail messages unstar [message] [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `message` | optional | msg:email/… references, as search messages shows them. |
+
+| Option | What it does |
+|---|---|
+| `--filter <query>` | the stored mail this query finds, instead of references (search messages syntax). |
+| `--limit <n>` | with --filter, at most this many, newest first (default 500, at most 5000). |
+| `--yes` | make the change; a deletion or a change of many is only a preview without it. |
+| `--dry-run` | only preview what would change, even with --yes. |
+
+**Returns:** mail change — action, applied, run, selected, located, changed, missing, already_deleted, and 6 more; every field: mail commands info messages unstar
+
+**Example:** `mail ya messages unstar msg:email/me%40example.com/t1/m1`, `mail ya messages unstar --filter 'from:shop@example.com is:unread' --yes`
+
+### `mail messages update`
+
+set and unset flags (read, flagged, answered, draft) and keywords ($Forwarded, $Junk, words of your own); --replace makes --flag each message's whole set
+
+**Changes something in the service.**
+
+```sh
+mail messages update [message] [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `message` | optional | msg:email/… references, as search messages shows them. |
+
+| Option | What it does |
+|---|---|
+| `--filter <query>` | the stored mail this query finds, instead of references (search messages syntax). |
+| `--limit <n>` | with --filter, at most this many, newest first (default 500, at most 5000). |
+| `--yes` | make the change; a deletion or a change of many is only a preview without it. |
+| `--dry-run` | only preview what would change, even with --yes. |
+| `--flag <flag>` | a flag or keyword to set; repeat it for more. |
+| `--unflag <flag>` | a flag or keyword to take away; repeat it for more. |
+| `--replace` | --flag is the whole set: every other flag and keyword is taken away. |
+
+**Returns:** mail change — action, applied, run, selected, located, changed, missing, already_deleted, and 6 more; every field: mail commands info messages update
+
+**Example:** `mail ya messages update msg:email/me%40example.com/t1/m1 --flag answered --unflag '$Junk'`, `mail ya messages update msg:email/me%40example.com/t1/m1 --flag read --flag flagged --replace`
+
+### `mail messages move`
+
+move messages to a folder, by path, name or role (archive, junk, inbox); on Gmail, a label change that takes Inbox away
+
+**Changes something in the service.**
+
+```sh
+mail messages move [message] [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `message` | optional | msg:email/… references, as search messages shows them. |
+
+| Option | What it does |
+|---|---|
+| `--filter <query>` | the stored mail this query finds, instead of references (search messages syntax). |
+| `--limit <n>` | with --filter, at most this many, newest first (default 500, at most 5000). |
+| `--yes` | make the change; a deletion or a change of many is only a preview without it. |
+| `--dry-run` | only preview what would change, even with --yes. |
+| `--folder <folder>` | the folder: its path, its name, or a role (archive, junk, inbox). |
+
+**Returns:** mail change — action, applied, run, selected, located, changed, missing, already_deleted, and 6 more; every field: mail commands info messages move
+
+**Example:** `mail ya messages move msg:email/me%40example.com/t1/m1 --folder Archive`, `mail ya messages move --filter 'list:github.com date<2026-01-01' --folder Lists --yes`
+
+### `mail messages copy`
+
+copy messages to a folder, by path, name or role; on Gmail, a label added
+
+**Changes something in the service.**
+
+```sh
+mail messages copy [message] [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `message` | optional | msg:email/… references, as search messages shows them. |
+
+| Option | What it does |
+|---|---|
+| `--filter <query>` | the stored mail this query finds, instead of references (search messages syntax). |
+| `--limit <n>` | with --filter, at most this many, newest first (default 500, at most 5000). |
+| `--yes` | make the change; a deletion or a change of many is only a preview without it. |
+| `--dry-run` | only preview what would change, even with --yes. |
+| `--folder <folder>` | the folder: its path, its name, or a role (archive, junk, inbox). |
+
+**Returns:** mail change — action, applied, run, selected, located, changed, missing, already_deleted, and 6 more; every field: mail commands info messages copy
+
+**Example:** `mail ya messages copy msg:email/me%40example.com/t1/m1 --folder Archive`, `mail ya messages copy --filter 'list:github.com date<2026-01-01' --folder Lists --yes`
+
+### `mail messages delete`
+
+move messages to Trash, where the provider keeps them for a while (Gmail: 30 days) and messages restore brings them back; a preview unless --yes
+
+**Changes something in the service.**
+
+```sh
+mail messages delete [message] [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `message` | optional | msg:email/… references, as search messages shows them. |
+
+| Option | What it does |
+|---|---|
+| `--filter <query>` | the stored mail this query finds, instead of references (search messages syntax). |
+| `--limit <n>` | with --filter, at most this many, newest first (default 5000, at most 5000). |
+| `--yes` | make the change; a deletion or a change of many is only a preview without it. |
+| `--dry-run` | only preview what would change, even with --yes. |
+| `--rules` | the envelope mail the owner's rules let go, each decided again (memo's mail delete). |
+| `--since-time <time>` | with --rules, only mail received from this time; older mail stays. |
+
+**Returns:** mail change — action, applied, run, selected, located, changed, missing, already_deleted, and 6 more; every field: mail commands info messages delete
+
+**Example:** `mail ya messages delete msg:email/me%40example.com/t1/m1 --yes`, `mail ya messages delete --filter 'from:shop@example.com date<2025-01-01'`, `mail ya messages delete --rules --yes`
+
+### `mail messages restore`
+
+undo a change run, last step first, for the messages still where it left them: Trash back to where they were, moves back, copies removed, flags as they were; a preview unless --yes
+
+**Changes something in the service.**
+
+```sh
+mail messages restore [options]
+```
+
+| Option | What it does |
+|---|---|
+| `--run <id>` | the run id a change answered with (runs list shows recent runs). |
+| `--yes` | make the change; without it, only say what would come back. |
+| `--dry-run` | only preview, even with --yes. |
+
+**Returns:** mail restore — run, applied, restore_run, command, logged, restorable, missing, restored, and 2 more; every field: mail commands info messages restore
+
+**Example:** `mail ya messages restore --run 20261101T101500Z-messages-delete-1a2b3c`, `mail ya messages restore --run 20261101T101500Z-messages-delete-1a2b3c --yes`
 
 ## `mail conversations`
 
