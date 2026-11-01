@@ -7,7 +7,7 @@ ran it · ⛔ not tested offline, with the reason and where it is checked instea
 Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 [TESTING.md](TESTING.md) for how, and for the states and failures that cut across commands.
 
-**209 ✅ · 26 ⛔ · 0 ❌** — 67 commands, 168 options.
+**235 ✅ · 26 ⛔ · 0 ❌** — 71 commands, 190 options.
 
 | Command | Option | | Note |
 |---|---|---|---|
@@ -129,10 +129,36 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `messages restore` | `--run` | ✅ |  |
 | `messages restore` | `--yes` | ✅ |  |
 | `messages restore` | `--dry-run` | ✅ |  |
+| `messages send` |  | ✅ |  |
+| `messages send` | `--to` | ✅ |  |
+| `messages send` | `--cc` | ✅ |  |
+| `messages send` | `--bcc` | ✅ |  |
+| `messages send` | `--file` | ✅ |  |
+| `messages send` | `--allow-any-file` | ✅ |  |
+| `messages send` | `--operation-id` | ✅ |  |
+| `messages send` | `--yes` | ✅ |  |
+| `messages send` | `--dry-run` | ✅ |  |
+| `messages send` | `--subject` | ✅ |  |
+| `messages send` | `--reply-to` | ✅ |  |
+| `messages send` | `--reply-all` | ✅ |  |
+| `messages forward` |  | ✅ |  |
+| `messages forward` | `--to` | ✅ |  |
+| `messages forward` | `--cc` | ✅ |  |
+| `messages forward` | `--bcc` | ✅ |  |
+| `messages forward` | `--file` | ✅ |  |
+| `messages forward` | `--allow-any-file` | ✅ |  |
+| `messages forward` | `--operation-id` | ✅ |  |
+| `messages forward` | `--yes` | ✅ |  |
+| `messages forward` | `--dry-run` | ✅ |  |
+| `messages forward` | `--subject` | ✅ |  |
 | `conversations list` |  | ✅ |  |
 | `conversations list` | `--limit` | ✅ |  |
 | `conversations list` | `--page` | ✅ |  |
 | `conversations show` |  | ✅ |  |
+| `attachments list` |  | ✅ |  |
+| `attachments download` |  | ✅ |  |
+| `attachments download` | `--output-dir` | ✅ |  |
+| `attachments download` | `--replace` | ✅ |  |
 | `stats messages top` |  | ✅ |  |
 | `stats messages top` | `--by` | ✅ |  |
 | `stats messages top` | `--limit` | ✅ |  |

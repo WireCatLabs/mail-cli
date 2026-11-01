@@ -5,6 +5,8 @@ import { Readable } from "node:stream"
 import { memoryKeyring } from "@wirecat/cli-base"
 import { sendsPathFor } from "@wirecat/cli-core/sends"
 import { afterEach, describe, expect, it } from "vitest"
+
+// Each case signs in, syncs and sends over two local servers: seconds on a loaded machine.
 import type { MailEnvironment } from "./commands/context.js"
 import { IDENTITY } from "./identity.js"
 import type { MailEndpoint, RunBounds } from "./mail/backend.js"
@@ -137,7 +139,7 @@ const harness = async (given: Partial<FakeOptions> & { mx?: string; smtp?: Parti
 const item = (text: string) => JSON.parse(text).item
 const errorOf = (text: string) => JSON.parse(text).error
 
-describe("messages send over SMTP", () => {
+describe("messages send over SMTP", { timeout: 20_000 }, () => {
   it("sends to the owner without asking, files a copy in Sent with its Bcc, and stores it", async () => {
     const folders = yandex()
     const { mail, smtp, journal } = await harness({ folders })
@@ -335,6 +337,24 @@ describe("messages send over SMTP", () => {
     ])
     expect(errorOf(refused.err).code).toBe("validation_error")
     expect(smtp.received).toHaveLength(1)
+    const meant = await mail([
+      "ya",
+      "messages",
+      "send",
+      "--to",
+      ADDRESS,
+      "--cc",
+      ADDRESS,
+      "--subject",
+      "Key",
+      "x",
+      "--file",
+      join(dir, ".ssh", "id_ed25519"),
+      "--allow-any-file",
+      "--json",
+    ])
+    expect(meant.code, meant.err).toBe(0)
+    expect(smtp.received).toHaveLength(2)
   })
 
   it("warns when the text speaks of an attachment and none is given", async () => {
@@ -394,7 +414,7 @@ describe("messages send over SMTP", () => {
   })
 })
 
-describe("replies and forwards", () => {
+describe("replies and forwards", { timeout: 20_000 }, () => {
   it("replies with In-Reply-To, References, Re: and the quote, and marks the original answered", async () => {
     const folders = yandex()
     const { mail, refOf, smtp, imap } = await harness({ folders })
@@ -458,6 +478,43 @@ describe("replies and forwards", () => {
     expect(folders[0]?.messages[0]?.flags).toContain("$Forwarded")
   })
 
+  it("forwards with copies, a file and its own subject; --dry-run sends nothing, --operation-id keeps the Message-ID", async () => {
+    const { mail, refOf, smtp } = await harness()
+    const ref = await refOf("subject:October")
+    const dir = mkdtempSync(join(tmpdir(), "files-"))
+    writeFileSync(join(dir, "note.txt"), "see this")
+    const argv = [
+      "ya",
+      "messages",
+      "forward",
+      ref,
+      "--to",
+      "bob@example.com",
+      "--cc",
+      "carol@example.com",
+      "--bcc",
+      "dave@example.com",
+      "--subject",
+      "Please pay",
+      "--file",
+      join(dir, "note.txt"),
+      "--allow-any-file",
+      "--operation-id",
+      "1234567890",
+      "--yes",
+      "--json",
+    ]
+    const preview = await mail([...argv, "--dry-run"])
+    expect(preview.code, preview.err).toBe(0)
+    expect(item(preview.out)).toMatchObject({ sent: false, subject: "Please pay" })
+    expect(smtp.received).toHaveLength(0)
+    const sent = await mail(argv)
+    expect(sent.code, sent.err).toBe(0)
+    expect(item(sent.out).message_id).toBe("<1234567890@example.com>")
+    expect(smtp.received[0]?.recipients.sort()).toEqual(["bob@example.com", "carol@example.com", "dave@example.com"])
+    expect(smtp.received[0]?.raw).toContain("filename=note.txt")
+  })
+
   it("asks before a forward to anyone else, as before a send", async () => {
     const { mail, refOf, smtp } = await harness()
     const refused = await mail([
@@ -474,7 +531,7 @@ describe("replies and forwards", () => {
   })
 })
 
-describe("attachments list and download", () => {
+describe("attachments list and download", { timeout: 20_000 }, () => {
   it("lists the attachments by number, as the server holds them", async () => {
     const { mail, refOf } = await harness()
     const listed = await mail(["ya", "attachments", "list", await refOf("subject:Files"), "--json"])
@@ -513,7 +570,7 @@ describe("attachments list and download", () => {
   })
 })
 
-describe("sending over MCP", () => {
+describe("sending over MCP", { timeout: 20_000 }, () => {
   it("lets the owner fence an agent to mail only the owner, with messages.send.others=readonly", async () => {
     const { options, smtp } = await harness()
     const { client, close } = await mcpClient(
