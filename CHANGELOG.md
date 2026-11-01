@@ -61,6 +61,7 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 - **`sync` says when it leaves stored rules out**: `rules_unread` and `rules_unread_why` (such as `condition label`)
   in the answer and a `mail.rules-unreadable` issue, when the rules hold a condition this mail does not know.
 - **`sync --rescan` fails on a locked or broken store** instead of reporting the rethreading done.
+- On cli-core 0.526.0, the version memo uses too, so both read the stored rules and make ids alike.
 
 ## 0.5.0 — 01.11.2026
 
