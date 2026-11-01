@@ -40,5 +40,26 @@
     "reason": "Lists the few profiles on this computer, every one at once by design (WC-ACCT-12), as gcal's session list does; a filter would let a caller narrow it to one and read that as the only profile. Review if a computer commonly holds more profiles than fit one screen.",
     "owner": "@WireCatLabs",
     "review_after": "2027-01-31"
+  },
+  {
+    "rule": "flag-two-meanings",
+    "target": "--add",
+    "reason": "Adds an IMAP flag or keyword to an email (read, flagged, $Junk); the vocabulary's --add names a chat, and no vocabulary flag names a mail flag yet. Review when cli-base's vocabulary names one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-02-01"
+  },
+  {
+    "rule": "flag-two-meanings",
+    "target": "--remove",
+    "reason": "Takes an IMAP flag or keyword off an email; the vocabulary's --remove names a chat, and no vocabulary flag names a mail flag yet. Review when cli-base's vocabulary names one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-02-01"
+  },
+  {
+    "rule": "flag-two-meanings",
+    "target": "--by",
+    "reason": "--by rules chooses the mail by the owner's rules (memo's mail delete moved here); the vocabulary's --by groups a list, and no flag names a selection by rules yet. Review when cli-base's vocabulary names one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-02-01"
   }
 ]

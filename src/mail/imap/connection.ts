@@ -50,6 +50,17 @@ const realTimer = (ms: number, fire: () => void) => {
 
 type Work<T> = (open: ImapFlow, validity: string) => Promise<T>
 
+/** A line that broke or a command that timed out during a write leaves it unknown whether the server made the change. */
+const writeError = (raw: unknown): CliError => {
+  const error = mapImapError(raw)
+  if (error.code !== "network_error" && error.code !== "timeout") return error
+  return new CliError(
+    "outcome_unknown",
+    `${error.message}; the server may have made the change — check the mailbox, or sync, before running it again`,
+    { ...error.details, retryable: false },
+  )
+}
+
 export interface Connections {
   connections: number
   /** Each folder's UIDVALIDITY as the run first saw it; a reconnect that finds another one stops the run. */
@@ -57,6 +68,13 @@ export interface Connections {
   /** `work` on a connection with no folder selected, retried like every read. */
   onServer<T>(work: (open: ImapFlow) => Promise<T>): Promise<T>
   inFolder<T>(folder: string, work: Work<T>, expected?: string, slot?: number): Promise<T>
+  /**
+   * `work` with `folder` selected for writing, sent once: a write that may have reached the server is not sent again.
+   * With `expected`, a folder whose UIDVALIDITY is not that is refused before anything is sent.
+   */
+  writeIn<T>(folder: string, work: Work<T>, expected?: string): Promise<T>
+  /** `work` on a connection with no folder selected, sent once, for a change to the folders themselves. */
+  writeOnServer<T>(work: (open: ImapFlow) => Promise<T>): Promise<T>
   /** Runs `work` over the batches on up to `connections` connections; the first failure stops the others. */
   spread<I, O, E = never>(
     folder: string,
@@ -136,10 +154,11 @@ export const imapConnections = (endpoint: MailEndpoint, password: string, tuning
     folder: string | undefined,
     expected: string | undefined,
     work: Work<T>,
+    readOnly = true,
   ): Promise<T> => {
     const open = await limited(slot, connect(slot))
     if (folder === undefined) return limited(slot, work(open, ""))
-    const lock = await limited(slot, open.getMailboxLock(folder, { readOnly: true }))
+    const lock = await limited(slot, open.getMailboxLock(folder, { readOnly }))
     try {
       // imapflow clears the selection when a SELECT fails or the server closes the mailbox, and a connection
       // in that state still counts as usable: a command sent on it fails with NoMailboxSelected.
@@ -178,6 +197,22 @@ export const imapConnections = (endpoint: MailEndpoint, password: string, tuning
         if (canRetry && !canRetry()) throw error
         await sleep(wait, signal).catch(() => Promise.reject(signal?.reason ?? error))
       }
+    }
+  }
+
+  /** Only a failure after the command went out is an unknown outcome; one while connecting changed nothing. */
+  const sentOnce = async <T>(attempt: (sent: <W extends Work<T>>(work: W) => W) => Promise<T>): Promise<T> => {
+    let went = false
+    try {
+      return await attempt(
+        (work) =>
+          ((open: ImapFlow, validity: string) => {
+            went = true
+            return work(open, validity)
+          }) as typeof work,
+      )
+    } catch (raw) {
+      throw went ? writeError(raw) : mapImapError(raw)
     }
   }
 
@@ -225,6 +260,8 @@ export const imapConnections = (endpoint: MailEndpoint, password: string, tuning
     validities,
     onServer: (work) => retrying(0, () => once(0, undefined, undefined, (open) => work(open))),
     inFolder,
+    writeIn: (folder, work, expected) => sentOnce((sent) => once(0, folder, expected, sent(work), false)),
+    writeOnServer: (work) => sentOnce((sent) => once(0, undefined, undefined, sent(work))),
     spread,
     close: async () => {
       closed = true

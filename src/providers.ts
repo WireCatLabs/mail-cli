@@ -28,6 +28,14 @@ export interface SyncFolders {
   otherwise: string
 }
 
+/** How a change reaches the mailbox, where providers differ. */
+export interface Organise {
+  /** Gmail: one All Mail with labels, so a move or copy is a change of labels, and a deletion a move to Trash. */
+  labels?: true
+  /** Trash under the names the provider gives it, tried when the server marks no folder `\Trash`. */
+  trash: string[]
+}
+
 export interface Provider {
   name: string
   /** Address domains it hosts; every provider here logs in with the full address. */
@@ -40,6 +48,7 @@ export interface Provider {
   auth: "app-password" | "oauth"
   note?: string
   sync?: SyncFolders
+  organise?: Organise
   prepare: Prepare
 }
 
@@ -54,6 +63,7 @@ const TABLE = {
     smtp: tls("smtp.yandex.com", 465),
     auth: "app-password",
     note: "turn on IMAP and app passwords in Yandex settings, then make a password of type Mail",
+    organise: { trash: ["Trash", "Удалённые", "Удаленные"] },
     prepare: {
       steps: [
         "Open https://mail.yandex.ru/#setup/client (or the gear, «Все настройки», «Почтовые программы»).",
@@ -85,6 +95,7 @@ const TABLE = {
     note: "needs 2-step verification and an app password; IMAP downloads are capped at 2500 MB a day",
     // Archived mail leaves INBOX; read from INBOX alone it would look deleted.
     sync: { mode: "gmail", roles: ["all"], otherwise: GMAIL_ALL_MAIL },
+    organise: { labels: true, trash: ["[Gmail]/Trash", "[Google Mail]/Trash"] },
     prepare: {
       steps: [
         'Personal Google Account: IMAP is always on, nothing to switch. Google Workspace: the administrator controls it, and the "Forwarding and POP/IMAP" tab in Gmail Settings, "See all settings", may be missing.',
@@ -202,6 +213,8 @@ export const providerByDomain = (domain: string): ProviderKey | undefined =>
   PROVIDER_KEYS.find((key) => PROVIDERS[key].domains.includes(domain))
 
 export const DEFAULT_SYNC: SyncFolders = { roles: ["inbox", "sent"], otherwise: "INBOX" }
+
+export const DEFAULT_ORGANISE: Organise = { trash: ["Trash", "Deleted Items", "Deleted Messages"] }
 
 /** The provider of a saved profile: its address domain first, then its server host (a domain of its own on Yandex). */
 export const providerFor = (address: string, host: string | undefined): Provider | undefined => {
