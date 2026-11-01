@@ -3,6 +3,7 @@ import { smtpSubmit } from "../smtp.js"
 import { imapAccount } from "./account.js"
 import { type ImapTuning, imapConnections } from "./connection.js"
 import { imapReads } from "./read.js"
+import { imapQuery } from "./search.js"
 import { imapWrites } from "./write.js"
 
 export { IMAP_DEFAULTS, type ImapTuning } from "./connection.js"
@@ -14,6 +15,7 @@ export const imapBackend = (endpoint: MailEndpoint, password: string, tuning: Im
   return {
     ...imapReads(pool, tuning),
     ...imapAccount(pool, endpoint.login),
+    serverQuery: imapQuery(pool),
     writes: imapWrites(pool),
     ...(endpoint.smtp ? { submit: smtpSubmit({ ...endpoint.smtp, login: endpoint.login }, password, tuning) } : {}),
     close: pool.close,

@@ -32,8 +32,10 @@ Find your way with the tool itself, not this file:
   If a command says there is no app password, tell the owner to run `mail <profile> session start`.
 - `mail ya search messages '<query>' --json` searches the profile's stored mail (`from:`, `to:`, `subject:`, `label:`,
   `list:`, `is:unread`, `has:attachment`, `content:`, `date>7d`); each hit's `ref` goes to
-  `mail ya messages show <ref>`, its `email.thread` to `mail ya conversations show <thread>`. It reads only what sync
-  stored; for mail with messages and notes together, memo's `search all`.
+  `mail ya messages show <ref>`, its `email.thread` to `mail ya conversations show <thread>`. It also asks the mail
+  server for mail sync has not read yet and stores what it finds; each hit's `found_in` says `archive`, `server` or
+  `both`, and `meta.complete: false` means the server answered in part. `--backend archive` keeps to the store. For
+  mail with messages and notes together, memo's `search all`.
 - `mail ya messages export '<query>' --output <folder> [--format mbox|maildir] [--limit n]` writes the original
   messages to a private folder for backup; a run can be partial: run it again with `--resume`. Never `--replace` unless
   the owner says so. `mail ya stats messages top --by sender|list|domain` ranks the stored mail.
