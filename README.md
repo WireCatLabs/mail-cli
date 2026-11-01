@@ -50,6 +50,10 @@ You need Node.js 22.16 or a later 22.x, or 24 or later. To try it with no instal
   `messages move|copy --folder` file mail (by label on Gmail), `messages delete` moves it to Trash, and
   `messages restore --run <id>` undoes any of them. `folders create|rename|delete` look after the folders. A search
   shows each change at once.
+- **Send, reply and forward.** `messages send --to … --subject …` sends over the provider's SMTP server with the same
+  app password, `--reply-to <ref>` answers a stored email with its quote, `messages forward <ref>` sends it on whole.
+  Mail to anyone but you asks first; Sent gets its copy and the store reads it at once. `attachments list|download`
+  save the files of one email.
 - **Decide what to keep.** `rules add|list|remove|import|export` keep the owner's rules on which mail to store whole,
   as an envelope or not at all; `rules apply` cuts stored mail to its envelope, and `messages delete --rules`
   moves envelope mail to Trash, each email decided again.

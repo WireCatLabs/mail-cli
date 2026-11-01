@@ -36,6 +36,16 @@ export interface Organise {
   trash: string[]
 }
 
+/** Where `messages send` submits mail, read from the provider's own help page. */
+export interface Smtp extends Endpoint {
+  /**
+   * The server files what SMTP carried into Sent itself, so a copy appended by the tool would be a second one. Absent:
+   * the help page does not say so, and the tool appends the copy unless Sent already holds that Message-ID.
+   */
+  savesSent?: true
+  sources: string[]
+}
+
 export interface Provider {
   name: string
   /** Address domains it hosts; every provider here logs in with the full address. */
@@ -43,8 +53,7 @@ export interface Provider {
   /** A domain with its own name can still be hosted here: its MX record says where. */
   mx?: RegExp
   imap: Endpoint
-  /** Not used until sending comes; check it against the provider's help page then. */
-  smtp: Endpoint
+  smtp: Smtp
   auth: "app-password" | "oauth"
   note?: string
   sync?: SyncFolders
@@ -54,13 +63,17 @@ export interface Provider {
 
 const tls = (host: string, port = 993): Endpoint => ({ host, port, security: "tls" })
 
+const YANDEX_CLIENTS = "https://yandex.ru/support/mail/mail-clients/others.html"
+const OUTLOOK_SETTINGS =
+  "https://support.microsoft.com/en-us/office/pop-imap-and-smtp-settings-for-outlook-com-d088b986-291d-42b8-9564-9c414e2aa040"
+
 const TABLE = {
   yandex: {
     name: "Yandex",
     domains: ["yandex.ru", "yandex.com", "ya.ru", "yandex.by", "yandex.kz", "yandex.ua"],
     mx: /(^|\.)mx\.yandex\.(net|ru)$|(^|\.)yandex\.(net|ru)$/,
     imap: tls("imap.yandex.com"),
-    smtp: tls("smtp.yandex.com", 465),
+    smtp: { ...tls("smtp.yandex.ru", 465), sources: [YANDEX_CLIENTS] },
     auth: "app-password",
     note: "turn on IMAP and app passwords in Yandex settings, then make a password of type Mail",
     organise: { trash: ["Trash", "Удалённые", "Удаленные"] },
@@ -90,7 +103,15 @@ const TABLE = {
     domains: ["gmail.com", "googlemail.com"],
     mx: /(^|\.)(aspmx\.l\.google\.com|googlemail\.com|google\.com)$/,
     imap: tls("imap.gmail.com"),
-    smtp: tls("smtp.gmail.com", 465),
+    smtp: {
+      ...tls("smtp.gmail.com", 465),
+      // "Sent messages are automatically copied to the Gmail/Sent folder if your email client uses SMTP."
+      savesSent: true,
+      sources: [
+        "https://knowledge.workspace.google.com/admin/gmail/send-email-from-a-printer-scanner-or-app",
+        "https://support.google.com/mail/answer/78892",
+      ],
+    },
     auth: "app-password",
     note: "needs 2-step verification and an app password; IMAP downloads are capped at 2500 MB a day",
     // Archived mail leaves INBOX; read from INBOX alone it would look deleted.
@@ -115,7 +136,12 @@ const TABLE = {
     name: "iCloud",
     domains: ["icloud.com", "me.com", "mac.com"],
     imap: tls("imap.mail.me.com"),
-    smtp: { host: "smtp.mail.me.com", port: 587, security: "starttls" },
+    smtp: {
+      host: "smtp.mail.me.com",
+      port: 587,
+      security: "starttls",
+      sources: ["https://support.apple.com/en-us/102525"],
+    },
     auth: "app-password",
     note: "needs an app-specific password",
     prepare: {
@@ -139,7 +165,7 @@ const TABLE = {
     domains: ["mail.ru", "inbox.ru", "list.ru", "bk.ru", "internet.ru"],
     mx: /(^|\.)mail\.ru$/,
     imap: tls("imap.mail.ru"),
-    smtp: tls("smtp.mail.ru", 465),
+    smtp: { ...tls("smtp.mail.ru", 465), sources: ["https://help.mail.ru/mail/login/mailer/"] },
     auth: "app-password",
     note: "needs an app password for external programs",
     prepare: {
@@ -162,7 +188,10 @@ const TABLE = {
     domains: ["fastmail.com", "fastmail.fm"],
     mx: /(^|\.)messagingengine\.com$/,
     imap: tls("imap.fastmail.com"),
-    smtp: tls("smtp.fastmail.com", 465),
+    smtp: {
+      ...tls("smtp.fastmail.com", 465),
+      sources: ["https://www.fastmail.help/hc/en-us/articles/1500000278342-Server-names-and-ports"],
+    },
     auth: "app-password",
     prepare: {
       steps: [
@@ -183,7 +212,7 @@ const TABLE = {
     domains: ["outlook.com", "hotmail.com", "live.com"],
     mx: /\.mail\.protection\.outlook\.com$/,
     imap: tls("outlook.office365.com"),
-    smtp: { host: "smtp-mail.outlook.com", port: 587, security: "starttls" },
+    smtp: { host: "smtp-mail.outlook.com", port: 587, security: "starttls", sources: [OUTLOOK_SETTINGS] },
     auth: "oauth",
     note: "Microsoft accepts only OAuth for IMAP; an app password cannot work, wait for OAuth sign-in",
     prepare: {
@@ -195,9 +224,7 @@ const TABLE = {
         "Microsoft 365 work and school accounts were not read from an official page: their steps are unverified.",
       ],
       refused: "Microsoft accepts only OAuth for IMAP, which this version cannot do yet.",
-      sources: [
-        "https://support.microsoft.com/en-us/office/pop-imap-and-smtp-settings-for-outlook-com-d088b986-291d-42b8-9564-9c414e2aa040",
-      ],
+      sources: [OUTLOOK_SETTINGS],
     },
   },
 } satisfies Record<string, Provider>

@@ -18,6 +18,7 @@ import { Command } from "commander"
 import * as v from "valibot"
 import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
+import type { MailBackend } from "../mail/backend.js"
 import { ChangeLog, readRun } from "../mail/changes.js"
 import { CLEANUP_LIMIT, type Cleanup, cleanupOf } from "../mail/cleanup.js"
 import {
@@ -113,8 +114,9 @@ const commandLine = (command: Command, profile: string) => {
   return { path: path.join(" "), line: `${IDENTITY.command} ${profile} ${path.join(" ")}` }
 }
 
-interface Opened {
+export interface Opened {
   mailbox: Mailbox
+  backend: MailBackend
   guard: SendGuard
   log: (action: Action, extra?: { restorableUntil?: string; command?: string }) => ChangeLog
   profile: string
@@ -124,7 +126,7 @@ interface Opened {
 }
 
 /** Opens the store and the mailbox for one write command, and closes both after `work`. */
-const organising = async <T>(command: Command, work: (opened: Opened) => Promise<T>): Promise<T> => {
+export const organising = async <T>(command: Command, work: (opened: Opened) => Promise<T>): Promise<T> => {
   const context = contextOf(command)
   refuseOffline(context.flags)
   const address = context.settings.mailbox.address
@@ -158,7 +160,8 @@ const organising = async <T>(command: Command, work: (opened: Opened) => Promise
           organise: providerFor(address, context.settings.mailbox.host)?.organise ?? DEFAULT_ORGANISE,
           now: Date.now,
         }
-        const settings = configuration.resolveSettings(command.optsWithGlobals(), { env: context.env })
+        // baseContext adds an MCP server's own --permission overrides, which a key checked only here would miss.
+        const { settings } = baseContext(command, configuration.resolveSettings)
         const guard = guardFor(
           IDENTITY,
           { ...settings, permissionDefaults: configuration.permissions?.defaults ?? {} },
@@ -169,6 +172,7 @@ const organising = async <T>(command: Command, work: (opened: Opened) => Promise
         const { path, line } = commandLine(command, context.profile)
         return await work({
           mailbox,
+          backend,
           guard,
           profile: context.profile,
           env: context.env,

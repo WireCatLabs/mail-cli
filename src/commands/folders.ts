@@ -83,12 +83,13 @@ const changeFolder = async (
   refuseOffline(context.flags)
   const { backend } = await openMail(context)
   try {
-    const done = await baseContext(command, configuration.resolveSettings).run(async () => {
+    const base = baseContext(command, configuration.resolveSettings)
+    const done = await base.run(async () => {
       const writes = backend.writes
       if (!writes) throw new CliError("provider_unavailable", "this mailbox cannot be changed from here")
       const guard = guardFor(
         IDENTITY,
-        { ...context.settings, permissionDefaults: configuration.permissions?.defaults ?? {} },
+        { ...base.settings, permissionDefaults: configuration.permissions?.defaults ?? {} },
         (message) => outputFor(command).renderer.warn(message),
         context.env,
         terminalAsker(command),

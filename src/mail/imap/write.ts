@@ -127,6 +127,16 @@ export const imapWrites = (pool: Connections): MailWrites => {
         validity,
       ),
 
+    append: (folder, raw, flags) =>
+      pool.writeOnServer(async (open) => {
+        const done = await open.append(folder, Buffer.from(raw), [...flags])
+        if (!done) throw new CliError("provider_unavailable", `the server refused to store the message in ${folder}`)
+        return {
+          ...(done.uid === undefined ? {} : { uid: done.uid }),
+          ...(done.uidValidity === undefined ? {} : { validity: String(done.uidValidity) }),
+        }
+      }),
+
     createFolder: (path) =>
       pool.writeOnServer(async (open) => {
         await open.mailboxCreate(path)

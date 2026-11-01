@@ -394,7 +394,7 @@ mail search messages <query> [options]
 
 **Returns:** message hit — ref, timestamp, sender_name, sender_is_me, chat_title, excerpt, matched_in, score, and 8 more; every field: mail commands info search messages
 
-**Next usually:** `mail messages show <message>`, `mail messages mark-read [message]`, `mail messages mark-unread [message]`
+**Next usually:** `mail messages show <message>`, `mail attachments list <message>`, `mail messages forward <message> [text]`
 
 **Example:** `mail ya search messages invoice`, `mail ya search messages 'from:ann@example.com has:attachment date>30d'`, `mail ya search messages 'list:github.com is:unread' --newest`
 
@@ -650,6 +650,69 @@ mail messages restore [options]
 
 **Example:** `mail ya messages restore --run 20261101T101500Z-messages-delete-1a2b3c`, `mail ya messages restore --run 20261101T101500Z-messages-delete-1a2b3c --yes`
 
+### `mail messages send`
+
+send an email from this profile's address over its SMTP server, with the same app password; without [text] the text is read from stdin. Mail to anyone but you asks first (permissions.messages.send.others). Sent gets a copy where the provider does not file one itself
+
+**Changes something in the service.**
+
+```sh
+mail messages send [text] [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `text` | optional | the text of the message; read from stdin when left out. |
+
+| Option | What it does |
+|---|---|
+| `--to <address>` | who it goes to: an address, or several split by commas; repeat it for more (a reply: instead of its sender). |
+| `--cc <address>` | a copy to this address; repeat it for more. |
+| `--bcc <address>` | a hidden copy to this address; repeat it for more. |
+| `--file <file>` | attach this file, as named, never a pattern; repeat it for more. |
+| `--allow-any-file` | attach a file even from credential folders or this CLI's own folders. |
+| `--operation-id <id>` | repeat a send whose outcome was unknown; Sent is checked first, so it goes once. |
+| `--yes` | answer the question before sending to anyone but you. |
+| `--dry-run` | build the message and show what would go; send nothing. |
+| `--subject <text>` | the subject; a reply takes the original's with Re:. |
+| `--reply-to <message>` | answer this msg:email/… reference: In-Reply-To, References, Re: and the quote. |
+| `--reply-all` | with --reply-to, also to everyone the original went to, except you. |
+
+**Returns:** mail send — sent, operation_id, message_id, from, to, cc, bcc, subject, and 9 more; every field: mail commands info messages send
+
+**Example:** `mail ya messages send --to ann@example.com --subject "Lunch" "See you at noon."`, `mail ya messages send --reply-to 'msg:email/me%40example.com/thread-1/1001' "Thanks, done."`, `mail ya messages send --to ann@example.com --subject Report --file ./report.pdf "The report."`
+
+### `mail messages forward`
+
+forward a stored email to other people: the original goes as an attached message with its own attachments, Fwd: before its subject. Mail to anyone but you asks first (permissions.messages.send.others)
+
+**Changes something in the service.**
+
+```sh
+mail messages forward <message> [text] [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `message` | required | the msg:email/… reference search messages shows. |
+| `text` | optional | a few words above the forwarded message. |
+
+| Option | What it does |
+|---|---|
+| `--to <address>` | who it goes to: an address, or several split by commas; repeat it for more (a reply: instead of its sender). |
+| `--cc <address>` | a copy to this address; repeat it for more. |
+| `--bcc <address>` | a hidden copy to this address; repeat it for more. |
+| `--file <file>` | attach this file, as named, never a pattern; repeat it for more. |
+| `--allow-any-file` | attach a file even from credential folders or this CLI's own folders. |
+| `--operation-id <id>` | repeat a send whose outcome was unknown; Sent is checked first, so it goes once. |
+| `--yes` | answer the question before sending to anyone but you. |
+| `--dry-run` | build the message and show what would go; send nothing. |
+| `--subject <text>` | the subject instead of the original's with Fwd:. |
+
+**Returns:** mail send — sent, operation_id, message_id, from, to, cc, bcc, subject, and 9 more; every field: mail commands info messages forward
+
+**Example:** `mail ya messages forward 'msg:email/me%40example.com/thread-1/1001' --to bob@example.com`, `mail ya messages forward 'msg:email/me%40example.com/thread-1/1001' --to bob@example.com "FYI"`
+
 ## `mail conversations`
 
 the threads of the stored mail: an email and its replies
@@ -690,6 +753,48 @@ mail conversations show <conversation>
 **Returns:** one email thread, every email oldest first
 
 **Example:** `mail ya conversations show 'chat:email/me%40example.com/thread-1'`, `mail ya conversations show 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E'`
+
+## `mail attachments`
+
+### `mail attachments list`
+
+the attachments of one stored email, numbered as attachments download takes them; reads the message from the server
+
+```sh
+mail attachments list <message>
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `message` | required | the msg:email/… reference search messages shows. |
+
+**Returns:** mail attachment — number, name, mime, bytes; every field: mail commands info attachments list
+
+**Example:** `mail ya attachments list 'msg:email/me%40example.com/thread-1/1001'`
+
+### `mail attachments download`
+
+save the attachments of one stored email into a folder, readable only by you; the bytes come from the server and never go into the store. An existing file is left alone unless --replace
+
+**Changes something on this computer only.**
+
+```sh
+mail attachments download <message> [number] [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `message` | required | the msg:email/… reference search messages shows. |
+| `number` | optional | only these attachments, by their number in attachments list (default: all). |
+
+| Option | What it does |
+|---|---|
+| `--output-dir <dir>` | the folder to save into, made if missing. |
+| `--replace` | overwrite a file of the same name in the folder. |
+
+**Returns:** mail attachments saved — folder, files; every field: mail commands info attachments download
+
+**Example:** `mail ya attachments download 'msg:email/me%40example.com/thread-1/1001' --output-dir ./invoices`, `mail ya attachments download 'msg:email/me%40example.com/thread-1/1001' 2 --output-dir ./invoices`
 
 ## `mail doctor`
 
@@ -962,7 +1067,7 @@ mail config set <setting> <value> [options]
 
 | Argument | | What it is |
 |---|---|---|
-| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, runs_size_limit_mb, permissions, requests_per_minute, speech_model, picture_search, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, auth, folders, update_check, skill_hint, search_stemmers.cyrillic, search_stemmers.latin. |
+| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, runs_size_limit_mb, permissions, requests_per_minute, speech_model, picture_search, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, smtp_host, smtp_port, smtp_security, auth, folders, update_check, skill_hint, search_stemmers.cyrillic, search_stemmers.latin. |
 | `value` | required | a number, true or false; for a group tg:work,max:Alice,email:me@x. |
 
 | Option | What it does |
@@ -985,7 +1090,7 @@ mail config unset <setting> [options]
 
 | Argument | | What it is |
 |---|---|---|
-| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, runs_size_limit_mb, permissions, requests_per_minute, speech_model, picture_search, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, auth, folders, update_check, skill_hint, search_stemmers.cyrillic, search_stemmers.latin. |
+| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, runs_size_limit_mb, permissions, requests_per_minute, speech_model, picture_search, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, smtp_host, smtp_port, smtp_security, auth, folders, update_check, skill_hint, search_stemmers.cyrillic, search_stemmers.latin. |
 
 | Option | What it does |
 |---|---|

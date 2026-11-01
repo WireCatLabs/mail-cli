@@ -24,14 +24,14 @@ const overStreams = (input: PassThrough, output: PassThrough): Transport => {
 }
 
 /**
- * `mail personal mcp serve <flags>` as an agent runs it, on streams of its own, with a connected client. `close` ends
+ * `mail <profile> mcp serve <flags>` as an agent runs it, on streams of its own, with a connected client. `close` ends
  * the server and resolves to its exit code.
  */
-export const mcpClient = async (options: RunOptions = {}, flags: string[] = []) => {
+export const mcpClient = async (options: RunOptions = {}, flags: string[] = [], profile = "personal") => {
   const stdin = new PassThrough()
   const stdout = new PassThrough()
   const diagnostic: string[] = []
-  const serving = run(["personal", "mcp", "serve", ...flags], {
+  const serving = run([profile, "mcp", "serve", ...flags], {
     tty: false,
     streams: { data: () => {}, diagnostic: (text) => diagnostic.push(text) },
     ...options,

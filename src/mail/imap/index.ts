@@ -1,4 +1,5 @@
 import type { MailBackend, MailEndpoint } from "../backend.js"
+import { smtpSubmit } from "../smtp.js"
 import { imapAccount } from "./account.js"
 import { type ImapTuning, imapConnections } from "./connection.js"
 import { imapReads } from "./read.js"
@@ -14,6 +15,7 @@ export const imapBackend = (endpoint: MailEndpoint, password: string, tuning: Im
     ...imapReads(pool, tuning),
     ...imapAccount(pool, endpoint.login),
     writes: imapWrites(pool),
+    ...(endpoint.smtp ? { submit: smtpSubmit({ ...endpoint.smtp, login: endpoint.login }, password, tuning) } : {}),
     close: pool.close,
   }
 }

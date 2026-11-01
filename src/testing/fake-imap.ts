@@ -216,6 +216,7 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
     socket.on("close", () => sockets.delete(socket))
     socket.on("error", () => {})
     let buffer = Buffer.alloc(0)
+    let literals: Buffer[] = []
     let selected: FakeFolder | undefined
     const send = (text: string) => socket.write(`${text}\r\n`)
     send(`* OK [CAPABILITY ${capabilities.join(" ")}] fake ready`)
@@ -448,6 +449,15 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
             )
           return send(`${tag} OK done`)
         }
+        case "APPEND": {
+          const words = tokens(tail)
+          const folder = folderNamed(words[0] ?? "")
+          if (!folder) return send(`${tag} NO [TRYCREATE] no such folder`)
+          const { values } = words[1] === "(" ? listOf(words, 1) : { values: [] }
+          const uid = nextUid(folder)
+          folder.messages.push({ uid, raw: Buffer.concat(literals).toString("utf8"), flags: values })
+          return send(`${tag} OK [APPENDUID ${folder.uidValidity ?? 777} ${uid}] appended`)
+        }
         case "CREATE": {
           const [name = ""] = tokens(tail)
           if (folderNamed(name)) return send(`${tag} NO [ALREADYEXISTS] exists`)
@@ -477,14 +487,33 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
       }
     }
 
+    // A command line that ends in `{n}` goes on with n bytes after the server's `+`, as APPEND sends a message.
+    let partial: { line: string; literal: Buffer[] } | undefined
+    let literalLeft = 0
     socket.on("data", (chunk) => {
       buffer = Buffer.concat([buffer, chunk])
       for (;;) {
+        if (literalLeft > 0) {
+          if (buffer.length < literalLeft) return
+          partial?.literal.push(buffer.subarray(0, literalLeft))
+          buffer = buffer.subarray(literalLeft)
+          literalLeft = 0
+        }
         const end = buffer.indexOf("\r\n")
         if (end === -1) return
         const text = buffer.subarray(0, end).toString("utf8")
         buffer = buffer.subarray(end + 2)
-        const [tag = "", ...words] = text.split(" ")
+        const literal = /\{(\d+)\+?\}$/.exec(text)
+        if (literal) {
+          partial = { line: `${partial?.line ?? ""}${text.slice(0, literal.index)}`, literal: partial?.literal ?? [] }
+          literalLeft = Number(literal[1])
+          if (!text.endsWith("+}")) send("+ go ahead")
+          continue
+        }
+        const whole = partial ? `${partial.line}${text}` : text
+        literals = partial?.literal ?? []
+        partial = undefined
+        const [tag = "", ...words] = whole.split(" ")
         if (tag) handle(tag, words.join(" "))
       }
     })

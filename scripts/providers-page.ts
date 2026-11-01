@@ -1,7 +1,7 @@
 import { GENERIC_PREPARE, PROVIDER_KEYS, PROVIDERS, type ProviderKey } from "../dist/providers.js"
 
 const section = (key: ProviderKey): string => {
-  const { name, prepare } = PROVIDERS[key]
+  const { name, prepare, smtp, auth } = PROVIDERS[key]
   const { steps, notes, sources } = prepare
   return [
     `## ${name}`,
@@ -11,6 +11,12 @@ const section = (key: ProviderKey): string => {
     ...notes.map((note) => `- ${note}`),
     ...(notes.length ? [""] : []),
     `Read from: ${sources.map((url) => `<${url}>`).join(", ")}`,
+    "",
+    `Sending: \`${smtp.host}\` port ${smtp.port}, ${smtp.security === "tls" ? "TLS" : "STARTTLS"}, ${auth === "oauth" ? "once OAuth sign-in comes" : "with the same app password"}. ` +
+      (smtp.savesSent
+        ? "The provider files sent mail in Sent itself."
+        : "Its help does not say it files SMTP mail in Sent, so `mail` appends the copy unless Sent has it already.") +
+      ` Read from: ${smtp.sources.map((url) => `<${url}>`).join(", ")}`,
     "",
   ].join("\n")
 }
@@ -35,7 +41,7 @@ export const providersPage = (): string =>
     GENERIC_PREPARE.notes.join(" "),
     "",
     "`session start` finds the server of a new profile through the MX record, Thunderbird's ISPDB and the domain's autoconfig file. If it finds",
-    "none, pass `--host`, `--port` and `--security` yourself. See [use it](usage.md). Those lookups send the domain of the address, never the",
+    "none, pass `--host`, `--port` and `--security` yourself, and for sending set `smtp_host`, `smtp_port` and `smtp_security` with `config set`. See [use it](usage.md). Those lookups send the domain of the address, never the",
     "address itself, to your DNS resolver, to `autoconfig.thunderbird.net` and to `autoconfig.<domain>`; `--provider` or `--host` skips them.",
     "",
   ].join("\n")

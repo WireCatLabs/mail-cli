@@ -24,6 +24,8 @@ its screens; the help page is the source of truth.
 
 Read from: <https://yandex.ru/support/yandex-360/customers/mail/ru/mail-clients/others>, <https://yandex.ru/support/id/ru/authorization/app-passwords>
 
+Sending: `smtp.yandex.ru` port 465, TLS, with the same app password. Its help does not say it files SMTP mail in Sent, so `mail` appends the copy unless Sent has it already. Read from: <https://yandex.ru/support/mail/mail-clients/others.html>
+
 ## Gmail
 
 1. Personal Google Account: IMAP is always on, nothing to switch. Google Workspace: the administrator controls it, and the "Forwarding and POP/IMAP" tab in Gmail Settings, "See all settings", may be missing.
@@ -34,6 +36,8 @@ Read from: <https://yandex.ru/support/yandex-360/customers/mail/ru/mail-clients/
 - App passwords are not offered if 2-Step Verification is set up only for security keys, on a work or school account, or with Advanced Protection on.
 
 Read from: <https://support.google.com/mail/answer/7126229>, <https://support.google.com/accounts/answer/185833>
+
+Sending: `smtp.gmail.com` port 465, TLS, with the same app password. The provider files sent mail in Sent itself. Read from: <https://knowledge.workspace.google.com/admin/gmail/send-email-from-a-printer-scanner-or-app>, <https://support.google.com/mail/answer/78892>
 
 ## iCloud
 
@@ -47,6 +51,8 @@ Read from: <https://support.google.com/mail/answer/7126229>, <https://support.go
 
 Read from: <https://support.apple.com/en-us/102654>, <https://support.apple.com/en-us/102525>
 
+Sending: `smtp.mail.me.com` port 587, STARTTLS, with the same app password. Its help does not say it files SMTP mail in Sent, so `mail` appends the copy unless Sent has it already. Read from: <https://support.apple.com/en-us/102525>
+
 ## Mail.ru
 
 1. Open <https://e.mail.ru/inbox>.
@@ -58,6 +64,8 @@ Read from: <https://support.apple.com/en-us/102654>, <https://support.apple.com/
 - Mail.ru's help page requires a phone number linked to the mailbox (check it under «Контакты и адреса»). It lists no separate IMAP switch, only the server data.
 
 Read from: <https://help.mail.ru/mail/login/mailer/>
+
+Sending: `smtp.mail.ru` port 465, TLS, with the same app password. Its help does not say it files SMTP mail in Sent, so `mail` appends the copy unless Sent has it already. Read from: <https://help.mail.ru/mail/login/mailer/>
 
 ## Fastmail
 
@@ -71,6 +79,8 @@ Read from: <https://help.mail.ru/mail/login/mailer/>
 
 Read from: <https://www.fastmail.help/hc/en-us/articles/360058752854-App-passwords>
 
+Sending: `smtp.fastmail.com` port 465, TLS, with the same app password. Its help does not say it files SMTP mail in Sent, so `mail` appends the copy unless Sent has it already. Read from: <https://www.fastmail.help/hc/en-us/articles/1500000278342-Server-names-and-ports>
+
 ## Outlook
 
 1. Outlook.com: open Settings (the cog), "Mail", "Forwarding and IMAP", turn on "Let devices and apps use IMAP" and save.
@@ -80,10 +90,12 @@ Read from: <https://www.fastmail.help/hc/en-us/articles/360058752854-App-passwor
 
 Read from: <https://support.microsoft.com/en-us/office/pop-imap-and-smtp-settings-for-outlook-com-d088b986-291d-42b8-9564-9c414e2aa040>
 
+Sending: `smtp-mail.outlook.com` port 587, STARTTLS, once OAuth sign-in comes. Its help does not say it files SMTP mail in Sent, so `mail` appends the copy unless Sent has it already. Read from: <https://support.microsoft.com/en-us/office/pop-imap-and-smtp-settings-for-outlook-com-d088b986-291d-42b8-9564-9c414e2aa040>
+
 ## Any other provider
 
 Make sure IMAP is on for the mailbox and, if the provider offers app passwords, make one: a normal password is often refused.
 
 `session start` finds the server of a new profile through the MX record, Thunderbird's ISPDB and the domain's autoconfig file. If it finds
-none, pass `--host`, `--port` and `--security` yourself. See [use it](usage.md). Those lookups send the domain of the address, never the
+none, pass `--host`, `--port` and `--security` yourself, and for sending set `smtp_host`, `smtp_port` and `smtp_security` with `config set`. See [use it](usage.md). Those lookups send the domain of the address, never the
 address itself, to your DNS resolver, to `autoconfig.thunderbird.net` and to `autoconfig.<domain>`; `--provider` or `--host` skips them.
