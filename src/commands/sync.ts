@@ -21,7 +21,7 @@ import { IDENTITY } from "../identity.js"
 import { rethreadStored } from "../mail/rethread.js"
 import { DEFAULT_SYNC, providerFor, type SyncFolders } from "../providers.js"
 import { openMailStore } from "../store.js"
-import { collect, contextOf, openMail, refuseOffline } from "./context.js"
+import { contextOf, openMail, refuseOffline, repeatable } from "./context.js"
 
 const DAY_MS = 86_400_000
 const DEFAULT_DAYS = 30
@@ -133,10 +133,11 @@ export const syncCommand = (): Command =>
       "at most this many requests to the mail server in this run; as many as fit the deadline if not given",
       positiveCount("--max-pages"),
     )
-    .option(
-      "--folder <folder>",
-      "a folder to read; repeat it for more (default: the profile's folders, else INBOX and Sent; All Mail on Gmail)",
-      collect,
+    .addOption(
+      repeatable(
+        "--folder <folder>",
+        "a folder to read; repeat it for more (default: the profile's folders, else INBOX and Sent; All Mail on Gmail)",
+      ),
     )
     .option(
       "--rescan",
@@ -210,7 +211,7 @@ export const syncCommand = (): Command =>
                       limit: args.limit,
                       max_pages: args.maxPages,
                       timeout,
-                      folder: args.folder,
+                      folder: args.folder?.length ? args.folder : undefined,
                       rescan: unthreaded ? true : undefined,
                     }).filter(([, value]) => value !== undefined),
                   ),

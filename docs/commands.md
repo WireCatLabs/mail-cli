@@ -74,7 +74,7 @@ mail session start [options]
 | `--port <port>` | IMAP port (default 993). |
 | `--security <mode>` | tls or starttls (default tls). |
 | `--login <login>` | the login name, when it is not the full address. |
-| `--folder <folder>` | sync only this folder; repeat it for more. |
+| `--folder <folder>` | sync only this folder; repeat it for more. Default: ``. |
 | `--credential-storage <storage>` | where the password is kept: keyring (the default, which falls back to a private file by itself when no keyring works), or file, not recommended. Default: `keyring`. |
 
 **Returns:** sign in; a new profile is created first
@@ -231,7 +231,7 @@ mail sync [options]
 | `--since-time <time>` | only mail received since this date or time; a date alone starts at local midnight, a time without a zone is local (default: 30 days). |
 | `--limit <n>` | save at most this many new emails in this run, newest first. |
 | `--max-pages <pages>` | at most this many requests to the mail server in this run; as many as fit the deadline if not given. |
-| `--folder <folder>` | a folder to read; repeat it for more (default: the profile's folders, else INBOX and Sent; All Mail on Gmail). |
+| `--folder <folder>` | a folder to read; repeat it for more (default: the profile's folders, else INBOX and Sent; All Mail on Gmail). Default: ``. |
 | `--rescan` | list the whole window again; also moves stored replies into their thread where the server has no thread ids. |
 
 **Returns:** mail sync — address, since, timezone, folders, state, requests, listed, saved, and 11 more; every field: mail commands info sync
@@ -445,7 +445,7 @@ mail messages export [query] [options]
 |---|---|
 | `--format <format>` | mbox files or a Maildir++ tree. One of: `mbox`, `maildir`. Default: `mbox`. |
 | `--output <file>` | the folder to write the export into (not one file); made private if it does not exist. |
-| `--folder <folder>` | only mail filed in this folder; repeat it for more (default: the folders sync reads). |
+| `--folder <folder>` | only mail filed in this folder; repeat it for more (default: the folders sync reads). Default: ``. |
 | `--limit <n>` | write at most this many messages in this run, newest first. |
 | `--max-pages <pages>` | at most this many requests to the mail server in this run; as many as fit the deadline if not given. |
 | `--resume` | go on with the export already in the folder, skipping what it holds. |
@@ -575,8 +575,8 @@ mail messages update [message] [options]
 | `--limit <n>` | with --filter, at most this many, newest first (default 500, at most 5000). |
 | `--yes` | make the change; a deletion or a change of many is only a preview without it. |
 | `--dry-run` | only preview what would change, even with --yes. |
-| `--flag <flag>` | a flag or keyword to set; repeat it for more. |
-| `--unflag <flag>` | a flag or keyword to take away; repeat it for more. |
+| `--flag <flag>` | a flag or keyword to set; repeat it for more. Default: ``. |
+| `--unflag <flag>` | a flag or keyword to take away; repeat it for more. Default: ``. |
 | `--replace` | --flag is the whole set: every other flag and keyword is taken away. |
 
 **Returns:** mail change — action, applied, run, selected, located, changed, missing, already_deleted, and 6 more; every field: mail commands info messages update
@@ -698,9 +698,9 @@ mail messages send [text] [options]
 
 | Option | What it does |
 |---|---|
-| `--to <address>` | who it goes to: an address, or several split by commas; repeat it for more (a reply: instead of its sender). |
-| `--cc <address>` | a copy to this address; repeat it for more. |
-| `--bcc <address>` | a hidden copy to this address; repeat it for more. |
+| `--to <address>` | who it goes to: an address, or several split by commas; repeat it for more (a reply: instead of its sender). Default: ``. |
+| `--cc <address>` | a copy to this address; repeat it for more. Default: ``. |
+| `--bcc <address>` | a hidden copy to this address; repeat it for more. Default: ``. |
 | `--file <file>` | attach this file, as named, never a pattern; repeat it for more. Default: ``. |
 | `--allow-any-file` | attach a file even from credential folders or this CLI's own folders. |
 | `--operation-id <id>` | repeat a send whose outcome was unknown; Sent is checked first, so it goes once. |
@@ -731,9 +731,9 @@ mail messages forward <message> [text] [options]
 
 | Option | What it does |
 |---|---|
-| `--to <address>` | who it goes to: an address, or several split by commas; repeat it for more (a reply: instead of its sender). |
-| `--cc <address>` | a copy to this address; repeat it for more. |
-| `--bcc <address>` | a hidden copy to this address; repeat it for more. |
+| `--to <address>` | who it goes to: an address, or several split by commas; repeat it for more (a reply: instead of its sender). Default: ``. |
+| `--cc <address>` | a copy to this address; repeat it for more. Default: ``. |
+| `--bcc <address>` | a hidden copy to this address; repeat it for more. Default: ``. |
 | `--file <file>` | attach this file, as named, never a pattern; repeat it for more. Default: ``. |
 | `--allow-any-file` | attach a file even from credential folders or this CLI's own folders. |
 | `--operation-id <id>` | repeat a send whose outcome was unknown; Sent is checked first, so it goes once. |
@@ -889,9 +889,9 @@ mail drafts create [text] [options]
 
 | Option | What it does |
 |---|---|
-| `--to <address>` | who it goes to; repeat it for more. |
-| `--cc <address>` | a copy to; repeat it for more. |
-| `--bcc <address>` | a blind copy to; repeat it for more. |
+| `--to <address>` | who it goes to: an address, or several split by commas; repeat it for more. Default: ``. |
+| `--cc <address>` | a copy to; repeat it for more. Default: ``. |
+| `--bcc <address>` | a blind copy to; repeat it for more. Default: ``. |
 | `--subject <text>` | the subject line. |
 | `--dry-run` | build the draft and show it; store nothing. |
 | `--reply-to <message>` | answer this stored message: its sender, its subject with Re:, in its thread. |
@@ -918,9 +918,9 @@ mail drafts update <draft> [text] [options]
 
 | Option | What it does |
 |---|---|
-| `--to <address>` | who it goes to; repeat it for more. |
-| `--cc <address>` | a copy to; repeat it for more. |
-| `--bcc <address>` | a blind copy to; repeat it for more. |
+| `--to <address>` | who it goes to: an address, or several split by commas; repeat it for more. Default: ``. |
+| `--cc <address>` | a copy to; repeat it for more. Default: ``. |
+| `--bcc <address>` | a blind copy to; repeat it for more. Default: ``. |
 | `--subject <text>` | the subject line. |
 | `--dry-run` | build the draft and show it; store nothing. |
 

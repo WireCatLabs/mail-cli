@@ -21,13 +21,13 @@ import type { MailEndpoint } from "../mail/backend.js"
 import { profileOf, writeProfile } from "../profile.js"
 import { GENERIC_PREPARE, PROVIDERS_URL, type Prepare, prepareText, providerFor } from "../providers.js"
 import {
-  collect,
   contextOf,
   endpointOf,
   type MailEnvironment,
   openMail,
   passwordsOf,
   refuseOffline,
+  repeatable,
 } from "./context.js"
 import { checkLogin } from "./login.js"
 import { chosen, type MailboxFlags, type Pick, securityOf } from "./mailbox.js"
@@ -66,7 +66,7 @@ export const sessionStartCommand = () =>
     .option("--port <port>", "IMAP port (default 993)")
     .option("--security <mode>", "tls or starttls (default tls)", securityOf)
     .option("--login <login>", "the login name, when it is not the full address")
-    .option("--folder <folder>", "sync only this folder; repeat it for more", collect)
+    .addOption(repeatable("--folder <folder>", "sync only this folder; repeat it for more"))
     .option(
       "--credential-storage <storage>",
       "where the password is kept: keyring (the default, which falls back to a private file by itself when no " +
@@ -99,7 +99,11 @@ export const sessionStartCommand = () =>
       let created: (() => string) | undefined
       if (known) {
         const same = flags.address?.trim().toLowerCase() === context.settings.mailbox.address?.toLowerCase()
-        const given = SERVER_FLAGS.filter((flag) => flags[flag] !== undefined && !(flag === "address" && same))
+        const given = SERVER_FLAGS.filter(
+          (flag) =>
+            (Array.isArray(flags[flag]) ? flags[flag].length > 0 : flags[flag] !== undefined) &&
+            !(flag === "address" && same),
+        )
         if (given.length)
           throw new CliError(
             "validation_error",
