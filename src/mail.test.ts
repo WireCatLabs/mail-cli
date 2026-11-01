@@ -191,7 +191,7 @@ describe("session start of a new profile", () => {
       imap_port: 993,
       imap_security: "tls",
     })
-    expect(statSync(config(env)).mode & 0o777).toBe(0o600)
+    if (process.platform !== "win32") expect(statSync(config(env)).mode & 0o777).toBe(0o600)
     expect(keyring.entries.size).toBe(1)
     expect(everything([wrong, started])).not.toContain(PASSWORD)
     expect(everything([wrong, started])).not.toContain("wrong-password-1")
