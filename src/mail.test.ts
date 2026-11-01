@@ -15,7 +15,8 @@ import { openStore, storePath } from "@wirecat/cli-core/store"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
 import { discover } from "./discovery.js"
-import { type ImapEndpoint, type ImapTuning, imapSource } from "./mail/imap.js"
+import type { MailEndpoint } from "./mail/backend.js"
+import { type ImapTuning, imapBackend } from "./mail/imap/index.js"
 import { run } from "./program.js"
 import { type FakeImap, type FakeOptions, startFakeImap } from "./testing/fake-imap.js"
 
@@ -105,8 +106,8 @@ const harness = async (options: { throttle?: boolean; fake?: Partial<FakeOptions
       keyring,
       himalaya: async () => undefined,
       discovery: { mx: async () => ["mx.yandex.net"], fetch: async () => new Response("", { status: 404 }) },
-      connect: (endpoint: ImapEndpoint, password: string, tuning: ImapTuning = {}) =>
-        imapSource({ ...endpoint, host: "127.0.0.1", port, security: "plain" }, password, {
+      connect: (endpoint: MailEndpoint, password: string, tuning: ImapTuning = {}) =>
+        imapBackend({ ...endpoint, host: "127.0.0.1", port, security: "plain" }, password, {
           sleep: async () => {},
           ...tuning,
           ...fixedTuning,

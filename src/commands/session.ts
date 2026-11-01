@@ -26,7 +26,8 @@ import * as v from "valibot"
 import { configuration } from "../config.js"
 import { PROVIDER_NAMES, prepareFor } from "../discovery.js"
 import { IDENTITY } from "../identity.js"
-import { type ImapEndpoint, imapSource } from "../mail/imap.js"
+import type { MailEndpoint } from "../mail/backend.js"
+import { imapBackend } from "../mail/imap/index.js"
 import { profileOf, writeProfile } from "../profile.js"
 import { PROVIDERS_URL, type Prepare, prepareText } from "../providers.js"
 import { PASSWORD_SOURCES, passwordStore } from "../secret.js"
@@ -94,7 +95,7 @@ const startCommand = () =>
       }
 
       const known = context.settings.mailbox.address !== undefined
-      let endpoint: ImapEndpoint
+      let endpoint: MailEndpoint
       let address: string
       let provider: string
       let prepare: Prepare
@@ -154,7 +155,7 @@ const startCommand = () =>
             : `there is no terminal to ask for the app password; set ${passwordVariable}`,
           { param: passwordVariable },
         )
-      const connect = environment.connect ?? imapSource
+      const connect = environment.connect ?? imapBackend
       const result = await baseContext(this, configuration.resolveSettings).run(() =>
         checkLogin(connect, endpoint, typed, prepare),
       )
@@ -204,7 +205,7 @@ const statusCommand = () =>
       }
       if (!args.check || !stored) return answer(this, status)
       refuseOffline(context.flags)
-      const connect = context.environment.connect ?? imapSource
+      const connect = context.environment.connect ?? imapBackend
       const source = connect(endpointOf(context.settings), stored.secret)
       context.environment.trackCloseable?.(source)
       try {

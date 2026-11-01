@@ -5,7 +5,8 @@ import type { Command } from "commander"
 import { configuration } from "../config.js"
 import type { DiscoveryDeps } from "../discovery.js"
 import { IDENTITY } from "../identity.js"
-import { type ImapEndpoint, type ImapMailSource, type ImapTuning, imapSource } from "../mail/imap.js"
+import type { MailBackend, MailEndpoint } from "../mail/backend.js"
+import { type ImapTuning, imapBackend } from "../mail/imap/index.js"
 import { type LookupHimalaya, passwordStore } from "../secret.js"
 
 /** What a test hands `run()` in place of the network, the keyring and `secret-tool`. */
@@ -13,7 +14,7 @@ export interface MailEnvironment extends BaseEnvironment {
   keyring?: KeyringStore
   himalaya?: LookupHimalaya
   discovery?: DiscoveryDeps
-  connect?: (endpoint: ImapEndpoint, password: string, tuning?: ImapTuning) => ImapMailSource
+  connect?: (endpoint: MailEndpoint, password: string, tuning?: ImapTuning) => MailBackend
 }
 
 export const contextOf = (command: Command) => {
@@ -28,7 +29,7 @@ export const refuseOffline = (flags: GlobalFlags) => {
   if (flags.offline) throw new CliError("permission_error", "this needs the mail server; leave out --offline")
 }
 
-export const endpointOf = (settings: ReturnType<typeof contextOf>["settings"]): ImapEndpoint => {
+export const endpointOf = (settings: ReturnType<typeof contextOf>["settings"]): MailEndpoint => {
   const { address, login, host, port, security } = settings.mailbox
   if (!address || !host || !port || !security)
     throw new CliError(
@@ -60,7 +61,7 @@ export const openSource = async (context: ReturnType<typeof contextOf>, tuning: 
       `no app password for profile ${context.profile}; run \`${IDENTITY.command} ${context.profile} session start\``,
       { reason: "mail.no-password" },
     )
-  const connect = context.environment.connect ?? imapSource
+  const connect = context.environment.connect ?? imapBackend
   const bounds: ImapTuning = {
     timeLeftMs: () => {
       const now = deadline?.()
