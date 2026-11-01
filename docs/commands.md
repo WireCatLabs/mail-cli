@@ -349,7 +349,7 @@ mail rules import <file> [options]
 
 | Option | What it does |
 |---|---|
-| `--format <format>` | the file's format. One of: `mail`, `gmail`. Default: `mail`. |
+| `--format <format>` | the file's format: mail (memo's export is the same file) or gmail. One of: `mail`, `memo`, `gmail`. Default: `mail`. |
 
 **Returns:** import saved rules, or preview Gmail filters
 
