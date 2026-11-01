@@ -45,7 +45,9 @@ name). An existing Himalaya setup then needs no new password.
 
 `sync` reads INBOX and the Sent folder; on Gmail it reads All Mail, since archived mail leaves INBOX. `--folder` or the
 profile's `folders` setting names other folders. It reads the newest mail first. `--limit` caps the new mail of one
-run. `--rescan` lists the whole window again. It saves text and headers only. It does not store attachments.
+run. `--rescan` lists the whole window again. It saves text and headers only. It does not store attachments. The
+rules memo keeps for the account hold here too: mail a skip rule names is not read, and an envelope rule keeps only
+its sender, date and size.
 
 A big mailbox does not fit in one run. `sync` has a budget of requests to the server, set by its deadline: 15
 minutes at a terminal, 45 seconds over MCP. `--timeout` changes the deadline. `--max-pages` lowers the budget. The

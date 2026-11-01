@@ -2,14 +2,13 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
-## Unreleased
+## 0.2.0 — 01.11.2026
 
 ### Added
 
 - **The skill on ClawHub names its program and npm package**, so an OpenClaw user is told to install `@wirecat/mail-cli`
   before the skill works, as with the other WireCat skills.
-- **mail's MCP server is listed in the official MCP Registry** as `dev.wirecat/mail-cli`: `server.json`, `mcpName`,
-  and the registry jobs from cli-template 0.12.0.
+- **mail's MCP server is listed in the official MCP Registry** as `dev.wirecat/mail-cli`.
 - **`session start` prints the server it found before it sends the password**: host, port, security and login, so
   a wrong guess of discovery is seen before the password goes to it.
 - **A new profile saves how it signs in (`auth`).** A profile saved before keeps working with its `imap_*` settings and
@@ -19,7 +18,7 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 - **`sync` reads All Mail on Gmail when the profile names no folders.** Archived Gmail mail leaves INBOX, so a sync of
   INBOX alone took it for deleted. All Mail is found by its role, so a Gmail account in another language works too.
-- **Headers are read by cli-core, as memo reads them.** A mailing list's `List-Id` is stored without its angle
+- **Headers are read as memo reads them.** A mailing list's `List-Id` is stored without its angle
   brackets and in lower case, and Reply-To, Gmail's SPF, DKIM and DMARC verdicts and the attachment hint are read at
   list time, so the owner's rules see the same fields in both tools.
 

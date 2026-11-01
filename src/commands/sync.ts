@@ -145,7 +145,7 @@ export const syncCommand = (): Command =>
     )
     .option(
       "--rescan",
-      "list every message in the window again, not only those an earlier run left; on a server without thread ids it also moves stored replies into their first email's thread",
+      "list the whole window again; also moves stored replies into their thread where the server has no thread ids",
     )
     .action(async function (this: Command, args: SyncFlags) {
       const context = contextOf(this)

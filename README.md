@@ -53,7 +53,8 @@ mail ya mcp config                         # the entry for Claude Desktop, Curso
 ```
 
 `mcp add` stops until you pass `--allow-writes`, because the server's `write` tool runs commands that change local
-data, such as `sync`, which writes into the store and never into the mailbox. Check the profile's permissions first.
+settings, such as `config set` and `skill install`. `sync` runs through `read`: it writes only into the store, never
+into the mailbox. Check the profile's permissions first.
 
 Every command except `mcp serve` takes `--json` and answers one JSON value on stdout; errors are JSON on stderr with a code to branch
 on. Over MCP an agent finds the commands with a search tool and runs them through a `read` and a `write` tool; the
