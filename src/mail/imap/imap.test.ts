@@ -155,7 +155,11 @@ it("makes no retry the run's budget or deadline does not allow", async () => {
   expect((await failureOf(noBudget.search?.(SINCE, "INBOX") as Promise<unknown>))?.code).toBe("network_error")
   await noBudget.close()
   const waits: number[] = []
-  const late = sourceOf(fake.port, undefined, { timeLeftMs: () => 500, sleep: async (ms) => void waits.push(ms) })
+  const late = sourceOf(fake.port, undefined, {
+    timeLeftMs: () => 500,
+    random: () => 0.9,
+    sleep: async (ms) => void waits.push(ms),
+  })
   expect((await failureOf(late.search?.(SINCE, "INBOX") as Promise<unknown>))?.code).toBe("network_error")
   await late.close()
   expect(waits).toEqual([])

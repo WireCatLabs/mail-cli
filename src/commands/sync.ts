@@ -18,7 +18,7 @@ import * as v from "valibot"
 import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
 import { openMailStore } from "../store.js"
-import { collect, contextOf, openSource, refuseOffline } from "./context.js"
+import { collect, contextOf, openMail, refuseOffline } from "./context.js"
 
 const DAY_MS = 86_400_000
 const DEFAULT_DAYS = 30
@@ -150,15 +150,15 @@ export const syncCommand = (): Command =>
       const since = sinceOf(args.sinceTime, zone, Date.now())
       const { signal } = environmentOf(this)
       const budget = runBudgetOf(this, args.maxPages)
-      // A retry is a request of the budget; openSource keeps it from ending after the deadline.
-      const { source } = await openSource(context, { canRetry: () => budget.take() === null })
+      // A retry is a request of the budget; openMail keeps it from ending after the deadline.
+      const { backend } = await openMail(context, { canRetry: () => budget.take() === null })
       try {
         const report = await baseContext(this, configuration.resolveSettings).run(async () => {
-          const folders = await foldersFor(args.folder, context.settings.mailbox.folders, () => source.folderList())
+          const folders = await foldersFor(args.folder, context.settings.mailbox.folders, () => backend.folderList())
           const store = await openMailStore(context.env)
           environmentOf(this).trackCloseable?.(store)
           try {
-            return await syncMail(source, store, {
+            return await syncMail(backend, store, {
               account: { address, mode: "imap", folders },
               since,
               budget,
@@ -239,6 +239,6 @@ export const syncCommand = (): Command =>
           ),
         )
       } finally {
-        await source.close()
+        await backend.close()
       }
     })

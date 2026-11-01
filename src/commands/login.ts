@@ -1,6 +1,6 @@
 import { CliError, isCliError } from "@wirecat/cli-base"
 import { IDENTITY } from "../identity.js"
-import type { MailBackend, MailEndpoint } from "../mail/backend.js"
+import type { MailBackend } from "../mail/backend.js"
 import type { Prepare } from "../providers.js"
 
 /** A refused login, with the provider's likely cause and where the steps are; any other error passes through. */
@@ -14,19 +14,12 @@ const explained = (error: unknown, prepare: Prepare): unknown =>
     : error
 
 /** Logs in once and closes; the password is stored by the caller, only after this succeeds (WC-SECR-5). */
-export const checkLogin = async (
-  connect: (endpoint: MailEndpoint, password: string) => MailBackend,
-  endpoint: MailEndpoint,
-  password: string,
-  prepare: Prepare,
-) => {
-  let source: MailBackend | undefined
+export const checkLogin = async (backend: MailBackend, prepare: Prepare) => {
   try {
-    source = connect(endpoint, password)
-    return await source.check()
+    return await backend.check()
   } catch (error) {
     throw explained(error, prepare)
   } finally {
-    await source?.close()
+    await backend.close()
   }
 }

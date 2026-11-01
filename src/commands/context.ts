@@ -5,8 +5,8 @@ import type { Command } from "commander"
 import { configuration } from "../config.js"
 import type { DiscoveryDeps } from "../discovery.js"
 import { IDENTITY } from "../identity.js"
-import type { MailBackend, MailEndpoint } from "../mail/backend.js"
-import { type ImapTuning, imapBackend } from "../mail/imap/index.js"
+import type { MailEndpoint, OpenBackend, RunBounds } from "../mail/backend.js"
+import { imapBackend } from "../mail/imap/index.js"
 import { type LookupHimalaya, passwordStore } from "../secret.js"
 
 /** What a test hands `run()` in place of the network, the keyring and `secret-tool`. */
@@ -14,7 +14,8 @@ export interface MailEnvironment extends BaseEnvironment {
   keyring?: KeyringStore
   himalaya?: LookupHimalaya
   discovery?: DiscoveryDeps
-  connect?: (endpoint: MailEndpoint, password: string, tuning?: ImapTuning) => MailBackend
+  /** Opens the mailbox in place of IMAP; a test hands in one on its fake server. */
+  backend?: OpenBackend
 }
 
 export const contextOf = (command: Command) => {
@@ -50,28 +51,40 @@ export const passwordsOf = (context: ReturnType<typeof contextOf>) =>
 /** A retry that would end after the run's deadline is not made; this much is kept back for saving and answering. */
 const RETRY_MARGIN_MS = 3_000
 
-/** An opened source for the profile, with the password read from the keyring; call `close` when done. */
-export const openSource = async (context: ReturnType<typeof contextOf>, tuning: ImapTuning = {}) => {
+export interface OpenMailOptions {
+  /** A server not saved in the profile yet: `session start` checks it before saving it. */
+  endpoint?: MailEndpoint
+  /** A password just typed, not read from the keyring. */
+  password?: string
+  canRetry?: () => boolean
+}
+
+/**
+ * The one way a command opens the mailbox: bound by the run's deadline and abort, handed to the runner so a timeout
+ * or a signal closes it too (WC-LIFE-3). The caller still closes it when done.
+ */
+export const openMail = async (context: ReturnType<typeof contextOf>, options: OpenMailOptions = {}) => {
   const { deadline, signal } = context.environment
-  const endpoint = endpointOf(context.settings)
-  const stored = await passwordsOf(context).read()
-  if (!stored)
+  const endpoint = options.endpoint ?? endpointOf(context.settings)
+  const stored = options.password === undefined ? await passwordsOf(context).read() : undefined
+  const password = options.password ?? stored?.secret
+  if (password === undefined)
     throw new CliError(
       "authentication_error",
       `no app password for profile ${context.profile}; run \`${IDENTITY.command} ${context.profile} session start\``,
       { reason: "mail.no-password" },
     )
-  const connect = context.environment.connect ?? imapBackend
-  const bounds: ImapTuning = {
+  const bounds: RunBounds = {
     timeLeftMs: () => {
       const now = deadline?.()
       return now ? now.endsAt - Date.now() - RETRY_MARGIN_MS : undefined
     },
     ...(signal ? { signal } : {}),
+    ...(options.canRetry ? { canRetry: options.canRetry } : {}),
   }
-  const source = connect(endpoint, stored.secret, { ...bounds, ...tuning })
-  context.environment.trackCloseable?.(source)
-  return { source, endpoint, passwordFrom: stored.source }
+  const backend = (context.environment.backend ?? imapBackend)(endpoint, password, bounds)
+  context.environment.trackCloseable?.(backend)
+  return { backend, endpoint, passwordFrom: stored?.source }
 }
 
 export const collect = (value: string, previous: string[] = []): string[] => [...previous, value]

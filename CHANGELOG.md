@@ -11,7 +11,16 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 - **`server.json` and `mcpName` for the official MCP Registry** (`dev.wirecat/mail-cli`). The registry jobs come with
   the next template update; until then nothing is published there.
 
+### Changed
+
+- **`session start` prints the server it found before it sends the password**: host, port, security and login, so
+  a wrong guess of discovery is seen before the password goes to it.
+
 ### Fixed
+
+- **Every command that asks the server is bound by the run's deadline and Ctrl-C.** `session start` and
+  `session status --check` opened the mailbox on their own, without the deadline or the abort the other commands
+  had, and a source could reconnect after it was closed.
 
 - **The schemas of `account check` and `session status` name `file` as a password source.** A password kept in the
   private file was answered as `file` while the published schema allowed only `environment`, `keyring` and

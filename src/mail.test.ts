@@ -15,7 +15,7 @@ import { openStore, storePath } from "@wirecat/cli-core/store"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
 import { discover } from "./discovery.js"
-import type { MailEndpoint } from "./mail/backend.js"
+import type { AccountCheck, MailBackend, MailEndpoint, RunBounds } from "./mail/backend.js"
 import { type ImapTuning, imapBackend } from "./mail/imap/index.js"
 import { run } from "./program.js"
 import { type FakeImap, type FakeOptions, startFakeImap } from "./testing/fake-imap.js"
@@ -106,10 +106,10 @@ const harness = async (options: { throttle?: boolean; fake?: Partial<FakeOptions
       keyring,
       himalaya: async () => undefined,
       discovery: { mx: async () => ["mx.yandex.net"], fetch: async () => new Response("", { status: 404 }) },
-      connect: (endpoint: MailEndpoint, password: string, tuning: ImapTuning = {}) =>
+      backend: (endpoint: MailEndpoint, password: string, bounds: RunBounds = {}) =>
         imapBackend({ ...endpoint, host: "127.0.0.1", port, security: "plain" }, password, {
           sleep: async () => {},
-          ...tuning,
+          ...bounds,
           ...fixedTuning,
         }),
       ...extra,
@@ -201,6 +201,7 @@ describe("session start of a new profile", () => {
   it("puts the provider's steps on stderr before the password is used", async () => {
     const { mail } = await harness()
     const started = await mail(["ya", "session", "start", "--address", ADDRESS, "--json"], typed(PASSWORD))
+    expect(started.err).toContain("Server: imap.yandex.com:993 (tls), login me@example.com")
     expect(started.err).toContain("Prepare the Yandex mailbox first:")
     expect(started.err).toContain("«Создать пароль приложения»")
     expect(started.out).not.toContain("«Создать пароль приложения»")
@@ -491,6 +492,39 @@ describe("account check, folders and sync", () => {
     expect((await h.mail(["ya", "session", "start", "--json"], typed(PASSWORD))).code).toBe(0)
     return h
   }
+
+  it("opens the mailbox for every server command through one backend, bound by the run and closed after", async () => {
+    const { mail } = await harness()
+    const opened: { bounds: RunBounds; closed: boolean }[] = []
+    const backend = (_endpoint: MailEndpoint, _password: string, bounds: RunBounds = {}): MailBackend => {
+      const record = { bounds, closed: false }
+      opened.push(record)
+      return {
+        list: async () => [],
+        search: async () => ({ validity: "1", uids: [] }),
+        fetchRaw: async () => [],
+        folderList: async () => [{ path: "INBOX", name: "INBOX", role: "inbox", messages: 0, unseen: 0 }],
+        check: async () => ({ login: ADDRESS, capabilities: [], features: {} as AccountCheck["features"], folders: 1 }),
+        close: async () => {
+          record.closed = true
+        },
+      }
+    }
+    const runs = [
+      ["ya", "session", "start", "--address", ADDRESS, "--json"],
+      ["ya", "session", "status", "--check", "--json"],
+      ["ya", "account", "check", "--json"],
+      ["ya", "folders", "list", "--json"],
+      ["ya", "sync", "--json"],
+    ]
+    for (const argv of runs) expect((await mail(argv, { backend, ...typed(PASSWORD) })).code).toBe(0)
+    expect(opened).toHaveLength(runs.length)
+    for (const { bounds, closed } of opened) {
+      expect(closed).toBe(true)
+      expect(bounds.timeLeftMs).toBeTypeOf("function")
+    }
+    expect(opened.at(-1)?.bounds.canRetry).toBeTypeOf("function")
+  })
 
   it("fails with the next step when no password is stored", async () => {
     const { mail } = await harness()
