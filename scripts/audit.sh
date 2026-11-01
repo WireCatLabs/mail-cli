@@ -17,18 +17,30 @@ npm install -g --prefix "$scratch/prefix" --ignore-scripts --no-audit --no-fund 
   @wirecat/gcal-cli
 bin="$scratch/prefix/bin"
 others=()
+names=()
 for cli in tg max wa memo drive zm gcal; do
-  [ "$cli" = "$command" ] || others+=(--cli "$bin/$cli")
+  [ "$cli" = "$command" ] || { others+=(--cli "$bin/$cli"); names+=("$cli"); }
 done
 # This CLI's entity schemas and error reasons, from its own `commands info`, so same-entity-schema and
-# same-error-reason measure it. shared-command-contract needs `--complete`, which wants cli-core's doctor contract.
+# same-error-reason measure it.
 node "$root/dist/bin/$command.js" commands info --json >"$scratch/info.json"
 node -e 'const info = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"))
 require("fs").writeFileSync(process.argv[2], JSON.stringify(info.schemas))
 require("fs").writeFileSync(process.argv[3], JSON.stringify(info.reasons))' \
   "$scratch/info.json" "$scratch/schemas.json" "$scratch/reasons.json"
-"$root/node_modules/.bin/cli-dev" audit --cli "$root/dist/bin/$command.js" "${others[@]}" --for "$command" \
+# --complete reads each CLI's contract references, so a divergence that comes from cli-core's shared commands (mail's
+# `search messages` beside the messengers') is accepted as inherited. It also reports gaps in the other CLIs'
+# published evidence; those are theirs to fix and do not fail this build.
+status=0
+"$root/node_modules/.bin/cli-dev" audit --complete --cli "$root/dist/bin/$command.js" "${others[@]}" --for "$command" \
   --lint "$command=$root/lint" --schemas "$command=$scratch/schemas.json" --reasons "$command=$scratch/reasons.json" \
-  >"$scratch/scorecard.txt" || { cat "$scratch/scorecard.txt"; exit 1; }
+  >"$scratch/scorecard.txt" 2>"$scratch/problems.txt" || status=$?
+theirs="^($(IFS='|'; echo "${names[*]}")): complete audit "
+if [ "$status" -ne 0 ] && { ! grep -q " 0 new that block" "$scratch/problems.txt" ||
+  grep -Ev "$theirs|^audit: |^review the rule " "$scratch/problems.txt" | grep -q .; }; then
+  cat "$scratch/scorecard.txt" "$scratch/problems.txt"
+  exit 1
+fi
+grep -E "$theirs" "$scratch/problems.txt" >&2 || true
 awk -v cli="$command" 'NR == 1 || $1 == cli' "$scratch/scorecard.txt"
 grep -q "^$command  *total " "$scratch/scorecard.txt" || { echo "audit: no scorecard row for $command" >&2; exit 1; }

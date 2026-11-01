@@ -9,11 +9,15 @@ an [issue on GitHub](https://github.com/WireCatLabs/mail-cli/issues).
 `mail` reads a mailbox over IMAP into the shared WireCat store and never changes the mailbox. It finds the server of
 a new address by itself: a built-in table, the MX record, Thunderbird's ISPDB and the domain's autoconfig file. It
 signs in with an app password kept in the OS keyring, which works for Yandex, Gmail, iCloud, Mail.ru, Fastmail and
-other providers that offer app passwords. You search and read the stored mail through `memo`. An MCP server gives
+other providers that offer app passwords. It searches and reads the stored mail of a profile (`search messages`, `messages show`, `conversations`); `memo`
+searches every mailbox together with messages and notes. An MCP server gives
 AI agents the same commands. Every command is in the [command reference](commands.md).
 
 ## Next
 
+- **Search on the server** (IMAP SEARCH, Gmail's own search) for mail not synced yet, and **export** to `.eml` files
+  and mailbox archives.
+- **Writing**: move, flag and delete with undo, then send, reply and drafts, behind the profile's permissions.
 - **OAuth sign-in for Outlook, Microsoft 365 and Google Workspace.** Microsoft accepts only OAuth for IMAP, so these
   mailboxes cannot be added yet, and a Workspace domain that turns app passwords off needs it too.
 

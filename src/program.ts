@@ -21,6 +21,7 @@ import { appUpdate } from "@wirecat/cli-core/update"
 import type { Command } from "commander"
 import { accountCommand } from "./commands/account.js"
 import { foldersCommand } from "./commands/folders.js"
+import { readCommands } from "./commands/read.js"
 import { sessionCommand } from "./commands/session.js"
 import { statusCommand } from "./commands/status.js"
 import { syncCommand } from "./commands/sync.js"
@@ -49,6 +50,7 @@ export const definition = (): ProgramDefinition => ({
     foldersCommand(),
     syncCommand(),
     statusCommand(),
+    ...readCommands(),
     appDoctorCommand(IDENTITY, configuration, { packageName: PACKAGE }),
     skillCommand(IDENTITY, SKILL),
     appMcpCommand(IDENTITY, configuration, {

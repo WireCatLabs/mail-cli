@@ -851,3 +851,132 @@ describe("account check, folders and sync", () => {
     expect(bad.code).not.toBe(0)
   })
 })
+
+describe("search, show and threads", () => {
+  const bill =
+    `Message-ID: <bill@example.com>\r\nDate: Tue, 27 Oct 2026 10:00:00 +0000\r\nFrom: Ann <ann@example.com>\r\n` +
+    `To: ${ADDRESS}\r\nSubject: Счёт за октябрь\r\nMIME-Version: 1.0\r\n` +
+    `Content-Type: multipart/mixed; boundary="b1"\r\n\r\n--b1\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n` +
+    `Оплатите счёт до пятницы.\r\n--b1\r\nContent-Type: text/plain; charset=utf-8; name="bill.txt"\r\n` +
+    `Content-Disposition: attachment; filename="bill.txt"\r\n\r\nИтого 85,93 € к оплате\r\n--b1--\r\n`
+  const synced = async () => {
+    const h = await harness({
+      fake: {
+        folders: [
+          {
+            name: "INBOX",
+            messages: [
+              { uid: 1, raw: bill, date: "27-Oct-2026 10:00:00 +0000" },
+              {
+                uid: 2,
+                raw: raw(
+                  "paid",
+                  "Re: Счёт за октябрь",
+                  "Оплатил вчера.",
+                  "In-Reply-To: <bill@example.com>\r\n",
+                ).replace("10:00:00", "11:00:00"),
+              },
+              {
+                uid: 3,
+                raw: raw(
+                  "digest",
+                  "Weekly digest",
+                  "New releases.",
+                  "List-Id: CLI core <cli-core.wirecatlabs.github.com>\r\n",
+                ),
+              },
+            ],
+          },
+        ],
+      },
+    })
+    await profileSet(h.mail)
+    expect((await h.mail(["ya", "session", "start", "--json"], typed(PASSWORD))).code).toBe(0)
+    expect((await h.mail(["ya", "sync", "--since-time", "2026-10-01", "--folder", "INBOX", "--json"])).code).toBe(0)
+    const store = await openStore({ path: storePath(h.env), env: h.env, command: "mail" })
+    try {
+      const other = await store.accounts.saveAccount(
+        { provider: "email", account: "other@example.com" },
+        { name: null },
+      )
+      await store.mail.saveThread({
+        accountId: other,
+        externalId: "theirs",
+        now: Date.now(),
+        emails: [
+          {
+            externalId: "<theirs@example.com>",
+            subject: "Счёт",
+            from: null,
+            sentAt: Date.now(),
+            bodyText: "Чужой счёт",
+          },
+        ],
+      })
+    } finally {
+      await store.close()
+    }
+    const json = async (...argv: string[]) => {
+      const answer = await h.mail(["ya", ...argv, "--json"])
+      expect(answer.code, answer.err).toBe(0)
+      return JSON.parse(answer.out)
+    }
+    return { ...h, json }
+  }
+  const refs = (body: { items: { ref: string }[] }) => body.items.map(({ ref }) => ref)
+
+  it("finds the profile's synced mail by any form of a word, by attachment and by list, and no other mailbox's", async () => {
+    const { json } = await synced()
+    const bills = await json("search", "messages", "счета")
+    expect(bills.items).toHaveLength(2)
+    expect(refs(bills).every((ref) => ref.startsWith("msg:email/me%40example.com/"))).toBe(true)
+    expect(await json("search", "messages", "has:attachment")).toMatchObject({
+      items: [{ chat_title: "Счёт за октябрь", excerpt: expect.stringContaining("Оплатите") }],
+    })
+    expect(await json("search", "messages", "list:github.com")).toMatchObject({
+      items: [{ chat_title: "Weekly digest" }],
+    })
+    const older = await json(
+      ...["search", "messages", "счёт", "--newest", "--limit", "1", "--page", "2"],
+      ...["--exact", "--plain-order", "--timezone", "Europe/Madrid"],
+    )
+    expect(older.items).toMatchObject([{ chat_title: "Счёт за октябрь", excerpt: expect.stringContaining("Оплатите") }])
+  })
+
+  it("shows an email with its attachment's text, and its thread oldest first", async () => {
+    const { json } = await synced()
+    const [ref] = refs(await json("search", "messages", "has:attachment"))
+    const shown = await json("messages", "show", ref as string)
+    expect(shown.item.text).toContain("Оплатите счёт")
+    expect(shown.item.attachments).toMatchObject([{ name: "bill.txt", text: expect.stringContaining("85,93") }])
+    expect((await json("messages", "show", ref as string, "--before-n", "1", "--after-n", "1")).items).toHaveLength(2)
+    const threads = await json("conversations", "list")
+    expect(threads.items).toHaveLength(2)
+    expect(refs(await json("conversations", "list", "--limit", "1", "--page", "2"))).toEqual([threads.items[1].ref])
+    const billThread = threads.items.find((one: { emails_count: number }) => one.emails_count === 2)
+    expect(billThread).toMatchObject({ subject: "Счёт за октябрь" })
+    expect(refs(await json("conversations", "list", "emails_count>1"))).toEqual([billThread.ref])
+    const thread = await json("conversations", "show", billThread.ref)
+    expect(thread.items.map((one: { text: string }) => one.text)).toEqual([
+      expect.stringContaining("Оплатите"),
+      expect.stringContaining("Оплатил вчера"),
+    ])
+  })
+
+  it("refuses an email of another mailbox, and says to sync when nothing is stored", async () => {
+    const { mail } = await synced()
+    const theirs = await mail([
+      "ya",
+      "messages",
+      "show",
+      "msg:email/other%40example.com/theirs/%3Ctheirs%40example.com%3E",
+    ])
+    expect(theirs.code).not.toBe(0)
+    expect(theirs.err).toContain("not mail of this profile")
+    const empty = await harness()
+    await profileSet(empty.mail)
+    const none = await empty.mail(["ya", "search", "messages", "invoice"])
+    expect(none.code).not.toBe(0)
+    expect(none.err).toContain("ya sync")
+  })
+})

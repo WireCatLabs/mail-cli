@@ -1,4 +1,5 @@
-mail — read mail over IMAP into the shared store, with app passwords kept in the OS keyring
+mail — read mail over IMAP into the shared store and search it, with app passwords kept in the OS
+keyring
 
 Usage: mail <profile> <command> [options]
 Account commands start with your profile, a name you choose; none is ever assumed.
