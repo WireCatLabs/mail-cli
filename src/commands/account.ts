@@ -12,6 +12,7 @@ import { Command } from "commander"
 import * as v from "valibot"
 import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
+import { PASSWORD_SOURCES } from "../secret.js"
 import { contextOf, openSource, refuseOffline } from "./context.js"
 
 const mailAccountCheck = v.strictObject({
@@ -19,7 +20,7 @@ const mailAccountCheck = v.strictObject({
   host: v.string(),
   port: v.number(),
   security: v.picklist(["tls", "starttls", "plain"]),
-  password_from: v.picklist(["environment", "keyring", "himalaya"]),
+  password_from: v.picklist(PASSWORD_SOURCES),
   login: v.string(),
   capabilities: v.array(v.string()),
   features: v.record(v.string(), v.boolean()),

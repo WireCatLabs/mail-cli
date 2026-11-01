@@ -65,6 +65,10 @@ it("commands info exports the schemas and reasons", async () => {
   const { code, out } = await ran(["commands", "info", "--json"])
   expect(code).toBe(0)
   expect(out.length).toBeGreaterThan(0)
+  const { schemas } = JSON.parse(out)
+  const sources = ["environment", "keyring", "file", "himalaya"]
+  expect(schemas.mail_account_check.properties.password_from.enum).toEqual(sources)
+  expect(schemas.mail_session_status.properties.password_from.anyOf[0].enum).toEqual(sources)
 })
 
 it("skill install writes the skill for Claude Code", async () => {

@@ -2,7 +2,9 @@ import { execFile } from "node:child_process"
 import { Credentials, isMovedRun, type KeyringStore, resolvePaths, systemKeyring } from "@wirecat/cli-base"
 import { IDENTITY } from "./identity.js"
 
-export type PasswordSource = "environment" | "keyring" | "file" | "himalaya"
+export const PASSWORD_SOURCES = ["environment", "keyring", "file", "himalaya"] as const
+
+export type PasswordSource = (typeof PASSWORD_SOURCES)[number]
 
 export type LookupHimalaya = (account: string) => Promise<string | undefined>
 

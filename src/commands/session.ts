@@ -29,7 +29,7 @@ import { IDENTITY } from "../identity.js"
 import { type ImapEndpoint, imapSource } from "../mail/imap.js"
 import { profileOf, writeProfile } from "../profile.js"
 import { PROVIDERS_URL, type Prepare, prepareText } from "../providers.js"
-import { passwordStore } from "../secret.js"
+import { PASSWORD_SOURCES, passwordStore } from "../secret.js"
 import { collect, contextOf, endpointOf, type MailEnvironment, passwordsOf, refuseOffline } from "./context.js"
 import { checkLogin } from "./login.js"
 import { chosen, type MailboxFlags, type Pick, securityOf } from "./mailbox.js"
@@ -171,7 +171,7 @@ const startCommand = () =>
       })
     })
 
-const passwordFrom = v.nullable(v.picklist(["environment", "keyring", "himalaya"]))
+const passwordFrom = v.nullable(v.picklist(PASSWORD_SOURCES))
 
 const mailSessionStatus = v.strictObject({
   profile: v.string(),

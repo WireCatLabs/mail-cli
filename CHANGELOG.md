@@ -11,6 +11,12 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 - **`server.json` and `mcpName` for the official MCP Registry** (`dev.wirecat/mail-cli`). The registry jobs come with
   the next template update; until then nothing is published there.
 
+### Fixed
+
+- **The schemas of `account check` and `session status` name `file` as a password source.** A password kept in the
+  private file was answered as `file` while the published schema allowed only `environment`, `keyring` and
+  `himalaya`, so a client that checks answers against the schema refused it.
+
 ## 0.1.1 — 01.11.2026
 
 ### Fixed
