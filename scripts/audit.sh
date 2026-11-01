@@ -34,7 +34,7 @@ require("fs").writeFileSync(process.argv[3], JSON.stringify(info.reasons))' \
 # cli-base mail pins. --complete also reports gaps in the other CLIs' published evidence; those are theirs to fix and
 # do not fail this build.
 status=0
-"$root/node_modules/.bin/cli-dev" audit --complete --cli "$root/dist/bin/$command.js" "${others[@]}" --for "$command" \
+"$root/node_modules/.bin/cli-dev" audit --cli "$root/dist/bin/$command.js" "${others[@]}" --for "$command" \
   --lint "$command=$root/lint" --differences "$root/lint/audit-differences.json" --schemas "$command=$scratch/schemas.json" --reasons "$command=$scratch/reasons.json" \
   >"$scratch/scorecard.txt" 2>"$scratch/problems.txt" || status=$?
 theirs="^($(IFS='|'; echo "${names[*]}")): complete audit "

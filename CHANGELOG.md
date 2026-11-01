@@ -94,6 +94,10 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Fixed
 
+- **Built on cli-core 0.529.0 and cli-base 0.71.0.** The command lint now knows `drafts`, `--cc`, `--bcc` and
+  `--reply-all`, and accepts `--to <address>` and `--subject <text>` beside the messengers' `<chat>` and `<ref>`, so
+  thirteen lint overrides are gone and the budget is 11. The audit compares mail in cli-base's `mail-shared` group and
+  runs without `--complete`. cli-core also stops hiding a locked store when it scores senders.
 - **Gmail labels are decoded once.** imapflow already decodes them, and mail decoded `R&D-team` again into `Rteam`.
 - **`sync` says when it leaves stored rules out**: `rules_unread` and `rules_unread_why` (such as `condition label`)
   in the answer and a `mail.rules-unreadable` issue, when the rules hold a condition this mail does not know.
