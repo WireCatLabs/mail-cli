@@ -117,6 +117,15 @@ profile's mailbox only; [memo](https://github.com/WireCatLabs/cli-memo) searches
 messages and notes (`memo search mail`, `memo search all`). The store keeps text, not the original message, so there
 is no raw source to show.
 
+`search messages` also asks the mail server, so mail sync has not read yet is found too: Gmail with its own search
+over All Mail, other servers with IMAP SEARCH in INBOX, Sent and Archive (or the profile's `folders`). What the server
+finds is stored and the same query decides, so each hit says `found_in`: `archive`, `server` (new from the server)
+or `both`. `--backend archive` keeps to the store, `--backend server` answers only what the server found, and
+`--server-time 20s` waits longer than the default 5 seconds. The server reads words, `from:`, `to:`, `cc:`,
+`subject:`, `body:`, `is:` and `date:`; the rest of the query is applied to what it returns. IMAP SEARCH matches parts
+of words and no other forms of a word, so a server can miss a hit that the store, with every form, finds after sync.
+`permissions.messages.server-search=deny` in the profile turns the server search off.
+
 Mail from a sender whose mail looks like spam or a scam comes after the rest of a page; `--plain-order` keeps the
 order the words give. `messages show` gives the first 4,000 characters of each attachment's text; `--full` gives all
 of it and the HTML body. `--before-n` and `--after-n` add the emails around it in its thread.

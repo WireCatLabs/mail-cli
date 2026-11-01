@@ -1,4 +1,5 @@
 import { GMAIL_ALL_MAIL } from "@wirecat/cli-core/mail"
+import type { SearchSyntax } from "./mail/imap/search.js"
 
 export const PROVIDERS_URL = "https://github.com/WireCatLabs/mail-cli/blob/main/docs/providers.md"
 
@@ -28,6 +29,13 @@ export interface SyncFolders {
   otherwise: string
 }
 
+/** How `search messages --backend` asks the server, and which folders by role when the profile names none. */
+export interface ServerSearch {
+  syntax: SearchSyntax
+  roles: string[]
+  otherwise: string
+}
+
 /** How a change reaches the mailbox, where providers differ. */
 export interface Organise {
   /** Gmail: one All Mail with labels, so a move or copy is a change of labels, and a deletion a move to Trash. */
@@ -50,6 +58,7 @@ export interface Provider {
   auth: "app-password" | "oauth"
   note?: string
   sync?: SyncFolders
+  search?: ServerSearch
   organise?: Organise
   prepare: Prepare
 }
@@ -97,6 +106,8 @@ const TABLE = {
     note: "needs 2-step verification and an app password; IMAP downloads are capped at 2500 MB a day",
     // Archived mail leaves INBOX; read from INBOX alone it would look deleted.
     sync: { mode: "gmail", roles: ["all"], otherwise: GMAIL_ALL_MAIL },
+    // X-GM-RAW in All Mail searches every label at once, in Gmail's own syntax.
+    search: { syntax: "gmail", roles: ["all"], otherwise: GMAIL_ALL_MAIL },
     organise: {
       labels: true,
       trash: ["[Gmail]/Trash", "[Google Mail]/Trash"],
@@ -220,6 +231,7 @@ export const providerByDomain = (domain: string): ProviderKey | undefined =>
 
 export const DEFAULT_SYNC: SyncFolders = { roles: ["inbox", "sent"], otherwise: "INBOX" }
 
+export const DEFAULT_SEARCH: ServerSearch = { syntax: "imap", roles: ["inbox", "sent", "archive"], otherwise: "INBOX" }
 export const DEFAULT_ORGANISE: Organise = {
   trash: ["Trash", "Deleted Items", "Deleted Messages"],
   drafts: ["Drafts", "Draft", "Черновики"],

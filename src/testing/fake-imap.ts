@@ -44,6 +44,8 @@ export interface FakeOptions {
   hangFetches?: boolean
   /** Changes the folder's UIDVALIDITY after this many connections have been dropped by `dropFetches`. */
   validityAfterDrop?: number
+  /** Answers a UID SEARCH by criteria, literals inlined, as a server's own search does; `undefined` falls through. */
+  search?: (criteria: string, folder: string) => number[] | undefined
   /**
    * Gmail: X-GM-EXT-1, ids and labels as X-GM-MSGID and X-GM-LABELS, and a mailbox where every message outside Trash
    * and Spam lives in All Mail and INBOX is only its `\\Inbox` label.
@@ -311,7 +313,9 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
             const messages = selected?.messages ?? []
             const all = messages.map((message) => message.uid)
             const test = criteria(tokens(more.join(" ")))
-            const found = messages.filter((message) => test(message, all)).map((message) => message.uid)
+            const found =
+              options.search?.(more.join(" "), selected?.name ?? "") ??
+              messages.filter((message) => test(message, all)).map((message) => message.uid)
             send(`* SEARCH ${found.join(" ")}`.trimEnd())
             return send(`${tag} OK done`)
           }
@@ -477,6 +481,9 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
       }
     }
 
+    // A non-ASCII search value comes as a literal: `{n}`, the go-ahead, then n bytes and the rest of the line.
+    let pending = ""
+    let literalBytes = 0
     /** APPEND's message comes as a literal after its line: `{n}`, a `+` from us, then n bytes. */
     const append = (tag: string, line: string, raw: string) => {
       commands.push(`APPEND ${line}`)
@@ -502,14 +509,28 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
           append(tag, line, raw)
           continue
         }
+        if (literalBytes > 0) {
+          if (buffer.length < literalBytes) return
+          pending += JSON.stringify(buffer.subarray(0, literalBytes).toString("utf8"))
+          buffer = buffer.subarray(literalBytes)
+          literalBytes = 0
+        }
         const end = buffer.indexOf("\r\n")
         if (end === -1) return
-        const text = buffer.subarray(0, end).toString("utf8")
+        const text = pending + buffer.subarray(0, end).toString("utf8")
+        pending = ""
         buffer = buffer.subarray(end + 2)
         const [tag = "", verb = "", ...words] = text.split(" ")
         const size = /\{(\d+)(\+?)\}$/.exec(text)
         if (verb.toUpperCase() === "APPEND" && size) {
           appending = { tag, line: words.join(" ").replace(/\s*\{\d+\+?\}$/, ""), size: Number(size[1]) }
+          if (!size[2]) send("+ go ahead")
+          continue
+        }
+        // A search value outside ASCII comes as a literal too: `{n}`, the go-ahead, then n bytes and the rest of the line.
+        if (size) {
+          pending = text.slice(0, size.index)
+          literalBytes = Number(size[1])
           if (!size[2]) send("+ go ahead")
           continue
         }
