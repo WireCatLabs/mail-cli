@@ -12,11 +12,12 @@ import {
   renderAnswer,
   runBudgetOf,
 } from "@wirecat/cli-core/cli"
-import { type MailSyncResult, syncMail } from "@wirecat/cli-core/mail"
+import { type MailSyncResult, storedMailRules, syncMail } from "@wirecat/cli-core/mail"
 import { Command } from "commander"
 import * as v from "valibot"
 import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
+import { rethreadStored } from "../mail/rethread.js"
 import { DEFAULT_SYNC, providerFor, type SyncFolders } from "../providers.js"
 import { openMailStore } from "../store.js"
 import { collect, contextOf, openMail, refuseOffline } from "./context.js"
@@ -103,6 +104,8 @@ const mailSync = v.strictObject({
   deleted: v.number(),
   complete: v.boolean(),
   remaining: v.number(),
+  /** With --rescan: stored emails moved to the thread their References name. */
+  rethreaded: v.optional(v.number()),
   unreadable: v.number(),
   deletions_skipped: v.optional(v.string()),
   hint: v.optional(v.string()),
@@ -140,7 +143,10 @@ export const syncCommand = (): Command =>
       "a folder to read; repeat it for more (default: the profile's folders, else INBOX and Sent; All Mail on Gmail)",
       collect,
     )
-    .option("--rescan", "list every message in the window again, not only those an earlier run left")
+    .option(
+      "--rescan",
+      "list every message in the window again, not only those an earlier run left; on a server without thread ids it also moves stored replies into their first email's thread",
+    )
     .action(async function (this: Command, args: SyncFlags) {
       const context = contextOf(this)
       refuseOffline(context.flags)
@@ -153,31 +159,41 @@ export const syncCommand = (): Command =>
       // A retry is a request of the budget; openMail keeps it from ending after the deadline.
       const { backend } = await openMail(context, { canRetry: () => budget.take() === null })
       try {
-        const report = await baseContext(this, configuration.resolveSettings).run(async () => {
+        const { report, rethreaded } = await baseContext(this, configuration.resolveSettings).run(async () => {
           const { mailbox } = context.settings
           const defaults = providerFor(address, mailbox.host)?.sync ?? DEFAULT_SYNC
           const folders = await foldersFor(args.folder, mailbox.folders, defaults, () => backend.folderList())
           const store = await openMailStore(context.env)
           environmentOf(this).trackCloseable?.(store)
           try {
-            return await syncMail(backend, store, {
-              account: { address, mode: "imap", folders },
+            // The stored rules, as memo passes them: the saved position holds their fingerprint, so both must agree.
+            const rules = await storedMailRules(store, { address })
+            const report = await syncMail(backend, store, {
+              account: { address, mode: defaults.mode ?? "imap", folders, rules },
               since,
               budget,
               ...(args.limit === undefined ? {} : { max: args.limit }),
               ...(args.rescan ? { rescan: true } : {}),
               ...(signal ? { signal } : {}),
             })
+            const key = { provider: "email", account: address.toLowerCase() }
+            const rethreaded =
+              args.rescan && !report.stopped
+                ? await rethreadStored(backend, store, key, folders, since, () => budget.take() === null)
+                : undefined
+            return { report, rethreaded }
           } finally {
             await store.close()
           }
         })
         const issues = issuesOf(report)
-        // cli-core reports a run its `max` cut short only as incomplete, with no reason and nothing remaining.
+        // cli-core reports a run its `max` cut short as incomplete with what it left, but with no reason.
         const limited = args.limit !== undefined && !report.complete && !report.stopped && report.saved >= args.limit
         const stopped = report.stopped ?? (limited ? "limit" : undefined)
-        const partial = (report.state ?? (report.complete ? "complete" : "partial")) === "partial" || limited
-        const moved = report.saved + report.alreadyStored + report.skipped + report.envelopes > 0
+        const unthreaded = rethreaded !== undefined && !rethreaded.complete
+        const partial =
+          (report.state ?? (report.complete ? "complete" : "partial")) === "partial" || limited || unthreaded
+        const moved = report.saved + report.alreadyStored + report.skipped + report.envelopes > 0 || unthreaded
         const timeout = this.optsWithGlobals<{ timeout?: string }>().timeout
         const next: NextStep[] =
           partial && moved
@@ -193,20 +209,25 @@ export const syncCommand = (): Command =>
                       max_pages: args.maxPages,
                       timeout,
                       folder: args.folder,
+                      rescan: unthreaded ? true : undefined,
                     }).filter(([, value]) => value !== undefined),
                   ),
                   why: limited
-                    ? `the run saved the ${args.limit} new emails --limit allows; running it again saves the next ones`
-                    : "the sync stopped before its end to answer in time; running it again goes on from where it stopped",
+                    ? `the run saved the ${args.limit} new emails --limit allows and left ${report.remaining ?? 0}; running it again saves the next ones`
+                    : unthreaded
+                      ? "the run stopped while it moved stored replies into their threads; --rescan again goes on"
+                      : "the sync stopped before its end to answer in time; running it again goes on from where it stopped",
                   safe_to_auto_execute: true,
                 },
               ]
             : []
         const hint = !partial
           ? undefined
-          : moved
-            ? `run sync again to continue; ${IDENTITY.command} ${context.profile} status shows how far it is`
-            : "this run moved nothing on: raise --timeout or --max-pages, then run sync again"
+          : limited
+            ? `${report.remaining ?? 0} new emails are left; run sync again to save the next ${args.limit}`
+            : moved
+              ? `run sync again to continue; ${IDENTITY.command} ${context.profile} status shows how far it is`
+              : "this run moved nothing on: raise --timeout or --max-pages, then run sync again"
         renderAnswer(
           this,
           outputFor(this),
@@ -225,6 +246,7 @@ export const syncCommand = (): Command =>
               deleted: report.deleted,
               complete: report.complete,
               remaining: report.remaining ?? 0,
+              ...(rethreaded ? { rethreaded: rethreaded.moved } : {}),
               unreadable: report.unreadable?.length ?? 0,
               ...(report.deletionsSkipped ? { deletions_skipped: report.deletionsSkipped } : {}),
               ...(hint ? { hint } : {}),

@@ -22,6 +22,8 @@ export interface Prepare {
 
 /** Which folders `sync` reads when neither the profile nor `--folder` names any: by role, else the named one. */
 export interface SyncFolders {
+  /** `gmail`: one All Mail with labels, as memo syncs it, so both tools keep the same saved position. */
+  mode?: "gmail"
   roles: string[]
   otherwise: string
 }
@@ -82,7 +84,7 @@ const TABLE = {
     auth: "app-password",
     note: "needs 2-step verification and an app password; IMAP downloads are capped at 2500 MB a day",
     // Archived mail leaves INBOX; read from INBOX alone it would look deleted.
-    sync: { roles: ["all"], otherwise: GMAIL_ALL_MAIL },
+    sync: { mode: "gmail", roles: ["all"], otherwise: GMAIL_ALL_MAIL },
     prepare: {
       steps: [
         'Personal Google Account: IMAP is always on, nothing to switch. Google Workspace: the administrator controls it, and the "Forwarding and POP/IMAP" tab in Gmail Settings, "See all settings", may be missing.',

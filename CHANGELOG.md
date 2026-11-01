@@ -25,9 +25,16 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Fixed
 
+- **`sync` applies the account's stored mail rules, as memo does.** A skip or envelope rule decided in memo now holds
+  for `mail sync` too, and both tools keep the same saved position, which holds a fingerprint of the rules. A Gmail
+  profile syncs in Gmail mode, as memo does.
+- **Gmail labels are named as memo names them** (`Inbox`, `Sent`, `Starred`, decoded names), so stored `label:Inbox`
+  mailboxes keep matching and nothing is stored as `label:\Inbox`.
+- **`sync --rescan` moves replies stored by 0.1 into their thread** on a server without thread ids, such as Yandex.
+  The answer says how many in `rethreaded`. Gmail's threads are not touched.
 - **A reply is stored in its conversation on servers without thread ids, such as Yandex and Mail.ru.** The thread is
-  the first email named in References, else in In-Reply-To. Mail synced before keeps the thread it was stored with.
-  Gmail keeps its own ids.
+  the first email named in References, else in In-Reply-To. Mail stored before moves with `sync --rescan`
+  (above). Gmail keeps its own ids.
 - **Every command that asks the server is bound by the run's deadline and Ctrl-C.** `session start` and
   `session status --check` opened the mailbox on their own, without the deadline or the abort the other commands
   had, and a source could reconnect after it was closed.
@@ -36,8 +43,9 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 - **The schemas of `account check` and `session status` name `file` as a password source.** A password kept in the
   private file was answered as `file` while the published schema allowed only `environment`, `keyring` and
   `himalaya`, so a client that checks answers against the schema refused it.
-- **A `sync` that `--limit` stopped says so.** It answers `stopped: "limit"`, and its next step says the run saved
-  the emails `--limit` allows, instead of saying it stopped to answer in time.
+- **A `sync` that `--limit` stopped says so.** It answers `stopped: "limit"` and how many new emails it left in
+  `remaining`, and its next step says the run saved the emails `--limit` allows, instead of saying it stopped to
+  answer in time.
 
 ## 0.1.1 — 01.11.2026
 
