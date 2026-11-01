@@ -9,10 +9,12 @@ import {
   FETCH,
   itemOf,
   outputFor,
+  positiveCount,
   renderAnswer,
   runBudgetOf,
 } from "@wirecat/cli-core/cli"
 import { type Quick, searchMail } from "@wirecat/cli-core/mail"
+import { refusedPlace } from "@wirecat/cli-core/sends"
 import type { FolderEmail } from "@wirecat/cli-core/store"
 import { Command, Option } from "commander"
 import * as v from "valibot"
@@ -24,7 +26,7 @@ import { IDENTITY } from "../identity.js"
 import { DEFAULT_SYNC, providerFor } from "../providers.js"
 import { openMailStore } from "../store.js"
 import { collect, contextOf, openMail, refuseOffline } from "./context.js"
-import { foldersFor, wholeNumberFor } from "./sync.js"
+import { foldersFor } from "./sync.js"
 
 const PAGE = 100
 const FETCH_SLICE = 50
@@ -95,11 +97,11 @@ export const exportLeaf = (): Command =>
       "only mail filed in this folder; repeat it for more (default: the folders sync reads)",
       collect,
     )
-    .option("--limit <n>", "write at most this many messages in this run, newest first", wholeNumberFor("limit"))
+    .option("--limit <n>", "write at most this many messages in this run, newest first", positiveCount("--limit"))
     .option(
       "--max-pages <pages>",
       "at most this many requests to the mail server in this run; as many as fit the deadline if not given",
-      wholeNumberFor("max-pages"),
+      positiveCount("--max-pages"),
     )
     .option("--resume", "go on with the export already in the folder, skipping what it holds")
     .option("--replace", "write into a folder that has something in it, over files of the same name")
@@ -118,6 +120,12 @@ export const exportLeaf = (): Command =>
       if (args.resume && args.replace)
         throw new CliError("validation_error", "--resume and --replace cannot be used together", { param: "replace" })
       const destination = resolve(args.output)
+      if (refusedPlace(destination, IDENTITY, context.env))
+        throw new CliError(
+          "validation_error",
+          `will not export into ${args.output}: credential folders and the WireCat apps' folders are not written to`,
+          { param: "output" },
+        )
       const account = address.toLowerCase()
       const journal = await openJournal({
         path: destination,

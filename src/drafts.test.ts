@@ -152,7 +152,7 @@ describe("drafts on an IMAP server", () => {
     expect(one.items[0].text).toBe("Another")
   })
 
-  it("deletes a draft only with --yes, and a dry run changes nothing", async () => {
+  it("deletes a draft only with --allow-dangerous, never with --yes, and a dry run changes nothing", async () => {
     const all = folders([
       { uid: 7, raw: raw("old-draft", "Old idea", "Draft text", ADDRESS), flags: ["\\Draft", "\\Seen"], date: OLD },
     ])
@@ -160,10 +160,20 @@ describe("drafts on an IMAP server", () => {
     const preview = await mail(["ya", "drafts", "delete", "old-draft@example.com", "--json"])
     expect(preview.code, preview.err).toBe(0)
     expect(item(preview.out)).toMatchObject({ applied: false, uid: 7, subject: "Old idea" })
-    const dry = await mail(["ya", "drafts", "delete", "old-draft@example.com", "--yes", "--dry-run", "--json"])
+    const dry = await mail([
+      "ya",
+      "drafts",
+      "delete",
+      "old-draft@example.com",
+      "--allow-dangerous",
+      "--dry-run",
+      "--json",
+    ])
     expect(item(dry.out)).toMatchObject({ applied: false })
+    const yes = await mail(["ya", "drafts", "delete", "old-draft@example.com", "--yes", "--json"])
+    expect(item(yes.out)).toMatchObject({ applied: false })
     expect(draftsIn(all)).toHaveLength(1)
-    const deleted = await mail(["ya", "drafts", "delete", "old-draft@example.com", "--yes", "--json"])
+    const deleted = await mail(["ya", "drafts", "delete", "old-draft@example.com", "--allow-dangerous", "--json"])
     expect(deleted.code, deleted.err).toBe(0)
     expect(item(deleted.out)).toMatchObject({ action: "delete", applied: true })
     expect(draftsIn(all)).toHaveLength(0)

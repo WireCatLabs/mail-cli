@@ -2,6 +2,27 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Changed — may break callers
+
+- **`drafts delete` takes `--allow-dangerous`, not `--yes`**, because a draft deleted this way does not come back
+  (WC-PERM-9). Only the owner passes it; an agent over MCP gets a preview.
+
+### Added
+
+- **`messages export --output` refuses credential folders** and the WireCat apps' folders, as `attachments download`
+  does.
+
+### Fixed
+
+- **An agent over MCP can attach several files**: `--file` of `messages send` and `messages forward` is a list there.
+- **Sending a message no longer shortens the archive's coverage** to the last 10 minutes, which memo reported until
+  the next full sync.
+- **`attachments list` and `download` show every attachment**, not the first 50, and `drafts update` keeps them all.
+- **Attachments are saved through cli-core's atomic write**, which also syncs the file and the folder to disk.
+- The `memo mail delete` command is named as it is now, in the docs and the help of `messages delete --rules`.
+
 ## 0.6.0 — 01.11.2026
 
 ### Added

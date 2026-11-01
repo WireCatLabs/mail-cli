@@ -29,7 +29,7 @@ const saved = v.looseObject({
 /** The message's attachments as the store numbered them at sync: the same parser, so the same order and names. */
 const attachmentsOf = async (opened: Opened, reference: string) => {
   const { raw } = await fetchOriginal(opened.mailbox, opened.backend, reference, opened.profile)
-  const parsed = await parseMail(raw)
+  const parsed = await parseMail(raw, undefined, Number.POSITIVE_INFINITY)
   const names = distinctNames(parsed.attachments.map(({ id, name }) => safeName(name, `attachment-${id + 1}`)))
   return parsed.attachments.map((one, at) => ({
     number: one.id + 1,
@@ -121,7 +121,7 @@ const downloadCommand = (): Command =>
         })
       const files = wanted.map((one) => ({ ...one, path: resolve(folder, one.name) }))
       if (!flags.replace) for (const { path } of files) refuseExisting(path)
-      for (const { path, content } of files) savePrivately(path, content, flags.replace === true)
+      for (const { path, content } of files) await savePrivately(path, content, flags.replace === true)
       renderAnswer(
         this,
         outputFor(this),

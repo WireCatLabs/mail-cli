@@ -183,7 +183,7 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `drafts update` | `--subject` | ✅ |  |
 | `drafts update` | `--dry-run` | ✅ |  |
 | `drafts delete` |  | ✅ |  |
-| `drafts delete` | `--yes` | ✅ |  |
+| `drafts delete` | `--allow-dangerous` | ✅ |  |
 | `drafts delete` | `--dry-run` | ✅ |  |
 | `drafts send` |  | ✅ |  |
 | `drafts send` | `--operation-id` | ✅ |  |

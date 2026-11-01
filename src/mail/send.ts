@@ -103,6 +103,7 @@ const storeSent = async (sending: Sending): Promise<boolean> => {
     const report: MailSyncResult = await syncMail(sending.backend, sending.mailbox.store, {
       account: { address, mode, folders, rules },
       since: new Date(Date.now() - SYNC_WINDOW_MS),
+      saveCoverage: false,
     })
     return report.saved + report.alreadyStored > 0
   } catch {

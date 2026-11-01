@@ -1,7 +1,7 @@
 import type { KeyringStore } from "@wirecat/cli-base"
 import { CliError } from "@wirecat/cli-base"
 import { type BaseEnvironment, environmentOf, type GlobalFlags } from "@wirecat/cli-core/cli"
-import type { Command } from "commander"
+import { type Command, Option } from "commander"
 import { configuration } from "../config.js"
 import type { DiscoveryDeps } from "../discovery.js"
 import { IDENTITY } from "../identity.js"
@@ -99,3 +99,7 @@ export const openMail = async (context: ReturnType<typeof contextOf>, options: O
 }
 
 export const collect = (value: string, previous: string[] = []): string[] => [...previous, value]
+
+/** The empty list as its default is what tells the MCP tool to take a list for the option, not one string. */
+export const repeatable = (flags: string, description: string): Option =>
+  new Option(flags, description).argParser(collect).default([], "none")
