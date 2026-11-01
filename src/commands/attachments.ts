@@ -121,7 +121,7 @@ const downloadCommand = (): Command =>
         })
       const files = wanted.map((one) => ({ ...one, path: resolve(folder, one.name) }))
       if (!flags.replace) for (const { path } of files) refuseExisting(path)
-      for (const { path, content } of files) savePrivately(path, content, flags.replace === true)
+      for (const { path, content } of files) await savePrivately(path, content, flags.replace === true)
       renderAnswer(
         this,
         outputFor(this),
