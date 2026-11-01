@@ -34,6 +34,18 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 - **Permissions:** `messages.delete`, `folders.delete` and `messages.bulk` (any change of many) ask; the rest of the
   changes go ahead. `MAIL_READ_ONLY=1` refuses them all. Each attempt goes into the send journal (cli-core 0.522.0).
 - Error reasons (`mail.no-trash`, `mail.run-unknown`, `mail.archive-unverified`, …) now reach the JSON error.
+- **`mail <profile> drafts list|create|update|delete`** keeps drafts in the mailbox's own Drafts folder, so an agent
+  writes one and the owner checks and sends it from any mail app. `create` takes `--to`, `--cc`, `--bcc`, `--subject`
+  and the text (`-` reads stdin); `--reply-to <ref> [--reply-all]` answers a stored message in its thread. A draft is
+  named by its Message-ID; `update` replaces only what is given and keeps the rest, the thread and the attachments;
+  `delete` removes it for good and asks first (`drafts.delete`). Nothing is sent: `drafts send` comes with sending.
+- **`mail <profile> tags add|remove <tag…> --message <ref> | --chat <ref>`** and **`tags list`** put your own tags on
+  stored mail and conversations. They stay in the local store, in the same tables memo tags with, and never reach the
+  server; `search messages tag:<tag>` finds them. Provider keywords stay `messages update --flag`, Gmail labels
+  `messages move|copy --folder`.
+- **`mail doctor`** says when a change run stopped part way, and when mail a run moved to Gmail's Trash is within five
+  days of Gmail emptying it, with the `messages restore` command for each. memo's doctor said this until the cleanup
+  moved here; memo's own cleanup runs count too. It needs cli-core 0.524.0 (`appDoctorCommand`'s `local` check).
 
 ### Changed — may break callers
 

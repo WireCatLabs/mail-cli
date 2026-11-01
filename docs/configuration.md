@@ -26,8 +26,9 @@ key. Over MCP there is no one to ask, so `ask` lets the command run. `MAIL_READ_
 the permissions say.
 
 The key of a command is its path: `messages.move`, `folders.delete`. Built in, a change that can be undone goes ahead
-(flags, moves, copies, folders made or renamed), and these ask: `messages.delete`, `folders.delete`, and
-`messages.bulk`, which every change of more than 20 messages or chosen by `--filter` passes as well. At a terminal
+(flags, moves, copies, folders made or renamed, drafts saved), and these ask: `messages.delete`, `folders.delete`,
+`drafts.delete`, and `messages.bulk`, which every change of more than 20 messages or chosen by `--filter` passes as
+well. At a terminal
 `ask` is a y/N question; `--yes` answers it.
 
 ```sh
