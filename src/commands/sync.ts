@@ -95,7 +95,7 @@ const mailSync = v.strictObject({
   timezone: v.string(),
   folders: v.array(v.string()),
   state: v.picklist(["partial", "complete"]),
-  stopped: v.optional(v.picklist(["requests", "deadline", "cancelled"])),
+  stopped: v.optional(v.picklist(["requests", "deadline", "cancelled", "limit"])),
   requests: v.number(),
   listed: v.number(),
   saved: v.number(),
@@ -171,7 +171,10 @@ export const syncCommand = (): Command =>
           }
         })
         const issues = issuesOf(report)
-        const partial = report.state === "partial"
+        // cli-core reports a run its `max` cut short only as incomplete, with no reason and nothing remaining.
+        const limited = args.limit !== undefined && !report.complete && !report.stopped && report.saved >= args.limit
+        const stopped = report.stopped ?? (limited ? "limit" : undefined)
+        const partial = (report.state ?? (report.complete ? "complete" : "partial")) === "partial" || limited
         const moved = report.saved + report.alreadyStored + report.skipped + report.envelopes > 0
         const timeout = this.optsWithGlobals<{ timeout?: string }>().timeout
         const next: NextStep[] =
@@ -190,7 +193,9 @@ export const syncCommand = (): Command =>
                       folder: args.folder,
                     }).filter(([, value]) => value !== undefined),
                   ),
-                  why: "the sync stopped before its end to answer in time; running it again goes on from where it stopped",
+                  why: limited
+                    ? `the run saved the ${args.limit} new emails --limit allows; running it again saves the next ones`
+                    : "the sync stopped before its end to answer in time; running it again goes on from where it stopped",
                   safe_to_auto_execute: true,
                 },
               ]
@@ -209,8 +214,8 @@ export const syncCommand = (): Command =>
               since: report.since,
               timezone: zone,
               folders: report.coverage?.folders ?? [],
-              state: report.state ?? (report.complete ? "complete" : "partial"),
-              ...(report.stopped ? { stopped: report.stopped } : {}),
+              state: partial ? "partial" : "complete",
+              ...(stopped ? { stopped } : {}),
               requests: report.requests ?? 0,
               listed: report.listed,
               saved: report.saved,

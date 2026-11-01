@@ -515,6 +515,18 @@ describe("account check, folders and sync", () => {
     expect(everything([checked, folders])).not.toContain(PASSWORD)
   })
 
+  it("says the password came from the private file when the keyring is not available", async () => {
+    const { mail } = await harness()
+    await profileSet(mail)
+    const keyring = brokenKeyring()
+    vi.spyOn(process.stderr, "write").mockImplementation(() => true)
+    expect((await mail(["ya", "session", "start", "--json"], { ...typed(PASSWORD), keyring })).code).toBe(0)
+    const checked = await mail(["ya", "account", "check", "--json"], { keyring })
+    vi.restoreAllMocks()
+    expect(checked.code).toBe(0)
+    expect(item(checked.out)).toMatchObject({ password_from: "file" })
+  })
+
   it("syncs INBOX into the shared store, keeps mail as text, and skips what it already has", async () => {
     const { mail, env, everything } = await ready()
     const first = await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])
@@ -563,6 +575,10 @@ describe("account check, folders and sync", () => {
       "--json",
     ])
     expect(item(limited.out)).toMatchObject({ saved: 1 })
+    const body = JSON.parse(limited.out)
+    expect(body.item).toMatchObject({ state: "partial", stopped: "limit" })
+    expect(body.next[0]).toMatchObject({ command: "sync", args: { since_time: "2026-10-01", limit: 1 } })
+    expect(body.next[0].why).toContain("--limit")
     const store = await openStore({ path: storePath(env), env, command: "mail" })
     try {
       const accountId = await store.accounts.saveAccount({ provider: "email", account: ADDRESS }, { name: ADDRESS })

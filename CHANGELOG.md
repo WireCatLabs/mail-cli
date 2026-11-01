@@ -17,6 +17,9 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   private file was answered as `file` while the published schema allowed only `environment`, `keyring` and
   `himalaya`, so a client that checks answers against the schema refused it.
 
+- **A `sync` that `--limit` stopped says so.** It answers `stopped: "limit"`, and its next step says the run saved
+  the emails `--limit` allows, instead of saying it stopped to answer in time.
+
 ## 0.1.1 — 01.11.2026
 
 ### Fixed
