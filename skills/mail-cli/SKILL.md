@@ -1,6 +1,14 @@
 ---
 name: mail-cli
 description: Read the owner's mailbox through mail, a WireCat CLI — check an account, list folders and sync mail over IMAP into the shared store, with JSON answers. Use when a task needs fresh mail in the store. It never asks for or prints a password, and it cannot send.
+metadata:
+  openclaw:
+    requires:
+      bins: [mail]
+    install:
+      - kind: node
+        package: "@wirecat/mail-cli"
+        bins: [mail]
 ---
 
 # mail
