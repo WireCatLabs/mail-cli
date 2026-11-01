@@ -19,7 +19,7 @@ permissions and the read-only lock first, and a deletion and a change of many ar
 restore: `drafts delete` and `drafts send` expunge the draft, undoing `messages copy` outside Gmail expunges the copy
 (only the UID the server gave it, never a message found again by its Message-ID), and `folders delete
 --allow-dangerous` deletes a folder with its mail. Only you pass `--allow-dangerous`, at a terminal: an agent over MCP
-never gets it, so it deletes only an empty folder. `messages delete --rules` refuses to run from a schedule.
+never gets it, so it deletes only an empty folder and only previews `drafts delete`. `messages delete --rules` refuses to run from a schedule.
 
 An agent that holds `mcp.authority` may change settings, but not the mailbox's server settings (`imap_host`,
 `smtp_host` and the rest), which decide where the app password goes, nor `permissions.messages.send.others`.

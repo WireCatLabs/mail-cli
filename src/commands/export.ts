@@ -14,6 +14,7 @@ import {
   runBudgetOf,
 } from "@wirecat/cli-core/cli"
 import { type Quick, searchMail } from "@wirecat/cli-core/mail"
+import { refusedPlace } from "@wirecat/cli-core/sends"
 import type { FolderEmail } from "@wirecat/cli-core/store"
 import { Command, Option } from "commander"
 import * as v from "valibot"
@@ -119,6 +120,12 @@ export const exportLeaf = (): Command =>
       if (args.resume && args.replace)
         throw new CliError("validation_error", "--resume and --replace cannot be used together", { param: "replace" })
       const destination = resolve(args.output)
+      if (refusedPlace(destination, IDENTITY, context.env))
+        throw new CliError(
+          "validation_error",
+          `will not export into ${args.output}: credential folders and the WireCat apps' folders are not written to`,
+          { param: "output" },
+        )
       const account = address.toLowerCase()
       const journal = await openJournal({
         path: destination,

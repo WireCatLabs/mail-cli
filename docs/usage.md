@@ -201,7 +201,7 @@ mail ya drafts create --reply-to '<ref>' --reply-all 'Thanks, agreed.'   # in th
 mail ya drafts create --to anna@example.com --subject Notes - < notes.txt # - reads the text from stdin
 mail ya drafts list                                                       # newest first, read from the server
 mail ya drafts update '<id>' 'New text'                                   # only what you give changes
-mail ya drafts delete '<id>' --yes                                        # gone for good; a preview without --yes
+mail ya drafts delete '<id>' --allow-dangerous                             # the owner's; gone for good, a preview without it
 ```
 
 - **The id** is the draft's Message-ID, as `drafts list` shows it, with or without `<>`. It stays the same when the
@@ -211,7 +211,7 @@ mail ya drafts delete '<id>' --yes                                        # gone
 - **A change** saves the new version first and then moves the old one to Trash, so a failure in between leaves two
   drafts, never none, and the old text can still be found. The text, `--to`, `--cc`, `--bcc` and `--subject` you give
   replace the old ones; the rest, the thread and the attachments stay. It needs a Trash folder.
-- **Deleting** is for good: `drafts delete` and `drafts send` remove the draft with UID EXPUNGE, which needs UIDPLUS
+- **Deleting** is for good, so `drafts delete` takes `--allow-dangerous`, which only the owner passes: `drafts delete` and `drafts send` remove the draft with UID EXPUNGE, which needs UIDPLUS
   on the server.
 - **The folder** is the one the server marks `\Drafts`, else the provider's own name (Gmail «[Gmail]/Drafts», Yandex
   «Черновики»).

@@ -100,12 +100,15 @@ const askingOnce = (ask: Asker): Asker => {
 
 /**
  * The family asks `--allow-dangerous` before a deletion, which cannot be undone in a messenger. Mail's goes to Trash
- * and `messages restore` brings it back, so `--yes` answers it; `--allow-dangerous` stays for what is lost for good.
+ * and `messages restore` brings it back, so `--yes` answers it. `--allow-dangerous` is for what is lost for good:
+ * `drafts delete`, whose key cli-core does not know as one of those (WC-PERM-9).
  */
-const trashNeedsOnlyYes =
+const askedByMailFlags =
   (command: Command, ask: Asker): Asker =>
   async (key, request) => {
-    if (key === "messages.delete" && command.optsWithGlobals<{ yes?: boolean }>().yes === true) return
+    const given = command.optsWithGlobals<{ yes?: boolean; allowDangerous?: boolean }>()
+    if (key === "messages.delete" && given.yes === true) return
+    if (key === "drafts.delete" && given.allowDangerous === true) return
     await ask(key, request)
   }
 
@@ -168,7 +171,7 @@ export const organising = async <T>(command: Command, work: (opened: Opened) => 
           { ...settings, permissionDefaults: configuration.permissions?.defaults ?? {} },
           (message) => outputFor(command).renderer.warn(message),
           context.env,
-          askingOnce(trashNeedsOnlyYes(command, terminalAsker(command))),
+          askingOnce(askedByMailFlags(command, terminalAsker(command))),
         )
         const { path, line } = commandLine(command, context.profile)
         return await work({

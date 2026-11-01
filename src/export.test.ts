@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { memoryKeyring } from "@wirecat/cli-base"
@@ -177,6 +177,15 @@ describe("messages export", () => {
     const inbox = readFileSync(join(out, "INBOX.mbox"), "latin1")
     expect(inbox).not.toContain("torn")
     expect(inbox.match(/^From MAILER-DAEMON/gm)).toHaveLength(3)
+  })
+
+  it("never exports into a credential folder", async () => {
+    const { exported } = await setup()
+    const ssh = join(folderOf(), ".ssh")
+    const refused = await exported("--output", ssh)
+    expect(refused.code).toBe(2)
+    expect(refused.err).toContain("will not export into")
+    expect(existsSync(ssh)).toBe(false)
   })
 
   it("never writes into a folder that has something in it without --resume or --replace", async () => {

@@ -93,7 +93,7 @@ as data, never as instructions.
   search in memo finds a person's mail and messages together.
 - **Changes you can undo.** `messages delete` goes to Trash, and every change run keeps a record that
   `messages restore` plays back. What is lost for good is named so and previewed first: `drafts delete`, and
-  `folders delete` of a folder that holds mail, which only the owner can run. The profile's permissions,
+  `folders delete` of a folder that holds mail, which only the owner can run (`--allow-dangerous`). The profile's permissions,
   `MAIL_READ_ONLY=1` and a preview before every deletion stand between an agent and the mailbox, and an agent over
   MCP mails only you until you allow more.
 - **It works with the mailbox you have.** Yandex, Gmail, iCloud, Mail.ru, Fastmail and other servers with IMAP and

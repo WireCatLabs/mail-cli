@@ -9,6 +9,7 @@ import {
   LOCAL_READ,
   listOf,
   outputFor,
+  ownerOnlyOption,
   REMOTE_READ,
   REMOTE_WRITE,
   renderAnswer,
@@ -308,19 +309,21 @@ const deleteCommand = () =>
   answerEntity(
     annotate(new Command("delete"), {
       effects: REMOTE_WRITE,
-      examples: [`${IDENTITY.command} ya drafts delete ${ID} --yes`],
+      examples: [`${IDENTITY.command} ya drafts delete ${ID} --allow-dangerous`],
     }),
     "mail_draft_change",
     draftChange,
   )
     .summary("delete a draft for good")
-    .description("delete a draft from the Drafts folder for good, with no restore; a preview without --yes")
+    .description(
+      "delete a draft from the Drafts folder for good, with no restore; the owner adds --allow-dangerous to do it, without it a preview",
+    )
     .argument("<draft>", "the draft's id, as drafts list shows it")
-    .option("--yes", "delete it; without it, only a preview")
-    .option("--dry-run", "only preview, even with --yes")
-    .action(async function (this: Command, draft: string, options: { yes?: boolean; dryRun?: boolean }) {
+    .addOption(ownerOnlyOption("--allow-dangerous", "delete it for good, no restore; without it, only a preview"))
+    .option("--dry-run", "only preview, even with --allow-dangerous")
+    .action(async function (this: Command, draft: string, options: { dryRun?: boolean }) {
       const id = draftIdOf(draft)
-      const yes = this.optsWithGlobals<{ yes?: boolean }>().yes === true || options.yes === true
+      const dangerous = this.optsWithGlobals<{ allowDangerous?: boolean }>().allowDangerous === true
       await organising(this, async (opened) => {
         const folder = await draftsFolder(opened)
         const found = await findDraft(opened.backend, folder, id)
@@ -332,8 +335,12 @@ const deleteCommand = () =>
           subject: found.read.draft.subject,
           to: found.read.draft.to,
         }
-        if (options.dryRun === true || !yes)
-          return answer(this, { ...shown, applied: false, hint: "a preview: nothing changed; add --yes to delete it" })
+        if (options.dryRun === true || !dangerous)
+          return answer(this, {
+            ...shown,
+            applied: false,
+            hint: "a preview: nothing changed; the owner adds --allow-dangerous to delete it for good",
+          })
         await guarded(opened, "drafts.delete", () => opened.mailbox.writes.expunge(folder, found.validity, [found.uid]))
         answer(this, { ...shown, applied: true })
       })
