@@ -1,0 +1,16 @@
+[
+  {
+    "group": "all",
+    "rule": "same-flag-meaning",
+    "target": "mail+max+tg+wa --to",
+    "expected": "mail: <address>, tg: <chat>, max: <chat>, wa: <chat>",
+    "reason": "A mail recipient is an e-mail address, a messenger's a chat; mail keeps the word every mail tool uses until the owner decides (NEED-2113)."
+  },
+  {
+    "group": "all",
+    "rule": "same-flag-meaning",
+    "target": "mail+memo --subject",
+    "expected": "mail: <text>, memo: <ref>",
+    "reason": "A mail subject line is text, memo's --subject a reference to what a note is about; mail keeps the mail word until the owner decides (NEED-2113)."
+  }
+]

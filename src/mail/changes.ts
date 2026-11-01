@@ -200,3 +200,86 @@ export const readRun = (env: NodeJS.ProcessEnv, account: string, id: string): { 
     },
   }
 }
+
+export interface RunSummary {
+  id: string
+  account: string
+  command: string
+  started_at: string
+  /** No end line: the process stopped part way, so some steps may be done and others not. */
+  unfinished: boolean
+  restorable_until: string | null
+  /** Moved to Trash and not restored since. */
+  in_trash: number
+}
+
+const summaryOf = (lines: Line[]): RunSummary | undefined => {
+  const run = lines.find((line): line is RunLine => line.type === "run")
+  if (!run) return undefined
+  const done = new Set(
+    lines
+      .filter((line): line is DoneLine => line.type === "done")
+      .flatMap(({ step, ids }) => ids.map((one) => `${step}:${one}`)),
+  )
+  const restored = new Set(
+    lines.filter((line): line is RestoreLine => line.type === "restore").flatMap(({ ids }) => ids),
+  )
+  const trashed = new Set(
+    lines
+      .filter((line): line is StepLine => line.type === "step" && line.op === "trash")
+      .flatMap(({ step, items }) => items.filter(({ id }) => done.has(`${step}:${id}`)).map(({ id }) => id)),
+  )
+  return {
+    id: run.id,
+    account: run.account,
+    command: run.command,
+    started_at: run.started_at,
+    unfinished: !lines.some(({ type }) => type === "end"),
+    restorable_until: run.restorable_until ?? null,
+    in_trash: [...trashed].filter((one) => !restored.has(one)).length,
+  }
+}
+
+/** memo's cleanup runs, from before the cleanup moved here: `email` lines are what it moved, `restore` what came back. */
+const memoSummaries = (env: NodeJS.ProcessEnv): RunSummary[] => {
+  const root = join(resolvePaths({ appName: "cli-memo", prefix: "MEMO", env }).state, "mail-trash")
+  if (!existsSync(root)) return []
+  return readdirSync(root).flatMap((name) =>
+    readdirSync(join(root, name))
+      .filter((file) => file.endsWith(".jsonl"))
+      .flatMap((file) => {
+        const lines = readLines(join(root, name, file)) as unknown as Record<string, unknown>[]
+        const head = lines.find(({ type }) => type === "run")
+        if (!head) return []
+        const started = String(head.started_at ?? "")
+        const restored = new Set(
+          lines.filter(({ type }) => type === "restore").flatMap((line) => (line.restored as string[]) ?? []),
+        )
+        const moved = lines.filter(({ type }) => type === "batch").flatMap((line) => (line.moved as string[]) ?? [])
+        return [
+          {
+            id: file.replace(/\.jsonl$/, ""),
+            account: String(head.account ?? name),
+            command: "memo mail delete",
+            started_at: started,
+            unfinished: !lines.some(({ type }) => type === "end"),
+            restorable_until: new Date(Date.parse(started) + 30 * 86_400_000).toISOString(),
+            in_trash: moved.filter((one) => !restored.has(one)).length,
+          },
+        ]
+      }),
+  )
+}
+
+/** Every recorded run on this computer, of every mailbox, memo's cleanup runs included; newest first. */
+export const runSummaries = (env: NodeJS.ProcessEnv): RunSummary[] => {
+  const root = join(resolvePaths({ appName: "mail-cli", prefix: "MAIL", env }).state, "changes")
+  const own = existsSync(root)
+    ? readdirSync(root).flatMap((account) =>
+        readdirSync(join(root, account))
+          .filter((file) => file.endsWith(".jsonl"))
+          .flatMap((file) => summaryOf(readLines(join(root, account, file))) ?? []),
+      )
+    : []
+  return [...own, ...memoSummaries(env)].sort((a, b) => b.started_at.localeCompare(a.started_at))
+}

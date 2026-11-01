@@ -121,6 +121,27 @@ Mail from a sender whose mail looks like spam or a scam comes after the rest of 
 order the words give. `messages show` gives the first 4,000 characters of each attachment's text; `--full` gives all
 of it and the HTML body. `--before-n` and `--after-n` add the emails around it in its thread.
 
+## Export mail
+
+The store keeps text, not the original message, so `messages export` reads the originals from the server again.
+It selects with the same query as `search messages` and writes a private folder (mode 700, files 600):
+
+```sh
+mail ya messages export 'from:ann@example.com' --output ~/mail-backup     # one mbox file per folder
+mail ya messages export --folder INBOX --format maildir --output ~/Maildir # Maildir++, for mu and notmuch
+mail ya messages export 'date>30d' --limit 500 --output ~/mail-backup --resume
+mail ya stats messages top --by list --limit 10                          # which lists send the most
+```
+
+- **What is written.** Each message as the server holds it, byte for byte, in every folder it is filed in (Gmail files
+  a message under All Mail and INBOX both: pass `--folder` to export one). mbox files are mboxrd: a body line that
+  starts with the word From gets a `>` before it. Maildir file names carry the read (`S`) and starred (`F`) state.
+- **Never over what is there.** A folder with something in it is refused. `--resume` goes on with an export begun
+  there (a journal file, `.mail-export.jsonl`, lists what is done and the length of each mbox file after it); `--replace`
+  writes into any folder over files of the same name and deletes nothing.
+- **In parts.** A run stops at `--limit`, `--max-pages` or before its deadline and says `state: "partial"`; run it again
+  with `--resume`. Mail the store has no UID for (sync again) or the server no longer has is counted, not written.
+
 ## Organise the mailbox
 
 Every change goes to the server first and then into the store, so `search messages` shows it at once. The messages
@@ -156,3 +177,44 @@ mail ya folders create Receipts                                  # also folders 
   move. It refuses until the store backup is under 8 days old, and a first run moves at most 100.
 - **Folders.** `folders delete` refuses a folder that still holds mail; `--allow-dangerous` deletes it with its mail,
   for good. The inbox and the special folders keep their names.
+
+## Drafts
+
+A draft goes into the mailbox's own Drafts folder, so it shows in every mail app. An agent writes it; you read it and
+send it from your mail app. Nothing here sends mail.
+
+```sh
+mail ya drafts create --to anna@example.com --subject 'Monday' 'Shall we meet at ten?'
+mail ya drafts create --reply-to '<ref>' --reply-all 'Thanks, agreed.'   # in the thread, to everyone but you
+mail ya drafts create --to anna@example.com --subject Notes - < notes.txt # - reads the text from stdin
+mail ya drafts list                                                       # newest first, read from the server
+mail ya drafts update '<id>' 'New text'                                   # only what you give changes
+mail ya drafts delete '<id>' --yes                                        # gone for good; a preview without --yes
+```
+
+- **The id** is the draft's Message-ID, as `drafts list` shows it, with or without `<>`. It stays the same when the
+  draft changes.
+- **A reply** reads the message from the server: it goes to its Reply-To or sender (with `--reply-all` also to
+  everyone else it went to, never to you), with `Re:` and the `In-Reply-To` and `References` that keep it in the thread.
+- **A change** saves the new version first and then removes the old one, so a failure in between leaves two drafts,
+  never none. The text, `--to`, `--cc`, `--bcc` and `--subject` you give replace the old ones; the rest, the thread
+  and the attachments stay. Removing the old version needs UIDPLUS on the server.
+- **The folder** is the one the server marks `\Drafts`, else the provider's own name (Gmail «[Gmail]/Drafts», Yandex
+  «Черновики»).
+- A draft is flagged `\Draft` and `\Seen`. `drafts.delete` asks first; `drafts.create` and `drafts.update` go ahead,
+  and `MAIL_READ_ONLY=1` refuses all three.
+
+## Your own tags
+
+Tags of your own go on stored mail and stay on this computer: the server never sees them. They are the same tags memo
+reads, and a search finds them.
+
+```sh
+mail ya tags add invoices --message '<ref>'     # one email; --chat '<conversation ref>' tags a whole conversation
+mail ya search messages 'tag:invoices date>30d'
+mail ya tags list tag:invoices                  # what is tagged; type:message or type:chat
+mail ya tags remove invoices --message '<ref>'
+```
+
+A tag is 1–32 letters a–z, digits and hyphens; upper case is lowered. What the server keeps instead are keywords
+(`messages update --flag '$Work'`) and, on Gmail, labels (`messages move|copy --folder Work`).

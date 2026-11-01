@@ -20,15 +20,19 @@ import {
 import { appUpdate } from "@wirecat/cli-core/update"
 import type { Command } from "commander"
 import { accountCommand } from "./commands/account.js"
+import { draftsCommand } from "./commands/drafts.js"
 import { foldersCommand } from "./commands/folders.js"
 import { messageWrites } from "./commands/messages.js"
 import { readCommands } from "./commands/read.js"
 import { rulesCommand } from "./commands/rules.js"
 import { sessionCommand } from "./commands/session.js"
+import { statsCommand } from "./commands/stats.js"
 import { statusCommand } from "./commands/status.js"
 import { syncCommand } from "./commands/sync.js"
+import { tagsCommand } from "./commands/tags.js"
 import { configuration } from "./config.js"
 import { IDENTITY, PACKAGE, SKILL } from "./identity.js"
+import { changesCheck } from "./mail/doctor.js"
 
 const update = appUpdate({
   packageName: PACKAGE,
@@ -62,7 +66,10 @@ export const definition = (): ProgramDefinition => ({
     rulesCommand(),
     statusCommand(),
     ...withWrites(readCommands()),
-    appDoctorCommand(IDENTITY, configuration, { packageName: PACKAGE }),
+    statsCommand(),
+    draftsCommand(),
+    tagsCommand(),
+    appDoctorCommand(IDENTITY, configuration, { packageName: PACKAGE, local: changesCheck }),
     skillCommand(IDENTITY, SKILL),
     appMcpCommand(IDENTITY, configuration, {
       name: "mail",

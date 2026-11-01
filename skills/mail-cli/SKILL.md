@@ -34,11 +34,20 @@ Find your way with the tool itself, not this file:
   `list:`, `is:unread`, `has:attachment`, `content:`, `date>7d`); each hit's `ref` goes to
   `mail ya messages show <ref>`, its `email.thread` to `mail ya conversations show <thread>`. It reads only what sync
   stored; for mail with messages and notes together, memo's `search all`.
+- `mail ya messages export '<query>' --output <folder> [--format mbox|maildir] [--limit n]` writes the original
+  messages to a private folder for backup; a run can be partial: run it again with `--resume`. Never `--replace` unless
+  the owner says so. `mail ya stats messages top --by sender|list|domain` ranks the stored mail.
 - Change the mailbox only when the owner asked for that change. `mail ya messages mark-read|star|move|copy|delete
   <ref…>` (or `--filter '<query>'`) changes the server and the store; a deletion, a `--filter` change or one of more
   than 20 messages answers with a preview (`applied: false`) and the same command with `yes` in `next`. Show the
   owner the preview before you add `--yes`. Every change answers with a `run` id: `mail ya messages restore --run
   <id> --yes` undoes it. Never `folders delete --allow-dangerous`: it loses mail for good.
+- When the owner asks you to write or answer mail, save a draft and tell them: `mail ya drafts create --to <address>
+  --subject '<subject>' '<text>' --json`, or `--reply-to <ref> [--reply-all]` to answer in the thread. Nothing is sent;
+  the owner sends it from a mail app. `drafts list` shows the drafts with their `id`; `drafts update <id> '<text>'`
+  changes one, `drafts delete <id> --yes` removes it for good — only a draft you made, or one the owner named.
+- Your own labels on mail: `mail ya tags add <tag> --message <ref>` (or `--chat <ref>` for a conversation); they stay
+  local, memo sees them, and `search messages tag:<tag>` finds them.
 - The owner's rules on which mail to keep are `mail ya rules list|add|remove|apply`; memo no longer has them.
 - `mail ya sync` reads new mail into the store (`--since-time`, `--limit`, `--folder`).
   A big mailbox does not fit one run: when the answer says `state: "partial"`, run the command in `next` again (it is

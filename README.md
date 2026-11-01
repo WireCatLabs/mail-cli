@@ -42,6 +42,9 @@ You need Node.js 22.16 or a later 22.x, or 24 or later. To try it with no instal
   query language of every WireCat CLI, with `list:` for mailing lists; `messages show` gives an email whole with its
   attachments' text, `conversations list|show` its threads. It reads the profile's mailbox only and asks no server.
   [memo](https://github.com/WireCatLabs/cli-memo) searches every mailbox together with your messages and notes.
+- **Export to mbox or Maildir.** `messages export 'from:ann@example.com' --output ~/mail-backup` reads the original
+  messages from the server into a private folder, one mbox file per folder or a Maildir++ tree for mu and notmuch;
+  it can be resumed and bounded. `stats messages top --by list` ranks senders, lists and domains.
 - **Sync a big mailbox in parts.** A run stops before its deadline, keeps what it read and tells you to run it again;
   `status` shows how far it is.
 - **Check a mailbox.** `account check` shows what the server supports, `folders list` the folders with their role and
@@ -50,6 +53,10 @@ You need Node.js 22.16 or a later 22.x, or 24 or later. To try it with no instal
   `messages move|copy --folder` file mail (by label on Gmail), `messages delete` moves it to Trash, and
   `messages restore --run <id>` undoes any of them. `folders create|rename|delete` look after the folders. A search
   shows each change at once.
+- **Draft for the owner.** `drafts create|update|list|delete` keep drafts in the mailbox's Drafts folder, replies in
+  their thread; the owner sends them from any mail app.
+- **Tag your own way.** `tags add|remove|list` put local tags on stored mail, shared with memo; `search messages
+  tag:<tag>` finds them.
 - **Decide what to keep.** `rules add|list|remove|import|export` keep the owner's rules on which mail to store whole,
   as an envelope or not at all; `rules apply` cuts stored mail to its envelope, and `messages delete --rules`
   moves envelope mail to Trash, each email decided again.
@@ -109,7 +116,7 @@ mail ya config show                            # every setting and where it came
 
 ## Limits
 
-- No sending, replies or drafts yet; tags of its own (W3) neither. A deletion goes to Trash only: `mail` never
+- No sending yet: a reply is a draft the owner sends. A deletion goes to Trash only: `mail` never
   expunges mail, and the provider empties Trash in its own time (Gmail: 30 days).
 - Text and headers only: the text of attachments is stored, not the files, nor the original message.
 - No OAuth yet, so no Outlook or Microsoft 365, and no Google Workspace domain that turns app passwords off.
@@ -173,6 +180,9 @@ keyring, the store, MCP) come from [cli-base](https://github.com/WireCatLabs/cli
 
 mail-cli is part of [WireCat](https://wirecat.dev): an open context layer for AI agents that keeps your data on your
 computer. Start with mail. Add Telegram, MAX and notes when you need them.
+
+Questions and setup help: join the [WireCat Discord](https://discord.gg/DebENqbRrJ). Bugs go to this
+repository's issues.
 
 ## Contributing and license
 

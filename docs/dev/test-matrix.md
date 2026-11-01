@@ -7,7 +7,7 @@ ran it · ⛔ not tested offline, with the reason and where it is checked instea
 Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 [TESTING.md](TESTING.md) for how, and for the states and failures that cut across commands.
 
-**171 ✅ · 26 ⛔ · 0 ❌** — 58 commands, 139 options.
+**209 ✅ · 26 ⛔ · 0 ❌** — 67 commands, 168 options.
 
 | Command | Option | | Note |
 |---|---|---|---|
@@ -70,6 +70,14 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `messages show` |  | ✅ |  |
 | `messages show` | `--before-n` | ✅ |  |
 | `messages show` | `--after-n` | ✅ |  |
+| `messages export` |  | ✅ |  |
+| `messages export` | `--format` | ✅ |  |
+| `messages export` | `--output` | ✅ |  |
+| `messages export` | `--folder` | ✅ |  |
+| `messages export` | `--limit` | ✅ |  |
+| `messages export` | `--max-pages` | ✅ |  |
+| `messages export` | `--resume` | ✅ |  |
+| `messages export` | `--replace` | ✅ |  |
 | `messages mark-read` |  | ✅ |  |
 | `messages mark-read` | `--filter` | ✅ |  |
 | `messages mark-read` | `--limit` | ✅ |  |
@@ -125,6 +133,36 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `conversations list` | `--limit` | ✅ |  |
 | `conversations list` | `--page` | ✅ |  |
 | `conversations show` |  | ✅ |  |
+| `stats messages top` |  | ✅ |  |
+| `stats messages top` | `--by` | ✅ |  |
+| `stats messages top` | `--limit` | ✅ |  |
+| `drafts list` |  | ✅ |  |
+| `drafts list` | `--limit` | ✅ |  |
+| `drafts create` |  | ✅ |  |
+| `drafts create` | `--to` | ✅ |  |
+| `drafts create` | `--cc` | ✅ |  |
+| `drafts create` | `--bcc` | ✅ |  |
+| `drafts create` | `--subject` | ✅ |  |
+| `drafts create` | `--dry-run` | ✅ |  |
+| `drafts create` | `--reply-to` | ✅ |  |
+| `drafts create` | `--reply-all` | ✅ |  |
+| `drafts update` |  | ✅ |  |
+| `drafts update` | `--to` | ✅ |  |
+| `drafts update` | `--cc` | ✅ |  |
+| `drafts update` | `--bcc` | ✅ |  |
+| `drafts update` | `--subject` | ✅ |  |
+| `drafts update` | `--dry-run` | ✅ |  |
+| `drafts delete` |  | ✅ |  |
+| `drafts delete` | `--yes` | ✅ |  |
+| `drafts delete` | `--dry-run` | ✅ |  |
+| `tags add` |  | ✅ |  |
+| `tags add` | `--message` | ✅ |  |
+| `tags add` | `--chat` | ✅ |  |
+| `tags remove` |  | ✅ |  |
+| `tags remove` | `--message` | ✅ |  |
+| `tags remove` | `--chat` | ✅ |  |
+| `tags list` |  | ✅ |  |
+| `tags list` | `--limit` | ✅ |  |
 | `doctor` |  | ✅ |  |
 | `doctor` | `--online` | ✅ |  |
 | `skill show` |  | ✅ |  |

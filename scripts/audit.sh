@@ -35,7 +35,7 @@ require("fs").writeFileSync(process.argv[3], JSON.stringify(info.reasons))' \
 # do not fail this build.
 status=0
 "$root/node_modules/.bin/cli-dev" audit --complete --cli "$root/dist/bin/$command.js" "${others[@]}" --for "$command" \
-  --lint "$command=$root/lint" --schemas "$command=$scratch/schemas.json" --reasons "$command=$scratch/reasons.json" \
+  --lint "$command=$root/lint" --differences "$root/lint/audit-differences.json" --schemas "$command=$scratch/schemas.json" --reasons "$command=$scratch/reasons.json" \
   >"$scratch/scorecard.txt" 2>"$scratch/problems.txt" || status=$?
 theirs="^($(IFS='|'; echo "${names[*]}")): complete audit "
 if [ "$status" -ne 0 ] && { ! grep -q " 0 new that block" "$scratch/problems.txt" ||
