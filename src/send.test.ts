@@ -57,6 +57,7 @@ const yandex = (): FakeFolder[] => [
     ],
   },
   { name: "Sent", attributes: ["\\Sent"], uidValidity: 14, messages: [] },
+  { name: "Drafts", attributes: ["\\Drafts"], uidValidity: 15, messages: [] },
   { name: "Trash", attributes: ["\\Trash"], uidValidity: 13, messages: [] },
 ]
 
@@ -593,5 +594,36 @@ describe("sending over MCP", { timeout: 20_000 }, () => {
       expect(await close()).toBe(0)
     }
     expect(smtp.received.map(({ recipients }) => recipients)).toEqual([[ADDRESS]])
+  })
+})
+
+describe("drafts send", { timeout: 20_000 }, () => {
+  it("sends a saved draft through the same guard as messages send, then takes it out of Drafts", async () => {
+    const folders = yandex()
+    const { mail, smtp, journal } = await harness({ folders })
+    const created = await mail([
+      "ya",
+      "drafts",
+      "create",
+      "--to",
+      "ann@example.com",
+      "--subject",
+      "Plan",
+      "Draft text",
+      "--json",
+    ])
+    expect(created.code, created.err).toBe(0)
+    const id = item(created.out).id
+    const preview = await mail(["ya", "drafts", "send", id, "--dry-run", "--operation-id", "424242424242", "--json"])
+    expect(item(preview.out)).toMatchObject({ sent: false, message_id: "<424242424242@example.com>" })
+    const asked = await mail(["ya", "drafts", "send", id, "--json"])
+    expect(errorOf(asked.err).code).toBe("confirmation_required")
+    expect(smtp.received).toHaveLength(0)
+    const sent = await mail(["ya", "drafts", "send", id, "--yes", "--json"])
+    expect(sent.code, sent.err).toBe(0)
+    expect(item(sent.out)).toMatchObject({ sent: true, subject: "Plan", to: ["ann@example.com"] })
+    expect(smtp.received[0]?.raw).toContain("Draft text")
+    expect(folders.find(({ name }) => name === "Drafts")?.messages).toHaveLength(0)
+    expect(journal()).toContain('"key":"messages.send"')
   })
 })

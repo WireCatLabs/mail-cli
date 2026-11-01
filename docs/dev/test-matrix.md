@@ -7,7 +7,7 @@ ran it · ⛔ not tested offline, with the reason and where it is checked instea
 Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 [TESTING.md](TESTING.md) for how, and for the states and failures that cut across commands.
 
-**235 ✅ · 26 ⛔ · 0 ❌** — 71 commands, 190 options.
+**239 ✅ · 26 ⛔ · 0 ❌** — 72 commands, 193 options.
 
 | Command | Option | | Note |
 |---|---|---|---|
@@ -181,6 +181,10 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `drafts delete` |  | ✅ |  |
 | `drafts delete` | `--yes` | ✅ |  |
 | `drafts delete` | `--dry-run` | ✅ |  |
+| `drafts send` |  | ✅ |  |
+| `drafts send` | `--operation-id` | ✅ |  |
+| `drafts send` | `--yes` | ✅ |  |
+| `drafts send` | `--dry-run` | ✅ |  |
 | `tags add` |  | ✅ |  |
 | `tags add` | `--message` | ✅ |  |
 | `tags add` | `--chat` | ✅ |  |

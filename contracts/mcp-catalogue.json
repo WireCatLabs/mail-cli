@@ -39,6 +39,7 @@
   "drafts create": "write",
   "drafts update": "write",
   "drafts delete": "write",
+  "drafts send": "write",
   "tags add": "write",
   "tags remove": "write",
   "tags list": "read",

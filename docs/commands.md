@@ -947,6 +947,30 @@ mail drafts delete <draft> [options]
 
 **Example:** `mail ya drafts delete 5b0e1c2a@example.com --yes`
 
+### `mail drafts send`
+
+send a draft as it is saved, over SMTP, as messages send does: mail to anyone but you asks first (permissions.messages.send.others); once it went, the draft leaves the Drafts folder
+
+**Changes something in the service.**
+
+```sh
+mail drafts send <draft> [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `draft` | required | the draft's id, as drafts list shows it. |
+
+| Option | What it does |
+|---|---|
+| `--operation-id <id>` | repeat a send whose outcome was unknown; Sent is checked first, so it goes once. |
+| `--yes` | answer the question before sending to anyone but you. |
+| `--dry-run` | show what would go; send nothing. |
+
+**Returns:** mail send — sent, operation_id, message_id, from, to, cc, bcc, subject, and 9 more; every field: mail commands info drafts send
+
+**Example:** `mail ya drafts send 5b0e1c2a@example.com`
+
 ## `mail tags`
 
 your own tags on stored mail, kept in the local store and shared with memo; never sent to the server

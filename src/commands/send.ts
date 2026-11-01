@@ -49,7 +49,7 @@ interface SendFlags {
   dryRun?: boolean
 }
 
-const mailSend = v.looseObject({
+export const mailSend = v.looseObject({
   sent: v.boolean(),
   already_sent: v.optional(v.boolean()),
   operation_id: v.string(),
@@ -69,7 +69,7 @@ const mailSend = v.looseObject({
   hint: v.optional(v.string()),
 })
 
-const operationIdOf = (given: string | undefined) => {
+export const operationIdOf = (given: string | undefined) => {
   if (given === undefined) return newOperationId()
   if (!OPERATION_ID.test(given))
     throw new CliError("validation_error", "--operation-id is the operation_id an outcome_unknown answer named", {
@@ -109,7 +109,7 @@ const sendingOf = (opened: Opened, command: Command): Sending => {
   }
 }
 
-const filesOf = async (command: Command, paths: readonly string[], anyFile: boolean) => {
+export const filesOf = async (command: Command, paths: readonly string[], anyFile: boolean) => {
   const { env } = contextOf(command)
   const files: Draft["files"] = []
   for (const path of paths) {
@@ -177,18 +177,21 @@ const answer = (command: Command, draft: Draft, outcome: Record<string, unknown>
         : `${String(outcome.hint ?? "not sent")}\n`,
   )
 
-const go = async (command: Command, opened: Opened, outgoing: Outgoing, dryRun: boolean) => {
+/** Checks, previews or sends, and answers; the outcome of a send that left, for what the caller does after. */
+export const go = async (command: Command, opened: Opened, outgoing: Outgoing, dryRun: boolean) => {
   const { draft } = outgoing
   if (everyone(draft).length === 0)
     throw new CliError("validation_error", "the message has nobody to go to; give --to", { param: "to" })
   if (forgotAttachment(draft.text, draft.files.length > 0 || draft.message !== undefined))
     outputFor(command).renderer.warn("the text speaks of an attachment, and nothing is attached (--file)")
-  if (dryRun)
-    return answer(command, draft, {
+  if (dryRun) {
+    answer(command, draft, {
       sent: false,
       operation_id: outgoing.operationId,
       hint: "a preview: nothing was sent; the same command without --dry-run sends it",
     })
+    return undefined
+  }
   const sending = sendingOf(opened, command)
   showBeforeAsking(command, draft, outgoing.key, sending.owner)
   const sent = await sendOut(sending, outgoing)
@@ -205,6 +208,7 @@ const go = async (command: Command, opened: Opened, outgoing: Outgoing, dryRun: 
       ? { hint: "Sent already holds this message: it went the first time, and nothing was sent again" }
       : {}),
   })
+  return sent
 }
 
 const sendAction = async function (this: Command, text: string | undefined, flags: SendFlags) {

@@ -62,6 +62,8 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   (cli-core 0.523.0). An answer lost after the message left is `outcome_unknown`; `--operation-id` retries it and sends
   nothing when Sent already has it. `--dry-run` builds the message and sends nothing. A text that says "attached" with
   no file warns.
+- **`drafts send <id>`** sends a saved draft through the same path as `messages send` (its keys and question, the
+  hourly limit, the journal, the Sent copy), then removes it from Drafts.
 - **`attachments list <ref>`** and **`attachments download <ref> [number…] --output-dir <dir> [--replace]`**: the
   files of one email, read from the server and numbered as the store numbers them, saved readable only by you under
   their plain names; an existing file is kept unless `--replace`.

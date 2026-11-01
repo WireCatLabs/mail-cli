@@ -39,6 +39,7 @@ import {
 } from "../mail/drafts.js"
 import { locate, selectIds } from "../mail/organise.js"
 import { collect } from "./context.js"
+import { draftSendCommand } from "./drafts-send.js"
 import { type Opened, organising } from "./messages.js"
 
 const LIST_LIMIT = 50
@@ -348,3 +349,4 @@ export const draftsCommand = (): Command =>
     .addCommand(createCommand())
     .addCommand(updateCommand())
     .addCommand(deleteCommand())
+    .addCommand(draftSendCommand())

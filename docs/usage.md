@@ -231,6 +231,7 @@ mail ya messages send --reply-to '<ref>' "Paid today."                # Re:, In-
 mail ya messages send --reply-to '<ref>' --reply-all "Thanks, all."   # also to the original's To and Cc, not you
 mail ya messages forward '<ref>' --to bob@example.com "FYI"           # the original attached whole
 mail ya messages send --to ann@example.com --subject Hi "Hello" --dry-run   # build it, send nothing
+mail ya drafts send '<draft id>'                                     # send a saved draft, then remove it
 ```
 
 - **The question.** Mail to anyone but you asks first, and shows from, to, cc, bcc, subject, each attachment and the
