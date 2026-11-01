@@ -2,7 +2,7 @@
 
 `mail` copies your mailbox into the shared WireCat store on your computer, so you and your AI agents can search it
 and read it there. It reads over IMAP and never changes the mailbox: it does not send, move, flag or delete mail.
-It does not search or show mail itself: you read and search the stored mail in memo.
+It searches and reads what it stored, offline.
 
 [Documentation](https://github.com/WireCatLabs/mail-cli/blob/main/docs/index.md) · [Roadmap](https://github.com/WireCatLabs/mail-cli/blob/main/docs/roadmap.md) · [WireCat](https://wirecat.dev)
 
@@ -24,11 +24,12 @@ mail ya session start --address me@example.com   # finds the server, shows the s
 mail ya account check                            # logs in and lists what the server supports
 mail ya sync                                     # reads the last 30 days into the shared store
 mail ya status                                   # how far the sync is
+mail ya search messages invoice                  # search the stored mail
 mail skill install                               # optional: instructions for your AI agent
 ```
 
-Now the mail is in the store. Search and read it in [memo](https://github.com/WireCatLabs/cli-memo), for example
-`memo search mail "invoice"`. `mail` has no command to read a message.
+Now the mail is in the store. `mail ya messages show <ref>` reads a search hit whole. [memo](https://github.com/WireCatLabs/cli-memo)
+searches it together with your messages and notes: `memo search all "invoice"`.
 
 You need Node.js 22.16 or a later 22.x, or 24 or later. To try it with no install, run
 `npx @wirecat/mail-cli --help`. If `mail` is not found, `mail doctor` says why.
@@ -37,8 +38,10 @@ You need Node.js 22.16 or a later 22.x, or 24 or later. To try it with no instal
 
 - **Sync a mailbox into the shared store.** `sync` reads INBOX and Sent (All Mail on Gmail), or the folders you name,
   newest first, and skips what is already stored. `--since-time 2026-10-01` reads from local midnight of that day.
-- **Search and read the mail with memo.** `mail` only fills the store;
-  [memo](https://github.com/WireCatLabs/cli-memo) searches your mail together with your messages and notes.
+- **Search and read the stored mail.** `search messages 'from:ann@example.com has:attachment date>30d'` uses the
+  query language of every WireCat CLI, with `list:` for mailing lists; `messages show` gives an email whole with its
+  attachments' text, `conversations list|show` its threads. It reads the profile's mailbox only and asks no server.
+  [memo](https://github.com/WireCatLabs/cli-memo) searches every mailbox together with your messages and notes.
 - **Sync a big mailbox in parts.** A run stops before its deadline, keeps what it read and tells you to run it again;
   `status` shows how far it is.
 - **Check a mailbox.** `account check` shows what the server supports, `folders list` the folders with their role and
@@ -98,10 +101,10 @@ mail ya config show                            # every setting and where it came
 
 - Read-only: `mail` never sends, moves, flags or deletes mail. But memo has `memo mail delete`, which moves Gmail mail
   to Trash, so an agent with write access to memo can change mail.
-- Text and headers only: attachments are not stored.
+- Text and headers only: the text of attachments is stored, not the files, nor the original message.
 - No OAuth yet, so no Outlook or Microsoft 365, and no Google Workspace domain that turns app passwords off.
 - Gmail caps IMAP downloads at 2,500 MB a day; a new Yandex app password can take 2 to 3 hours to work.
-- `mail` has no search of its own: search and read through memo.
+- Search reads what `sync` stored: mail not synced yet is not found. Search on the server is planned.
 
 What comes next, such as OAuth sign-in, is on the
 [roadmap](https://github.com/WireCatLabs/mail-cli/blob/main/docs/roadmap.md).

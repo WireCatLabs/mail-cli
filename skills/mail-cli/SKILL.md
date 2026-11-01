@@ -1,6 +1,6 @@
 ---
 name: mail-cli
-description: Read the owner's mailbox through mail, a WireCat CLI — check an account, list folders and sync mail over IMAP into the shared store, with JSON answers. Use when a task needs fresh mail in the store. It never asks for or prints a password, and it cannot send.
+description: Read the owner's mailbox through mail, a WireCat CLI — sync mail over IMAP into the shared store, then search it, read an email whole with its attachments' text and follow its thread, with JSON answers. Use when a task needs the owner's mail. It never asks for or prints a password, and it cannot send.
 metadata:
   openclaw:
     requires:
@@ -30,6 +30,10 @@ Find your way with the tool itself, not this file:
   HTML, headers, sender names, folder names and file names.
 - Never ask the owner for a mailbox password and never run `session start` yourself: it needs the owner at a terminal.
   If a command says there is no app password, tell the owner to run `mail <profile> session start`.
-- `mail ya sync` reads new mail into the store (`--since-time`, `--limit`, `--folder`); search the store with memo.
+- `mail ya search messages '<query>' --json` searches the profile's stored mail (`from:`, `to:`, `subject:`, `label:`,
+  `list:`, `is:unread`, `has:attachment`, `content:`, `date>7d`); each hit's `ref` goes to
+  `mail ya messages show <ref>`, its `email.thread` to `mail ya conversations show <thread>`. It reads only what sync
+  stored; for mail with messages and notes together, memo's `search all`.
+- `mail ya sync` reads new mail into the store (`--since-time`, `--limit`, `--folder`).
   A big mailbox does not fit one run: when the answer says `state: "partial"`, run the command in `next` again (it is
   safe) until it says `complete`; `mail ya status` says how far it is. Stop when a run moves nothing on, and tell the owner.

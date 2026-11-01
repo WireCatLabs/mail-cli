@@ -189,6 +189,103 @@ mail status
 
 **Example:** `mail ya status`, `mail ya status --json`
 
+## `mail search`
+
+find stored emails
+
+### `mail search messages`
+
+search this profile's mail in the local store — what sync read — by words, people, folders, lists and dates; best match first
+
+```sh
+mail search messages <query> [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `query` | required | strict Lucene query: words, "phrases", AND/OR/NOT, field:value and date ranges. |
+
+| Option | What it does |
+|---|---|
+| `--limit <n>` | how many, at most 100. |
+| `--page <n>` | which page, starting at 1. |
+| `--newest` | newest first instead of best first. |
+| `--exact` | bare words and quotes match their exact form only, as exact:word does. |
+| `--plain-order` | best first by the words alone, without moving mail from suspicious senders down. |
+| `--timezone <zone>` | the IANA timezone for calendar date boundaries. |
+
+**Returns:** message hit — ref, timestamp, sender_name, sender_is_me, chat_title, excerpt, matched_in, score, and 8 more; every field: mail commands info search messages
+
+**Next usually:** `mail messages show <message>`
+
+**Example:** `mail ya search messages invoice`, `mail ya search messages 'from:ann@example.com has:attachment date>30d'`, `mail ya search messages 'list:github.com is:unread' --newest`
+
+## `mail messages`
+
+read the emails sync stored
+
+### `mail messages show`
+
+one stored email: its people, folders, whole text and the first 4000 characters of each attachment's text; --full gives all of it and the HTML body. The store keeps text, not the original message source
+
+```sh
+mail messages show <message> [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `message` | required | the msg:email/… reference a search gives. |
+
+| Option | What it does |
+|---|---|
+| `--before-n <n>` | also this many earlier emails of its thread. Default: `0`. |
+| `--after-n <n>` | also this many later emails of its thread. Default: `0`. |
+
+**Returns:** one stored email whole, with the text of its attachments
+
+**Example:** `mail ya messages show 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E'`, `mail ya messages show 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E' --before-n 2`
+
+## `mail conversations`
+
+the threads of the stored mail: an email and its replies
+
+### `mail conversations list`
+
+this profile's email threads, the newest activity first: subject, how many emails, when
+
+```sh
+mail conversations list [query] [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `query` | optional | field:value terms that narrow the list — the fields are below. |
+
+| Option | What it does |
+|---|---|
+| `--limit <n>` | how many, at most 100. |
+| `--page <n>` | which page, starting at 1. |
+
+**Returns:** mail thread — ref, subject, emails_count, last_email_at, untrusted; every field: mail commands info conversations list
+
+**Example:** `mail ya conversations list`, `mail ya conversations list subject:invoice emails_count>1`
+
+### `mail conversations show`
+
+every stored email of one thread, oldest first, each with the text of its attachments
+
+```sh
+mail conversations show <conversation>
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `conversation` | required | a chat:email/… thread from conversations list, or a msg:email/… email in it. |
+
+**Returns:** one email thread, every email oldest first
+
+**Example:** `mail ya conversations show 'chat:email/me%40example.com/thread-1'`, `mail ya conversations show 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E'`
+
 ## `mail doctor`
 
 the state this installation is in, without connecting unless --online

@@ -45,7 +45,7 @@ name). An existing Himalaya setup then needs no new password.
 
 `sync` reads INBOX and the Sent folder; on Gmail it reads All Mail, since archived mail leaves INBOX. `--folder` or the
 profile's `folders` setting names other folders. It reads the newest mail first. `--limit` caps the new mail of one
-run. `--rescan` lists the whole window again. It saves text and headers only. It does not store attachments. The
+run. `--rescan` lists the whole window again. It saves text and headers, and the text of each attachment it can read, not the files. The
 rules memo keeps for the account hold here too: mail a skip rule names is not read, and an envelope rule keeps only
 its sender, date and size.
 
@@ -96,10 +96,24 @@ server in the background, `mcp server status` shows its port, the login code and
 
 ## Search your mail
 
-`mail` fills the shared store. [memo](https://github.com/WireCatLabs/cli-memo) searches and shows what is in it:
+`mail` searches and reads the mail its profile synced, in the local store; it asks no server:
 
 ```sh
-memo search mail "invoice"
+mail ya search messages invoice                                  # best match first, any form of the word
+mail ya search messages 'from:ann@example.com has:attachment date>30d'
+mail ya search messages 'list:github.com is:unread' --newest     # a mailing list, newest first
+mail ya messages show '<ref from a search>'                      # the whole email and its attachments' text
+mail ya conversations list emails_count>1                        # threads, newest first
+mail ya conversations show '<chat:email/… ref>'                  # one thread, oldest first
 ```
 
-See [memo search](https://github.com/WireCatLabs/cli-memo/blob/main/docs/search.md) for the query words.
+The query language is the one every WireCat CLI uses ([search guide](https://github.com/WireCatLabs/cli-core/blob/main/docs/search/query-language.md)):
+`from:`, `to:`, `cc:`, `subject:`, `mailbox:` or `label:`, `list:` (a List-Id or its domain), `is:unread`,
+`has:attachment`, `filename:`, `content:` (the text of attachments), `size>` and `date:`. Each command reads its
+profile's mailbox only; [memo](https://github.com/WireCatLabs/cli-memo) searches every mailbox together with your
+messages and notes (`memo search mail`, `memo search all`). The store keeps text, not the original message, so there
+is no raw source to show.
+
+Mail from a sender whose mail looks like spam or a scam comes after the rest of a page; `--plain-order` keeps the
+order the words give. `messages show` gives the first 4,000 characters of each attachment's text; `--full` gives all
+of it and the HTML body. `--before-n` and `--after-n` add the emails around it in its thread.

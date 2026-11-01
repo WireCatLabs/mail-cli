@@ -2,6 +2,22 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Added
+
+- **`mail <profile> search messages '<query>'`** searches the profile's stored mail offline, with the query language
+  of every WireCat CLI and memo's ranking: any form of a word, `from:`, `to:`, `subject:`, `label:`, `is:unread`,
+  `has:attachment`, `content:`, `date>7d`, and `list:` for a mailing list by its List-Id or domain. Mail from a
+  suspicious sender comes after the rest (`--plain-order` keeps the words' order); `--newest`, `--exact`, `--page`.
+- **`mail <profile> messages show <ref>`** gives one email whole, with the first 4,000 characters of each
+  attachment's text (`--full`: all of it and the HTML body), and `--before-n`/`--after-n` emails of its thread, in the
+  JSON `memo messages show` gives.
+- **`mail <profile> conversations list [query]` and `conversations show <thread>`**: the threads, newest first,
+  filtered by `subject:`, `emails_count>1` or `last_email_at>7d`, and one thread's emails oldest first.
+- Each reads the profile's own mailbox only; a reference of another mailbox is refused. Over MCP they are `read`
+  commands.
+
 ## 0.2.0 — 01.11.2026
 
 ### Added

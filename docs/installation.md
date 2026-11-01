@@ -25,13 +25,13 @@ mail ya account check
 
 ## Search your mail
 
-After `sync`, the mail is in the shared store. `mail` fills the store. [memo](https://github.com/WireCatLabs/cli-memo)
-searches and shows it:
+After `sync`, the mail is in the shared store, and `mail` searches it:
 
 ```sh
-memo search mail "invoice"
+mail ya search messages invoice
 ```
 
-See [memo search](https://github.com/WireCatLabs/cli-memo/blob/main/docs/search.md) for the query words.
+The query words are in [use it](usage.md#search-your-mail). [memo](https://github.com/WireCatLabs/cli-memo) searches
+every mailbox together with your messages and notes.
 
 Next: [use it](usage.md).
