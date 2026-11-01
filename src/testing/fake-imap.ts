@@ -36,6 +36,10 @@ export interface FakeOptions {
   throttleBodies?: boolean
   /** Drops the connection instead of answering this many UID SEARCH commands, as a flaky network does. */
   dropSearches?: number
+  /** Never answers a UID SEARCH, as a server busy with a large folder does. */
+  hangSearches?: boolean
+  /** Answers every UID SEARCH with a tagged NO, as a server that cannot search a folder does. */
+  refuseSearches?: boolean
   /** UIDs a FETCH answers with an untagged `NO [UNAVAILABLE]` instead of the message, as Yandex does; each once. */
   unavailableOnce?: number[]
   /** Closes the connection on this many UID FETCH commands, after answering the first of their messages. */
@@ -69,6 +73,8 @@ export interface FakeImap {
   commands: string[]
   /** The access token of each AUTHENTICATE, accepted or not, in order. */
   tokensTried: string[]
+  /** Client connections still open. */
+  connections(): number
   close(): Promise<void>
 }
 
@@ -337,6 +343,8 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
               dropsLeft -= 1
               return socket.destroy()
             }
+            if (options.hangSearches) return
+            if (options.refuseSearches) return send(`${tag} NO search failed`)
             const messages = selected?.messages ?? []
             const all = messages.map((message) => message.uid)
             const test = criteria(tokens(more.join(" ")))
@@ -574,6 +582,7 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
     port,
     commands,
     tokensTried,
+    connections: () => sockets.size,
     close: () =>
       new Promise((resolve) => {
         for (const socket of sockets) socket.destroy()

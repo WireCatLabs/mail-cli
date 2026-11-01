@@ -8,6 +8,7 @@ const ENTRIES: [reason: string, code: string, message: string][] = [
   ["mail.oauth-no-client", "configuration_error", "no Microsoft app id is set up for OAuth sign-in"],
   ["mail.uidvalidity-changed", "invalid_response", "the folder's UIDVALIDITY changed during the run"],
   ["mail.not-returned", "not_found", "the server did not return the email"],
+  ["mail.search-refused", "provider_error", "the mail server refused to search a folder"],
   ["mail.rules-file-invalid", "validation_error", "the rules file is not one rules export writes"],
   ["mail.filters-file-invalid", "validation_error", "the file is not a Gmail Takeout Filters.json"],
   ["mail.rule-not-found", "not_found", "no rule has exactly these conditions"],
