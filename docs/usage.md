@@ -121,3 +121,24 @@ is no raw source to show.
 Mail from a sender whose mail looks like spam or a scam comes after the rest of a page; `--plain-order` keeps the
 order the words give. `messages show` gives the first 4,000 characters of each attachment's text; `--full` gives all
 of it and the HTML body. `--before-n` and `--after-n` add the emails around it in its thread.
+
+## Export mail
+
+The store keeps text, not the original message, so `messages export` reads the originals from the server again.
+It selects with the same query as `search messages` and writes a private folder (mode 700, files 600):
+
+```sh
+mail ya messages export 'from:ann@example.com' --output ~/mail-backup     # one mbox file per folder
+mail ya messages export --folder INBOX --format maildir --output ~/Maildir # Maildir++, for mu and notmuch
+mail ya messages export 'date>30d' --limit 500 --output ~/mail-backup --resume
+mail ya stats messages top --by list --limit 10                          # which lists send the most
+```
+
+- **What is written.** Each message as the server holds it, byte for byte, in every folder it is filed in (Gmail files
+  a message under All Mail and INBOX both: pass `--folder` to export one). mbox files are mboxrd: a body line that
+  starts with the word From gets a `>` before it. Maildir file names carry the read (`S`) and starred (`F`) state.
+- **Never over what is there.** A folder with something in it is refused. `--resume` goes on with an export begun
+  there (a journal file, `.mail-export.jsonl`, lists what is done and the length of each mbox file after it); `--replace`
+  writes into any folder over files of the same name and deletes nothing.
+- **In parts.** A run stops at `--limit`, `--max-pages` or before its deadline and says `state: "partial"`; run it again
+  with `--resume`. Mail the store has no UID for (sync again) or the server no longer has is counted, not written.

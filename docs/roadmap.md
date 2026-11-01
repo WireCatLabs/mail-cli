@@ -15,8 +15,7 @@ AI agents the same commands. Every command is in the [command reference](command
 
 ## Next
 
-- **Search on the server** (IMAP SEARCH, Gmail's own search) for mail not synced yet, and **export** to `.eml` files
-  and mailbox archives.
+- **Search on the server** (IMAP SEARCH, Gmail's own search) for mail not synced yet.
 - **Writing**: move, flag and delete with undo, then send, reply and drafts, behind the profile's permissions.
 - **OAuth sign-in for Outlook, Microsoft 365 and Google Workspace.** Microsoft accepts only OAuth for IMAP, so these
   mailboxes cannot be added yet, and a Workspace domain that turns app passwords off needs it too.

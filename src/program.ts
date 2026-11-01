@@ -23,6 +23,7 @@ import { accountCommand } from "./commands/account.js"
 import { foldersCommand } from "./commands/folders.js"
 import { readCommands } from "./commands/read.js"
 import { sessionCommand } from "./commands/session.js"
+import { statsCommand } from "./commands/stats.js"
 import { statusCommand } from "./commands/status.js"
 import { syncCommand } from "./commands/sync.js"
 import { configuration } from "./config.js"
@@ -51,6 +52,7 @@ export const definition = (): ProgramDefinition => ({
     syncCommand(),
     statusCommand(),
     ...readCommands(),
+    statsCommand(),
     appDoctorCommand(IDENTITY, configuration, { packageName: PACKAGE }),
     skillCommand(IDENTITY, SKILL),
     appMcpCommand(IDENTITY, configuration, {

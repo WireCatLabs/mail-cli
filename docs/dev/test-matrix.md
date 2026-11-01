@@ -7,7 +7,7 @@ ran it · ⛔ not tested offline, with the reason and where it is checked instea
 Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 [TESTING.md](TESTING.md) for how, and for the states and failures that cut across commands.
 
-**95 ✅ · 26 ⛔ · 0 ❌** — 40 commands, 81 options.
+**106 ✅ · 26 ⛔ · 0 ❌** — 42 commands, 90 options.
 
 | Command | Option | | Note |
 |---|---|---|---|
@@ -45,10 +45,21 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `messages show` |  | ✅ |  |
 | `messages show` | `--before-n` | ✅ |  |
 | `messages show` | `--after-n` | ✅ |  |
+| `messages export` |  | ✅ |  |
+| `messages export` | `--format` | ✅ |  |
+| `messages export` | `--output` | ✅ |  |
+| `messages export` | `--folder` | ✅ |  |
+| `messages export` | `--limit` | ✅ |  |
+| `messages export` | `--max-pages` | ✅ |  |
+| `messages export` | `--resume` | ✅ |  |
+| `messages export` | `--replace` | ✅ |  |
 | `conversations list` |  | ✅ |  |
 | `conversations list` | `--limit` | ✅ |  |
 | `conversations list` | `--page` | ✅ |  |
 | `conversations show` |  | ✅ |  |
+| `stats messages top` |  | ✅ |  |
+| `stats messages top` | `--by` | ✅ |  |
+| `stats messages top` | `--limit` | ✅ |  |
 | `doctor` |  | ✅ |  |
 | `doctor` | `--online` | ✅ |  |
 | `skill show` |  | ✅ |  |

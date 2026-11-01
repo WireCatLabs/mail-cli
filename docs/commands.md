@@ -245,6 +245,34 @@ mail messages show <message> [options]
 
 **Example:** `mail ya messages show 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E'`, `mail ya messages show 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E' --before-n 2`
 
+### `mail messages export`
+
+copy the original messages of stored mail that match a query into mbox files (one per folder) or a Maildir++ tree, for backup or for mu and notmuch. The store keeps text, not the original source, so each message is read from the server again; the destination folder is private (mode 700, files 600)
+
+**Changes something on this computer only.**
+
+```sh
+mail messages export [query] [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `query` | optional | which stored mail: the same query as `search messages`; all of it if left out. |
+
+| Option | What it does |
+|---|---|
+| `--format <format>` | mbox files or a Maildir++ tree. One of: `mbox`, `maildir`. Default: `mbox`. |
+| `--output <file>` | the folder to write the export into (not one file); made private if it does not exist. |
+| `--folder <folder>` | only mail filed in this folder; repeat it for more (default: the folders sync reads). |
+| `--limit <n>` | write at most this many messages in this run, newest first. |
+| `--max-pages <pages>` | at most this many requests to the mail server in this run; as many as fit the deadline if not given. |
+| `--resume` | go on with the export already in the folder, skipping what it holds. |
+| `--replace` | write into a folder that has something in it, over files of the same name. |
+
+**Returns:** mail export — address, format, destination, folders, state, matched, exported, already_exported, and 5 more; every field: mail commands info messages export
+
+**Example:** `mail ya messages export 'from:ann@example.com' --output ~/mail-backup`, `mail ya messages export --folder INBOX --format maildir --output ~/Maildir`, `mail ya messages export 'date>30d' --limit 500 --output ~/mail-backup --resume`
+
 ## `mail conversations`
 
 the threads of the stored mail: an email and its replies
@@ -285,6 +313,31 @@ mail conversations show <conversation>
 **Returns:** one email thread, every email oldest first
 
 **Example:** `mail ya conversations show 'chat:email/me%40example.com/thread-1'`, `mail ya conversations show 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E'`
+
+## `mail stats`
+
+counts over the mail sync stored
+
+### `mail stats messages`
+
+counts of stored emails
+
+#### `mail stats messages top`
+
+group this profile's stored mail by sender, mailing list (List-Id) or sender domain, the biggest group first; unread and size help decide what to unsubscribe from or clean up
+
+```sh
+mail stats messages top [options]
+```
+
+| Option | What it does |
+|---|---|
+| `--by <group>` | what to group by. One of: `sender`, `list`, `domain`. Default: `sender`. |
+| `--limit <n>` | how many groups, at most 200. Default: `20`. |
+
+**Returns:** mail group — group, emails, unread, bytes, last_email_at, untrusted; every field: mail commands info stats messages top
+
+**Example:** `mail ya stats messages top`, `mail ya stats messages top --by list --limit 10`
 
 ## `mail doctor`
 

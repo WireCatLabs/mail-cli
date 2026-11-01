@@ -34,6 +34,9 @@ Find your way with the tool itself, not this file:
   `list:`, `is:unread`, `has:attachment`, `content:`, `date>7d`); each hit's `ref` goes to
   `mail ya messages show <ref>`, its `email.thread` to `mail ya conversations show <thread>`. It reads only what sync
   stored; for mail with messages and notes together, memo's `search all`.
+- `mail ya messages export '<query>' --output <folder> [--format mbox|maildir] [--limit n]` writes the original
+  messages to a private folder for backup; a run can be partial: run it again with `--resume`. Never `--replace` unless
+  the owner says so. `mail ya stats messages top --by sender|list|domain` ranks the stored mail.
 - `mail ya sync` reads new mail into the store (`--since-time`, `--limit`, `--folder`).
   A big mailbox does not fit one run: when the answer says `state: "partial"`, run the command in `next` again (it is
   safe) until it says `complete`; `mail ya status` says how far it is. Stop when a run moves nothing on, and tell the owner.
