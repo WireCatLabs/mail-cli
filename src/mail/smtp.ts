@@ -48,8 +48,20 @@ const refused = (error: SmtpError): CliError => {
   )
 }
 
-const settle = <T>(start: (done: (error: SmtpError | null, value?: T) => void) => void): Promise<T> =>
-  new Promise<T>((resolve, reject) => start((error, value) => (error ? reject(error) : resolve(value as T))))
+/** One step's callback, or the connection's 'error' event, which nodemailer raises instead when the socket fails. */
+const settle = <T>(
+  connection: SMTPConnection,
+  start: (done: (error: SmtpError | null, value?: T) => void) => void,
+): Promise<T> =>
+  new Promise<T>((resolve, reject) => {
+    const failed = (error: SmtpError) => reject(error)
+    connection.once("error", failed)
+    start((error, value) => {
+      connection.off("error", failed)
+      if (error) reject(error)
+      else resolve(value as T)
+    })
+  })
 
 /** SMTP submission with the profile's login and app password, one connection per message. */
 export const smtpSubmit = (
@@ -76,13 +88,13 @@ export const smtpSubmit = (
     bounds.signal?.addEventListener("abort", abort, { once: true })
     try {
       try {
-        await settle<void>((done) => connection.connect((error) => done(error ?? null)))
-        await settle<boolean>((done) => connection.login({ user: endpoint.login, pass: password }, done))
+        await settle<void>(connection, (done) => connection.connect((error) => done(error ?? null)))
+        await settle<boolean>(connection, (done) => connection.login({ user: endpoint.login, pass: password }, done))
       } catch (error) {
         throw beforeSending(error as SmtpError)
       }
       try {
-        const info = await settle<SMTPConnection.SentMessageInfo>((done) =>
+        const info = await settle<SMTPConnection.SentMessageInfo>(connection, (done) =>
           connection.send({ from, to: [...recipients] }, Buffer.from(raw), done),
         )
         return { accepted: info.accepted, rejected: info.rejected }

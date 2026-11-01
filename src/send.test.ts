@@ -1,4 +1,5 @@
 import { mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs"
+import { createServer } from "node:net"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Readable } from "node:stream"
@@ -70,11 +71,13 @@ afterEach(async () => {
   smtp = undefined
 })
 
-const harness = async (given: Partial<FakeOptions> & { mx?: string; smtp?: Partial<FakeSmtpOptions> } = {}) => {
-  const { mx = "mx.yandex.net", smtp: smtpOptions, ...imapOptions } = given
+const harness = async (
+  given: Partial<FakeOptions> & { mx?: string; smtp?: Partial<FakeSmtpOptions>; smtpPort?: number } = {},
+) => {
+  const { mx = "mx.yandex.net", smtp: smtpOptions, smtpPort, ...imapOptions } = given
   imap = await startFakeImap({ login: ADDRESS, password: PASSWORD, folders: yandex(), ...imapOptions })
   smtp = await startFakeSmtp({ login: ADDRESS, password: PASSWORD, ...smtpOptions })
-  const ports = { imap: imap.port, smtp: smtp.port }
+  const ports = { imap: imap.port, smtp: smtpPort ?? smtp.port }
   const keyring = memoryKeyring()
   const env: NodeJS.ProcessEnv = {
     ...process.env,
@@ -393,6 +396,49 @@ describe("messages send over SMTP", { timeout: 20_000 }, () => {
     const error = errorOf(failed.err)
     expect(error.code).toBe("authentication_error")
     expect(error.details?.sent ?? error.sent).toBe(false)
+  })
+
+  it("tells a refusal it may retry from one it may not, both with nothing sent", async () => {
+    for (const [code, expected] of [
+      [451, "provider_unavailable"],
+      [554, "provider_error"],
+    ] as const) {
+      const { mail, journal } = await harness({ smtp: { onData: { code, message: "no" } } })
+      const failed = await mail(["ya", "messages", "send", "--to", ADDRESS, "--subject", "x", "y", "--json"])
+      const error = errorOf(failed.err)
+      expect(error.code).toBe(expected)
+      expect(error.details?.sent ?? error.sent).toBe(false)
+      expect(journal()).toContain('"outcome":"failed"')
+      await imap?.close()
+      await smtp?.close()
+    }
+  })
+
+  it("answers network_error, nothing sent, when the submission server cannot be reached", async () => {
+    const closed = createServer()
+    await new Promise<void>((resolve) => closed.listen(0, "127.0.0.1", resolve))
+    const port = (closed.address() as { port: number }).port
+    await new Promise((resolve) => closed.close(resolve))
+    const { mail } = await harness({ smtpPort: port })
+    const failed = await mail(["ya", "messages", "send", "--to", ADDRESS, "--subject", "x", "y", "--json"])
+    expect(errorOf(failed.err).code).toBe("network_error")
+  })
+
+  it("answers people with a line, and the text of what it sent", async () => {
+    const { mail, refOf } = await harness()
+    const sent = await mail(["ya", "messages", "send", "--to", ADDRESS, "--subject", "Plain", "words"], {
+      tty: true,
+    } as Partial<MailEnvironment>)
+    expect(sent.code, sent.err).toBe(0)
+    expect(sent.out).toContain("sent to 1 recipient: Plain")
+    const listed = await mail(["ya", "attachments", "list", await refOf("subject:October")], {
+      tty: true,
+    } as Partial<MailEnvironment>)
+    expect(listed.out).toContain("no attachments")
+    const files = await mail(["ya", "attachments", "list", await refOf("subject:Files")], {
+      tty: true,
+    } as Partial<MailEnvironment>)
+    expect(files.out).toContain("1  invoice.pdf  16 bytes")
   })
 
   it("calls a broken line after the message went outcome_unknown, and a retry finds it in Sent instead of sending twice", async () => {
