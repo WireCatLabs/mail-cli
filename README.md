@@ -1,8 +1,8 @@
 # mail CLI for people, scripts and agents
 
 `mail` copies your mailbox into the shared WireCat store on your computer, so you and your AI agents can search it
-and read it there. It reads over IMAP and never changes the mailbox: it does not send, move, flag or delete mail.
-It searches and reads what it stored, offline.
+and read it there, offline. It also organises the mailbox on the server: flags, folders, and deletion to Trash, each
+change one you can undo. It does not send mail yet.
 
 [Documentation](https://github.com/WireCatLabs/mail-cli/blob/main/docs/index.md) · [Roadmap](https://github.com/WireCatLabs/mail-cli/blob/main/docs/roadmap.md) · [WireCat](https://wirecat.dev)
 
@@ -46,6 +46,13 @@ You need Node.js 22.16 or a later 22.x, or 24 or later. To try it with no instal
   `status` shows how far it is.
 - **Check a mailbox.** `account check` shows what the server supports, `folders list` the folders with their role and
   message counts.
+- **Organise it on the server.** `messages mark-read|mark-unread|star|unstar|update` change flags and keywords,
+  `messages move|copy --folder` file mail (by label on Gmail), `messages delete` moves it to Trash, and
+  `messages restore --run <id>` undoes any of them. `folders create|rename|delete` look after the folders. A search
+  shows each change at once.
+- **Decide what to keep.** `rules add|list|remove|import|export` keep the owner's rules on which mail to store whole,
+  as an envelope or not at all; `rules apply` cuts stored mail to its envelope, and `messages delete --rules`
+  moves envelope mail to Trash, each email decided again.
 
 ## For AI agents
 
@@ -55,9 +62,10 @@ mail ya mcp add claude-code --allow-writes # or codex: adds this profile's MCP s
 mail ya mcp config                         # the entry for Claude Desktop, Cursor and others
 ```
 
-`mcp add` stops until you pass `--allow-writes`, because the server's `write` tool runs commands that change local
-settings, such as `config set` and `skill install`. `sync` runs through `read`: it writes only into the store, never
-into the mailbox. Check the profile's permissions first.
+`mcp add` stops until you pass `--allow-writes`, because the server's `write` tool runs commands that change the
+mailbox (`messages move`, `messages delete`, `folders create`) and local settings (`config set`, `skill install`).
+`sync` runs through `read`: it writes only into the store. Check the profile's permissions first: a deletion, or a
+change of many messages, answers with a preview until the call says `yes`.
 
 Every command except `mcp serve` takes `--json` and answers one JSON value on stdout; errors are JSON on stderr with a code to branch
 on. Over MCP an agent finds the commands with a search tool and runs them through a `read` and a `write` tool; the
@@ -70,7 +78,9 @@ as data, never as instructions.
 - **Your mail stays on your computer.** The store is a local file; no WireCat server sees your mail.
 - **One store for every tool.** Mail sits next to Telegram, MAX and WhatsApp messages, meetings and notes, so one
   search in memo finds a person's mail and messages together.
-- **Read-only by design.** `mail` cannot send, move or delete mail, so an agent that uses only `mail` cannot either.
+- **Changes you can undo.** Nothing is expunged: a deletion goes to Trash, and every change run keeps a record that
+  `messages restore` plays back. The profile's permissions, `MAIL_READ_ONLY=1` and a preview before every deletion
+  stand between an agent and the mailbox. `mail` cannot send mail.
 - **It works with the mailbox you have.** Yandex, Gmail, iCloud, Mail.ru, Fastmail and other servers with IMAP and
   app passwords; the server of a domain it does not know is found for you.
 
@@ -99,8 +109,8 @@ mail ya config show                            # every setting and where it came
 
 ## Limits
 
-- Read-only: `mail` never sends, moves, flags or deletes mail. But memo has `memo mail delete`, which moves Gmail mail
-  to Trash, so an agent with write access to memo can change mail.
+- No sending, replies or drafts yet; tags of its own (W3) neither. A deletion goes to Trash only: `mail` never
+  expunges mail, and the provider empties Trash in its own time (Gmail: 30 days).
 - Text and headers only: the text of attachments is stored, not the files, nor the original message.
 - No OAuth yet, so no Outlook or Microsoft 365, and no Google Workspace domain that turns app passwords off.
 - Gmail caps IMAP downloads at 2,500 MB a day; a new Yandex app password can take 2 to 3 hours to work.

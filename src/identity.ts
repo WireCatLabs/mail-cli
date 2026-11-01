@@ -1,4 +1,5 @@
 import type { AppIdentity } from "@wirecat/cli-core/cli"
+import { REASONS } from "./reasons.js"
 import { VERSION } from "./version.js"
 
 export const PACKAGE = "@wirecat/mail-cli"
@@ -14,6 +15,7 @@ export const IDENTITY: AppIdentity = {
   // One call to the source reads 60 messages on 4 connections: 5 to 12 s on Yandex 360 (cli-testing, performance/mail).
   requestMs: 9_000,
   contentLanguages: ["ru", "en"],
+  errors: { reasons: REASONS },
 }
 
 export const SKILL = new URL("../skills/mail-cli/SKILL.md", import.meta.url)
