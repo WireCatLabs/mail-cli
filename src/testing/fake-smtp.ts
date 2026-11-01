@@ -9,6 +9,8 @@ export interface Received {
 export interface FakeSmtpOptions {
   login: string
   password: string
+  /** OAuth access tokens taken over AUTH XOAUTH2, as Microsoft's and Gmail's submission servers do. */
+  tokens?: string[]
   /** `drop`: the line breaks after the message was read and before the answer, so the outcome is unknown. */
   onData?: "drop" | { code: number; message: string }
 }
@@ -18,6 +20,8 @@ export interface FakeSmtp {
   received: Received[]
   /** Logins tried, right or wrong. */
   logins: number
+  /** The access token of each XOAUTH2 login, in order. */
+  tokensTried: string[]
   close(): Promise<void>
 }
 
@@ -25,13 +29,20 @@ export interface FakeSmtp {
 export const startFakeSmtp = async (options: FakeSmtpOptions): Promise<FakeSmtp> => {
   const received: Received[] = []
   const state = { logins: 0 }
+  const tokensTried: string[] = []
   const server = new SMTPServer({
     logger: false,
     disabledCommands: ["STARTTLS"],
     allowInsecureAuth: true,
+    authMethods: options.tokens ? ["XOAUTH2"] : ["PLAIN", "LOGIN"],
     onAuth: (auth, _session, callback) => {
       state.logins += 1
-      if (auth.username === options.login && auth.password === options.password) callback(null, { user: auth.username })
+      if (auth.method === "XOAUTH2") tokensTried.push(auth.accessToken ?? "")
+      const accepted =
+        auth.method === "XOAUTH2"
+          ? (options.tokens ?? []).includes(auth.accessToken ?? "")
+          : auth.password === options.password
+      if (auth.username === options.login && accepted) callback(null, { user: auth.username })
       else callback(Object.assign(new Error("Invalid credentials"), { responseCode: 535 }))
     },
     onData: (stream, session, callback) => {
@@ -59,6 +70,7 @@ export const startFakeSmtp = async (options: FakeSmtpOptions): Promise<FakeSmtp>
   return {
     port,
     received,
+    tokensTried,
     get logins() {
       return state.logins
     },

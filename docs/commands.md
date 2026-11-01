@@ -58,7 +58,7 @@ keep this profile's app password in the OS keyring
 
 ### `mail session start`
 
-sign this profile in. A new profile needs its mailbox: --address, or it is asked at a terminal; the server is found (built-in providers, the MX record, ISPDB, the domain's autoconfig; all providers: https://github.com/WireCatLabs/mail-cli/blob/main/docs/providers.md); for a domain the built-in table does not know, the domain, never the address, goes to the DNS resolver, autoconfig.thunderbird.net and autoconfig.<domain>, and --provider or --host skips those lookups; the steps to prepare the mailbox are shown, the app password is asked (hidden) or read from MAIL_PASSWORD, checked against the server, and only then the profile and the keyring entry are saved. An existing profile only asks for the password again. Without a terminal nothing is asked: a missing --address or password is a validation error
+sign this profile in. A new profile needs its mailbox: --address, or it is asked at a terminal; the server is found (built-in providers, the MX record, ISPDB, the domain's autoconfig; all providers: https://github.com/WireCatLabs/mail-cli/blob/main/docs/providers.md); for a domain the built-in table does not know, the domain, never the address, goes to the DNS resolver, autoconfig.thunderbird.net and autoconfig.<domain>, and --provider or --host skips those lookups; the steps to prepare the mailbox are shown, the app password is asked (hidden) or read from MAIL_PASSWORD, checked against the server, and only then the profile and the keyring entry are saved. Outlook.com and Microsoft 365 sign in with OAuth instead, and Gmail with your own Google app (--client-file): the browser opens the provider's page, and the token is checked against the server before it is kept. An existing profile only asks for the password, or signs in, again. Without a terminal nothing is asked: a missing --address or password is a validation error
 
 **Changes something on this computer only.**
 
@@ -69,21 +69,23 @@ mail session start [options]
 | Option | What it does |
 |---|---|
 | `--address <email>` | the full mail address of a new profile, also the login for most providers. |
-| `--provider <provider>` | skip discovery and use a built-in provider: Yandex, Gmail, iCloud, Mail.ru, Fastmail, Outlook. |
+| `--provider <provider>` | skip discovery and use a built-in provider: Yandex, Gmail, iCloud, Mail.ru, Fastmail, Microsoft 365, Outlook. |
 | `--host <host>` | skip discovery and use this IMAP host. |
 | `--port <port>` | IMAP port (default 993). |
 | `--security <mode>` | tls or starttls (default tls). |
 | `--login <login>` | the login name, when it is not the full address. |
 | `--folder <folder>` | sync only this folder; repeat it for more. Default: ``. |
+| `--no-browser` | OAuth: print the sign-in link instead of opening the browser. |
+| `--client-file <file>` | Gmail over OAuth: your own Google Desktop app client JSON (chmod 600). |
 | `--credential-storage <storage>` | where the password is kept: keyring (the default, which falls back to a private file by itself when no keyring works), or file, not recommended. Default: `keyring`. |
 
 **Returns:** sign in; a new profile is created first
 
-**Example:** `mail ya session start --address me@example.com`, `mail ya session start`, `mail me session start --address me@example.com --host imap.example.com --security tls`
+**Example:** `mail ya session start --address me@example.com`, `mail work session start --address me@outlook.com`, `mail gm session start --address me@gmail.com --client-file ~/client.json`
 
 ### `mail session status`
 
-show where this profile's app password comes from; the password is never printed
+show where this profile's app password comes from, or what its OAuth sign-in allows and until when; no password or token is ever printed
 
 ```sh
 mail session status [options]
@@ -91,23 +93,27 @@ mail session status [options]
 
 | Option | What it does |
 |---|---|
-| `--check` | log in to the server to prove the password still works. |
+| `--check` | log in to the server to prove the password or sign-in still works. |
 
-**Returns:** mail session status — profile, state, password_from, address, verified; every field: mail commands info session status
+**Returns:** mail session status — profile, state, auth, password_from, address, verified, oauth; every field: mail commands info session status
 
 **Example:** `mail ya session status`, `mail ya session status --check --json`
 
 ### `mail session end`
 
-forget this profile's app password on this computer; synced mail stays
+forget this profile's app password or OAuth sign-in on this computer; synced mail stays
 
 **Changes something on this computer only.**
 
 ```sh
-mail session end
+mail session end [options]
 ```
 
-**Returns:** forget this profile's app password on this computer; synced mail stays
+| Option | What it does |
+|---|---|
+| `--revoke` | Gmail over OAuth: also ask Google to revoke the sign-in, which ends every sign-in of that Google project. |
+
+**Returns:** forget this profile's password or sign-in; synced mail stays
 
 **Example:** `mail ya session end`
 
@@ -119,7 +125,7 @@ list the profiles on this computer, each with its address and where its app pass
 mail session list
 ```
 
-**Returns:** mail profile — profile, address, password_from; every field: mail commands info session list
+**Returns:** mail profile — profile, address, auth, password_from; every field: mail commands info session list
 
 **Example:** `mail session list`, `mail session list --json`
 
@@ -1316,7 +1322,7 @@ mail config set <setting> <value> [options]
 
 | Argument | | What it is |
 |---|---|---|
-| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, runs_size_limit_mb, permissions, sends_per_hour, requests_per_minute, speech_model, picture_search, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, smtp_host, smtp_port, smtp_security, auth, folders, update_check, skill_hint, search_stemmers.cyrillic, search_stemmers.latin. |
+| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, runs_size_limit_mb, permissions, sends_per_hour, requests_per_minute, speech_model, picture_search, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, smtp_host, smtp_port, smtp_security, auth, microsoft_client_id, folders, update_check, skill_hint, search_stemmers.cyrillic, search_stemmers.latin. |
 | `value` | required | a number, true or false; for a group tg:work,max:Alice,email:me@x. |
 
 | Option | What it does |
@@ -1339,7 +1345,7 @@ mail config unset <setting> [options]
 
 | Argument | | What it is |
 |---|---|---|
-| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, runs_size_limit_mb, permissions, sends_per_hour, requests_per_minute, speech_model, picture_search, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, smtp_host, smtp_port, smtp_security, auth, folders, update_check, skill_hint, search_stemmers.cyrillic, search_stemmers.latin. |
+| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, runs_size_limit_mb, permissions, sends_per_hour, requests_per_minute, speech_model, picture_search, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, smtp_host, smtp_port, smtp_security, auth, microsoft_client_id, folders, update_check, skill_hint, search_stemmers.cyrillic, search_stemmers.latin. |
 
 | Option | What it does |
 |---|---|

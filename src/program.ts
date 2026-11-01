@@ -34,7 +34,7 @@ import { syncCommand } from "./commands/sync.js"
 import { tagsCommand } from "./commands/tags.js"
 import { configuration, OWNER_ONLY } from "./config.js"
 import { IDENTITY, PACKAGE, SKILL } from "./identity.js"
-import { changesCheck } from "./mail/doctor.js"
+import { localChecks } from "./mail/doctor.js"
 
 const update = appUpdate({
   packageName: PACKAGE,
@@ -72,7 +72,7 @@ export const definition = (): ProgramDefinition => ({
     statsCommand(),
     draftsCommand(),
     tagsCommand(),
-    appDoctorCommand(IDENTITY, configuration, { packageName: PACKAGE, local: changesCheck }),
+    appDoctorCommand(IDENTITY, configuration, { packageName: PACKAGE, local: localChecks }),
     skillCommand(IDENTITY, SKILL),
     appMcpCommand(IDENTITY, configuration, {
       name: "mail",

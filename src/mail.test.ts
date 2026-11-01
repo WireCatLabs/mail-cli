@@ -16,7 +16,7 @@ import { openStore, storePath } from "@wirecat/cli-core/store"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
 import { discover } from "./discovery.js"
-import type { AccountCheck, MailBackend, MailEndpoint, RunBounds } from "./mail/backend.js"
+import type { AccountCheck, MailBackend, MailCredential, MailEndpoint, RunBounds } from "./mail/backend.js"
 import { type ImapTuning, imapBackend } from "./mail/imap/index.js"
 import { run } from "./program.js"
 import { type FakeImap, type FakeOptions, startFakeImap } from "./testing/fake-imap.js"
@@ -107,7 +107,7 @@ const harness = async (options: { throttle?: boolean; fake?: Partial<FakeOptions
       keyring,
       himalaya: async () => undefined,
       discovery: { mx: async () => ["mx.yandex.net"], fetch: async () => new Response("", { status: 404 }) },
-      backend: (endpoint: MailEndpoint, password: string, bounds: RunBounds = {}) =>
+      backend: (endpoint: MailEndpoint, password: MailCredential, bounds: RunBounds = {}) =>
         imapBackend({ ...endpoint, host: "127.0.0.1", port, security: "plain" }, password, {
           sleep: async () => {},
           ...bounds,
@@ -303,14 +303,14 @@ describe("session start of a new profile", () => {
     expect((await mail([...base, "--security", "plain"], typed(PASSWORD))).code).not.toBe(0)
   })
 
-  it("will not create a profile for a provider that allows only OAuth", async () => {
+  it("creates no Outlook profile while mail has no Microsoft app to sign in with", async () => {
     const { mail, env } = await harness()
     const refused = await mail(["me", "session", "start", "--address", "me@outlook.com", "--json"], {
       discovery: { mx: async () => [] },
       ...typed(PASSWORD),
     })
     expect(refused.code).not.toBe(0)
-    expect(refused.err).toContain("OAuth")
+    expect(refused.err).toContain("microsoft_client_id")
     expect(profilesIn(env)).toEqual([])
   })
 
@@ -430,10 +430,14 @@ describe("session", () => {
     const { mail } = await harness()
     await profileSet(mail)
     const before = await mail(["session", "list", "--json"])
-    expect(JSON.parse(before.out).items).toEqual([{ profile: "ya", address: ADDRESS, password_from: null }])
+    expect(JSON.parse(before.out).items).toEqual([
+      { profile: "ya", address: ADDRESS, auth: "app-password", password_from: null },
+    ])
     await mail(["ya", "session", "start", "--json"], typed(PASSWORD))
     const after = await mail(["session", "list", "--json"])
-    expect(JSON.parse(after.out).items).toEqual([{ profile: "ya", address: ADDRESS, password_from: "keyring" }])
+    expect(JSON.parse(after.out).items).toEqual([
+      { profile: "ya", address: ADDRESS, auth: "app-password", password_from: "keyring" },
+    ])
   })
 
   describe("with only HOME moved, against the system keyring (WC-SECR-24)", () => {
@@ -499,7 +503,7 @@ describe("account check, folders and sync", () => {
   it("opens the mailbox for every server command through one backend, bound by the run and closed after", async () => {
     const { mail } = await harness()
     const opened: { bounds: RunBounds; closed: boolean }[] = []
-    const backend = (_endpoint: MailEndpoint, _password: string, bounds: RunBounds = {}): MailBackend => {
+    const backend = (_endpoint: MailEndpoint, _password: MailCredential, bounds: RunBounds = {}): MailBackend => {
       const record = { bounds, closed: false }
       opened.push(record)
       return {

@@ -13,6 +13,24 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 - **`messages export --output` refuses credential folders** and the WireCat apps' folders, as `attachments download`
   does.
+- **Outlook.com and Microsoft 365 sign in with OAuth.** `mail <profile> session start --address <you>@outlook.com`
+  shows what it will ask for, opens Microsoft's page in the browser, logs in to IMAP with the new token, and only then
+  saves the profile and the tokens (keyring entry `oauth:microsoft:<profile>`). Sync and `messages send` use the token
+  over IMAP and SMTP (XOAUTH2), refreshing it as needed; a token the server refuses is refreshed once, then the error
+  `mail.oauth-refused` asks for a new sign-in. `session status` shows the app, scopes and expiry, never a token;
+  `session end` forgets the sign-in and names where Microsoft lists the app. `--no-browser` prints the link only.
+- **`microsoft_client_id`**: the Microsoft app to sign in with, set by you once (`config set --defaults`); an agent
+  over MCP cannot change it. WireCat's own app is not registered yet, so for now this is required;
+  [register a Microsoft app](docs/oauth-microsoft.md) gives the steps.
+- **Gmail over OAuth with your own Google app**: `session start --client-file <Desktop client JSON>`
+  (or, on a profile switched with `config set auth oauth`, `MAIL_GOOGLE_CLIENT_ID` and `MAIL_GOOGLE_CLIENT_SECRET`),
+  for an account that cannot make an app password. The signed-in address must match the profile's. Gmail profiles
+  keep app passwords unless switched.
+  [Gmail with your own Google app](docs/oauth-google.md) gives the steps: a Google project just for mail, published
+  without verification. `session end --revoke` asks Google to revoke it, which ends every sign-in of that project.
+- **`mail doctor` lists each OAuth profile** with its app and last sign-in, from disk only, and warns from day 6 that
+  a Google app left in Testing ends its sign-ins on day 7.
+- `session status` and `session list` answer `auth` too.
 
 ### Fixed
 
@@ -22,6 +40,9 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 - **`attachments list` and `download` show every attachment**, not the first 50, and `drafts update` keeps them all.
 - **Attachments are saved through cli-core's atomic write**, which also syncs the file and the folder to disk.
 - The `memo mail delete` command is named as it is now, in the docs and the help of `messages delete --rules`.
+- **Microsoft 365 is its own provider**, found by its MX record, and sends through `smtp.office365.com:587`
+  ([Microsoft](https://learn.microsoft.com/en-us/exchange/mail-flow-best-practices/how-to-set-up-a-multifunction-device-or-application-to-send-email-using-microsoft-365-or-office-365));
+  Outlook.com keeps `smtp-mail.outlook.com`.
 
 ## 0.6.0 — 01.11.2026
 
