@@ -3,7 +3,7 @@ import { CliError } from "@wirecat/cli-base"
 import { annotate } from "@wirecat/cli-base/commands"
 import { progressOf } from "@wirecat/cli-core/background"
 import { answerEntity, baseContext, itemOf, LOCAL_READ, outputFor, renderAnswer } from "@wirecat/cli-core/cli"
-import { parsePoint, type ResumePoint, resumeKey } from "@wirecat/cli-core/mail"
+import { mailProgress } from "@wirecat/cli-core/mail"
 import { Command } from "commander"
 import * as v from "valibot"
 import { configuration } from "../config.js"
@@ -59,26 +59,13 @@ export const statusCommand = (): Command =>
         const store = await openMailStore(context.env, { readOnly: true })
         context.environment.trackCloseable?.(store)
         try {
-          const stored = await store.accounts.storedAccount(key).catch(() => null)
-          const names =
-            stored === null
-              ? []
-              : (await store.mail.mailboxes(stored.id))
-                  .filter(({ kind }) => kind === null)
-                  .map(({ externalId }) => externalId)
-          const folders = []
-          for (const folder of names) {
-            const point = parsePoint<ResumePoint>((await store.sync.syncState(key, resumeKey(folder)))?.value)
-            if (point !== undefined)
-              folders.push({
-                folder,
-                since: point.window.since,
-                done: point.window.done,
-                total: point.window.total,
-                updated_at: point.updatedAt,
-              })
-          }
-          return folders
+          return (await mailProgress(store, key)).map(({ folder, since, done, total, updatedAt }) => ({
+            folder,
+            since,
+            done,
+            total,
+            updated_at: updatedAt,
+          }))
         } finally {
           await store.close()
         }
