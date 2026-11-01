@@ -7,7 +7,7 @@ ran it · ⛔ not tested offline, with the reason and where it is checked instea
 Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 [TESTING.md](TESTING.md) for how, and for the states and failures that cut across commands.
 
-**77 ✅ · 17 ⛔ · 0 ❌** — 30 commands, 64 options.
+**80 ✅ · 27 ⛔ · 0 ❌** — 36 commands, 71 options.
 
 | Command | Option | | Note |
 |---|---|---|---|
@@ -85,6 +85,19 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `runs show` |  | ✅ |  |
 | `runs show` | `--problems` | ✅ |  |
 | `runs path` |  | ✅ |  |
+| `schedule command` |  | ✅ |  |
+| `schedule command` | `--every` | ✅ |  |
+| `schedule command` | `--at` | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |
+| `schedule command` | `--at-time` | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |
+| `schedule agent` |  | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |
+| `schedule agent` | `--max-cost` | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |
+| `schedule agent` | `--every` | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |
+| `schedule agent` | `--at` | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |
+| `schedule agent` | `--at-time` | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |
+| `schedule list` |  | ✅ |  |
+| `schedule run` |  | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |
+| `schedule remove` |  | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |
+| `schedule exec` |  | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |
 | `help` |  | ✅ |  |
 | *global* | `--version` | ⛔ | Commander answers before any command runs, so the trace never sees it; `pnpm version:check` checks it |
 | *global* | `--verbose` | ✅ |  |

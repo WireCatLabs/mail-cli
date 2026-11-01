@@ -17,5 +17,11 @@
   "config unset": "write",
   "runs list": "read",
   "runs show": "read",
-  "runs path": "read"
+  "runs path": "read",
+  "schedule command": "write",
+  "schedule agent": "write",
+  "schedule list": "read",
+  "schedule run": "write",
+  "schedule remove": "write",
+  "schedule exec": "write"
 }

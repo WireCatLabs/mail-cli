@@ -3,6 +3,9 @@ const SHARED_MCP =
   "src/mcp-http.test.ts run mail's own server, config, revoke and refusals"
 const LONG_RUNNING = `starts an HTTP server or a background process that runs until stopped; ${SHARED_MCP}`
 
+const SHARED_SCHEDULE =
+  "cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule"
+
 export const UNTESTED: { command: string; option?: string; reason: string }[] = [
   {
     command: "",
@@ -36,4 +39,16 @@ export const UNTESTED: { command: string; option?: string; reason: string }[] = 
     ...(option ? { option } : {}),
     reason: `starts the installed mail as a child process, as the agent would; ${SHARED_MCP}`,
   })),
+  ...[
+    { command: "schedule command", option: "--at" },
+    { command: "schedule command", option: "--at-time" },
+    { command: "schedule agent" },
+    { command: "schedule agent", option: "--max-cost" },
+    { command: "schedule agent", option: "--every" },
+    { command: "schedule agent", option: "--at" },
+    { command: "schedule agent", option: "--at-time" },
+    { command: "schedule run" },
+    { command: "schedule remove" },
+    { command: "schedule exec" },
+  ].map((entry) => ({ ...entry, reason: SHARED_SCHEDULE })),
 ]

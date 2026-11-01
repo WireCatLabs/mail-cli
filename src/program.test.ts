@@ -182,3 +182,23 @@ it("a failed run keeps the words typed, and record_input false masks them", asyn
     expect((await ran(["personal", "config", "unset", "record_input"])).code).toBe(0)
   }
 })
+
+it("schedules a profile's sync on a timer and lists it", async () => {
+  const calls: string[][] = []
+  const system = {
+    platform: "linux" as const,
+    uid: 1000,
+    entry: ["/opt/node", "/opt/mail/mail.js"],
+    run: async (argv: string[]) => (calls.push(argv), { code: 0, stdout: "", stderr: "" }),
+    spawn: () => 0,
+    pause: async () => {},
+  }
+  const out: string[] = []
+  const options = { streams: { data: (text: string) => out.push(text), diagnostic: () => {} }, tty: false, system }
+  const added = await run(["ya", "schedule", "command", "mail-ya", "--every", "5m", "--", "sync"], options)
+  expect(added).toBe(0)
+  expect(calls.length).toBeGreaterThan(0)
+  out.length = 0
+  expect(await run(["ya", "schedule", "list", "--json"], options)).toBe(0)
+  expect(JSON.parse(out.join("")).items).toEqual([{ name: "mail-ya", kind: "command", when: "every 5m", last: null }])
+})
