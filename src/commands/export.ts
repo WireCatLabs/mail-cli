@@ -25,7 +25,7 @@ import { type Written, writeBatch } from "../export/write.js"
 import { IDENTITY } from "../identity.js"
 import { DEFAULT_SYNC, providerFor } from "../providers.js"
 import { openMailStore } from "../store.js"
-import { collect, contextOf, openMail, refuseOffline } from "./context.js"
+import { contextOf, openMail, refuseOffline, repeatable } from "./context.js"
 import { foldersFor } from "./sync.js"
 
 const PAGE = 100
@@ -92,10 +92,11 @@ export const exportLeaf = (): Command =>
       "--output <file>",
       "the folder to write the export into (not one file); made private if it does not exist",
     )
-    .option(
-      "--folder <folder>",
-      "only mail filed in this folder; repeat it for more (default: the folders sync reads)",
-      collect,
+    .addOption(
+      repeatable(
+        "--folder <folder>",
+        "only mail filed in this folder; repeat it for more (default: the folders sync reads)",
+      ),
     )
     .option("--limit <n>", "write at most this many messages in this run, newest first", positiveCount("--limit"))
     .option(
@@ -294,7 +295,7 @@ export const exportLeaf = (): Command =>
                   format: args.format,
                   output: args.output,
                   resume: true,
-                  ...(args.folder ? { folder: args.folder } : {}),
+                  ...(args.folder?.length ? { folder: args.folder } : {}),
                   ...(args.limit === undefined ? {} : { limit: args.limit }),
                 },
                 why:
