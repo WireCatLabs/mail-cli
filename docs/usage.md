@@ -54,6 +54,10 @@ minutes at a terminal, 45 seconds over MCP. `--timeout` changes the deadline. `-
 run saves what it read, then answers `state: partial` and gives the same command in `next`. Run it again to go on.
 `mail <profile> status` shows how far the sync is.
 
+To keep a profile current, put its sync on a timer (systemd, launchd or Task Scheduler):
+`mail ya schedule command mail-ya --every 5m -- sync`. `mail ya schedule list` shows each schedule and how its last
+run went, and `doctor` says when a run keeps failing.
+
 Yandex gives no message id. For such a server, `sync` lists only each message's number, flags, date and size, and it
 downloads each new message once. It skips stored mail by that number, so a rerun reads nothing twice. It does not
 notice mail deleted on the server or changed flags on mail it skips. `--rescan` does both. It also moves a reply stored

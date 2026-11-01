@@ -554,6 +554,132 @@ mail runs path <run-id>
 
 **Example:** `mail personal runs path run-101`
 
+## `mail schedule`
+
+run a mail command or an agent later or on a timer (systemd, launchd, Task Scheduler); an agent cannot send
+
+### `mail schedule command`
+
+run mail <args…> on a timer — reads save what they read, so this is how a chat's history fills the store
+
+**Changes something on this computer only.**
+
+```sh
+mail schedule command <name> <args> [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `name` | required | lowercase letters, digits and dashes. |
+| `args` | required | the mail command after its name, e.g. -- messages list <chat> --limit 50. |
+
+| Option | What it does |
+|---|---|
+| `--every <duration>` | repeat: 30m, 2h, 1d. |
+| `--at <HH:MM>` | every day at this local time. |
+| `--at-time <time>` | one run: 30m, 2d from now, or an ISO time; the schedule removes itself after it. |
+
+**Returns:** run mail <args…> on a timer — reads save what they read, so this is how a…
+
+**Example:** `mail personal schedule command daily <args>`
+
+### `mail schedule agent`
+
+start an agent (claude or codex) with a prompt on a timer; it runs with MAIL_READ_ONLY=1, so it reads and drafts and cannot send — its answer is kept and you are notified
+
+**Changes something on this computer only.**
+
+```sh
+mail schedule agent <name> <harness> <prompt> [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `name` | required | lowercase letters, digits and dashes. |
+| `harness` | required | the agent to start. One of: `claude`, `codex`. |
+| `prompt` | required | what to do, e.g. "run the daily follow-up review: mail skill show follow-ups". |
+
+| Option | What it does |
+|---|---|
+| `--max-cost <usd>` | claude only: stop a run that costs more than this, in US dollars. |
+| `--every <duration>` | repeat: 30m, 2h, 1d. |
+| `--at <HH:MM>` | every day at this local time. |
+| `--at-time <time>` | one run: 30m, 2d from now, or an ISO time; the schedule removes itself after it. |
+
+**Returns:** start an agent (claude or codex) with a prompt on a timer; it runs with…
+
+**Example:** `mail personal schedule agent daily claude <prompt>`
+
+### `mail schedule list`
+
+the schedules, when they run and how their last run went
+
+```sh
+mail schedule list [query]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `query` | optional | field:value terms that narrow the list — the fields are below. |
+
+**Returns:** scheduled job — name, kind, when, last; every field: mail commands info schedule list
+
+**Example:** `mail personal schedule list`
+
+### `mail schedule run`
+
+run a schedule now, as its timer would, and wait for it
+
+**Changes something in the service.**
+
+```sh
+mail schedule run <name>
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `name` | required |  |
+
+**Returns:** run a schedule now, as its timer would, and wait for it
+
+**Example:** `mail personal schedule run daily`
+
+### `mail schedule remove`
+
+stop a schedule and remove its timer; its past output stays
+
+**Changes something on this computer only.**
+
+```sh
+mail schedule remove <name>
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `name` | required |  |
+
+**Returns:** stop a schedule and remove its timer; its past output stays
+
+**Example:** `mail personal schedule remove daily`
+
+### `mail schedule exec`
+
+what a timer runs, given the schedule's file; to run one by hand, use run
+
+**Changes something in the service.**
+
+```sh
+mail schedule exec <file>
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `file` | required |  |
+
+**Returns:** what a timer runs, given the schedule's file; to run one by hand, use run
+
+**Example:** `mail personal schedule exec ./report.pdf`
+
 ## Exit codes
 
 Branch on the code, not on the text: the text can change, the code does not.
