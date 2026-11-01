@@ -1,6 +1,6 @@
 {
   "template": "@wirecat/cli-template",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "names": {
     "name": "mail-cli",
     "command": "mail",
@@ -15,7 +15,7 @@
     ".github/workflows/main.yml": "f89f9ae8e25a935ed12131c74817afd494afb7fd6dd70929392ad1a0a58e2063",
     ".github/workflows/monthly.yml": "5b2e4ac5edf4c43c2987144a606149fbf8a81ac1ef881695ace33a8b86512adc",
     ".github/workflows/pr.yml": "38a69a349babc24c0ab5e0a5ddf041973e4827d61b8f72ca55d38c1fe74fd336",
-    ".github/workflows/release.yml": "8a97f18c792c689b0e06a24b571b27bfda8c1dae69b30fa26e16426d4640ea4c",
+    ".github/workflows/release.yml": "d7cf79680c0fc9c185c31e39ea4a5bdb863a0be8bc63e548189d134102373c4f",
     ".github/workflows/standards.yml": "d5a74b07504f28c3293ec17623e9224bc9b6166ce866b643067a98f98051f895",
     ".gitignore": "f7bcd72d93c1e007befd036caff83ea4c784ff0f436230fae86df6b0b67131d0",
     ".gitleaks.toml": "a639f135a1330a0246fe26e85970c90205553408e127fc2bdadacd298cdfca4b",
@@ -26,7 +26,7 @@
     "docs/dev/design-questions.md": "9d6202bf676d74c62a333d5552cc1e0dab46f89225c417d14ee6fe57c2a45636",
     "docs/dev/reference-clis.md": "c41141b84294956aad6357a6c9e8d8f273bfc3e63f95b42a96272a37a3ca8433",
     "docs/dev/skills/design-interview/SKILL.md": "a2e85d0778b843fe7b91537aebe97b0b45ffc64c93a000801a77ef5ecb450d76",
-    "docs/dev/skills/release/SKILL.md": "2abb0f0cbd48753f41a7f7a235ada12e1a79d4b394028a2b2806e5079182563c",
+    "docs/dev/skills/release/SKILL.md": "b621813918ed50ab63a37e29ceb4a1fcbedebcee80810323c708f25d637ccc81",
     "docs/dev/skills/release/fresh-audit.md": "f74c41958ae343791085d3cfc3a55d8f4f7b3baeb5f833a88f97aae7dce9e320",
     "lefthook.yml": "c41b0b3b90a5c1e3f5b8c78a524139bdbafb836a0e0e4ebd90ccb2c7939b57ed",
     "scripts/audit.sh": "a3b23b86d451e7ab8f5820e5d7bf95c6f63165ae42615c45fcba9fba22ed542a",
@@ -52,6 +52,7 @@
     "scripts/",
     "skills/",
     "src/",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    "server.json"
   ]
 }
