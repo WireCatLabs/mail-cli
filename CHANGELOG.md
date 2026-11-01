@@ -2,6 +2,15 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Added
+
+- **The skill on ClawHub names its program and npm package**, so an OpenClaw user is told to install `@wirecat/mail-cli`
+  before the skill works, as with the other WireCat skills.
+- **`server.json` and `mcpName` for the official MCP Registry** (`dev.wirecat/mail-cli`). The registry jobs come with
+  the next template update; until then nothing is published there.
+
 ## 0.1.1 — 01.11.2026
 
 ### Fixed
