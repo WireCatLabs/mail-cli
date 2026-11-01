@@ -19,6 +19,13 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 - **`sync` asks for at most 20 MB of message bodies in one request**, as well as at most 15 messages, so a batch of
   large attachments does not hold a connection for minutes or fill memory.
 
+- **A reply is stored in its conversation on servers without thread ids, such as Yandex and Mail.ru.** The thread is
+  the first email named in References, else in In-Reply-To. Mail synced before keeps the thread it was stored with.
+  Gmail keeps its own ids.
+- **Headers are read by cli-core, as memo reads them.** A mailing list's `List-Id` is stored without its angle
+  brackets and in lower case, and Reply-To, Gmail's SPF, DKIM and DMARC verdicts and the attachment hint are read at
+  list time, so the owner's rules see the same fields in both tools.
+
 ### Fixed
 
 - **Every command that asks the server is bound by the run's deadline and Ctrl-C.** `session start` and

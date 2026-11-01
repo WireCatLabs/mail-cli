@@ -86,7 +86,7 @@ it("reads UIDVALIDITY on open, lists envelopes and never asks for a body without
   expect(listed[0]?.headers).toMatchObject({
     from: "ann@example.com",
     fromName: "Ann",
-    listId: "<news.example.com>",
+    listId: "news.example.com",
     bulk: true,
   })
   expect(listed[1]?.headers?.bulk).toBe(false)
@@ -410,4 +410,42 @@ it("gives mail read as bytes the id the envelope listing gives it, a folded or m
     full.map(({ messageId, threadId }) => ({ messageId, threadId })),
   )
   expect(new Set(full.map(({ messageId }) => messageId)).size).toBe(3)
+})
+
+it("threads a reply under its first email by References, the same way from a listing and from the bytes", async () => {
+  fake = await serveMessages([
+    { uid: 4, raw: raw("root", "question") },
+    { uid: 5, raw: raw("r1", "Re: question", "In-Reply-To: <root@example.com>\r\n") },
+    {
+      uid: 6,
+      raw: raw(
+        "r2",
+        "Re: Re: question",
+        "In-Reply-To: <r1@example.com>\r\nReferences: <root@example.com>\r\n <r1@example.com>\r\n",
+      ),
+    },
+    { uid: 7, raw: raw("other", "another") },
+  ])
+  const source = sourceOf(fake.port)
+  const searched = (await source.search?.(FROM, "INBOX")) as Searched
+  const full = await source.list(FROM, "INBOX", { searched })
+  const quick = (await source.quick?.(FROM, "INBOX", { searched })) as Quick[]
+  const raws = await source.fetchRaw(quick)
+  await source.close()
+  const [root, first, second, other] = full.map(({ threadId }) => threadId)
+  expect([first, second]).toEqual([root, root])
+  expect(other).not.toBe(root)
+  expect(quick.map((item, index) => source.identify?.(raws[index] as Uint8Array, item)?.threadId)).toEqual(
+    full.map(({ threadId }) => threadId),
+  )
+})
+
+it("keeps the server's own thread and message ids where it gives them, as Gmail does", async () => {
+  fake = await serveMessages([
+    { uid: 5, raw: raw("r1", "Re: question", "References: <root@example.com>\r\n"), emailId: "E5", threadId: "T9" },
+  ])
+  const source = sourceOf(fake.port)
+  const [listed] = await source.list(FROM, "INBOX")
+  await source.close()
+  expect(listed).toMatchObject({ messageId: "E5", threadId: "T9" })
 })

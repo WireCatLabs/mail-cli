@@ -3,7 +3,7 @@ import type { MailSource, Quick, Searched } from "@wirecat/cli-core/mail"
 import type { FetchMessageObject } from "imapflow"
 import { type Connections, IMAP_DEFAULTS, type ImapTuning } from "./connection.js"
 import { mapImapError } from "./errors.js"
-import { HEADER_FIELDS, idsOf, listedOf, messageIdOf, quickOf } from "./messages.js"
+import { HEADER_FIELDS, listedOf, quickOf, rawIdsOf } from "./messages.js"
 
 const chunks = <T>(items: T[], size: number): T[][] => {
   const out: T[][] = []
@@ -135,7 +135,7 @@ export const imapReads = (pool: Connections, tuning: ImapTuning = {}): Reads => 
 
     identify: (raw, item) => {
       const validity = validities.get(item.folder ?? "INBOX") ?? ""
-      return idsOf(messageIdOf(raw), item.folder ?? "INBOX", validity, item.uid)
+      return rawIdsOf(raw, item.folder ?? "INBOX", validity, item.uid)
     },
 
     fetchRaw: async (items) => {

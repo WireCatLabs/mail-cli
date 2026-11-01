@@ -34,6 +34,9 @@ Languages: ru, en.
   Gmail's X-GM-MSGID), else a hash of the Message-ID header. On a server with neither (Yandex) a listing asks only for
   UID, flags, date and size (`quick`) and the hash is taken from the Message-ID of the raw message (`identify`), which
   must equal imapflow's ENVELOPE value (the trimmed first header) or stored mail would get a second id.
+  The thread id is the server's (Gmail's X-GM-THRID, OBJECTID's THREADID), else a hash of the first Message-ID in
+  References, else of In-Reply-To, else of the message's own Message-ID: a reply then shares its first email's thread
+  on Yandex and Mail.ru too. Gmail's ids stay the server's, since stored Gmail mail is keyed on them.
 - **Password:** OS keyring (service `mail-cli`, account the profile); when it fails, a 0600 `credentials.json` in the
   config folder without asking (WC-SECR-4, owner 2026-10-31, which replaces "no file fallback");
   `--credential-storage file` chooses the file. `MAIL_PASSWORD` first; read-only fallback to Himalaya's `secret-tool`
