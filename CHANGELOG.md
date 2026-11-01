@@ -82,6 +82,17 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 - `mail` is no longer read-only: an MCP client with `--allow-writes` can change the mailbox through the `write` tool,
   within the profile's permissions.
+- **On a server with OBJECTID (Fastmail, Cyrus) an email's id is the hash of its Message-ID, as memo makes it**, not
+  the server's EMAILID, and its thread comes from References. Ids come from cli-core's `mailIds`, which memo uses too,
+  so the two never store one email twice. Gmail keeps its own ids; Yandex and Mail.ru ids do not change.
+
+### Fixed
+
+- **Gmail labels are decoded once.** imapflow already decodes them, and mail decoded `R&D-team` again into `Rteam`.
+- **`sync` says when it leaves stored rules out**: `rules_unread` and `rules_unread_why` (such as `condition label`)
+  in the answer and a `mail.rules-unreadable` issue, when the rules hold a condition this mail does not know.
+- **`sync --rescan` fails on a locked or broken store** instead of reporting the rethreading done.
+- On cli-core 0.526.0, the version memo uses too, so both read the stored rules and make ids alike.
 
 ## 0.5.0 — 01.11.2026
 

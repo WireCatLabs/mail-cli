@@ -6,7 +6,7 @@ import { CliError, resolvePaths } from "@wirecat/cli-base"
 export type ChangeOp = "flag" | "label" | "move" | "copy" | "trash"
 
 export interface ChangedItem {
-  /** The stored email's id: Gmail's X-GM-MSGID, an OBJECTID, or the hash of its Message-ID. */
+  /** The stored email's id: Gmail's X-GM-MSGID, or the hash of its Message-ID. */
   id: string
   uid: number
   /** Of the flags or labels this step changes, the ones the message had before it. */

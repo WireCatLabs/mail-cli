@@ -1,3 +1,4 @@
+import { CliError } from "@wirecat/cli-base"
 import type { AccountKey, MessageStore } from "@wirecat/cli-core/store"
 import type { MailBackend } from "./backend.js"
 
@@ -10,8 +11,7 @@ export interface Rethreaded {
 
 /**
  * Mail stored before thread ids came from References kept a thread of its own, and the sync skips stored mail, so
- * only a listing of its headers can move it. Only a server without thread ids is read: Gmail's and OBJECTID's ids
- * are already the server's.
+ * only a listing of its headers can move it. Gmail is not read: its thread ids are already the server's.
  */
 export const rethreadStored = async (
   backend: MailBackend,
@@ -21,7 +21,11 @@ export const rethreadStored = async (
   since: Date,
   mayGoOn: () => boolean,
 ): Promise<Rethreaded> => {
-  const account = await store.accounts.storedAccount(key).catch(() => null)
+  // A locked or broken store must fail the rescan, not report it done.
+  const account = await store.accounts.storedAccount(key).catch((error: unknown) => {
+    if (error instanceof CliError && error.code === "not_found") return null
+    throw error
+  })
   if (account === null || backend.search === undefined) return { moved: 0, complete: true }
   let moved = 0
   for (const folder of folders) {

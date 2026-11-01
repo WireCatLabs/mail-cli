@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import type { Quick, Searched } from "@wirecat/cli-core/mail"
 import { type FetchMessageObject, ImapFlow } from "imapflow"
 import { afterEach, expect, it, vi } from "vitest"
@@ -387,12 +388,21 @@ const serveMessages = (messages: FakeMessage[]) =>
     folders: [{ name: "INBOX", messages }],
   })
 
-it("does not call a listing quick when the server gives message ids", async () => {
+it("calls a listing quick everywhere but Gmail, since only Gmail's own ids are used", async () => {
   fake = await serveMessages([{ uid: 4, raw: raw("a", "first"), emailId: "E1", threadId: "T1" }])
   const source = sourceOf(fake.port)
-  const searched = await source.search?.(FROM, "INBOX")
+  expect((await source.search?.(FROM, "INBOX"))?.quick).toBe(true)
   await source.close()
-  expect(searched?.quick).toBeUndefined()
+  await fake.close()
+  fake = await startFakeImap({
+    login: "me@example.com",
+    password: "app-secret-1",
+    gmail: true,
+    folders: [{ name: "INBOX", messages: [{ uid: 4, raw: raw("a", "first"), emailId: "E1", threadId: "T1" }] }],
+  })
+  const gmail = sourceOf(fake.port)
+  expect((await gmail.search?.(FROM, "INBOX"))?.quick).toBeUndefined()
+  await gmail.close()
 })
 
 it("gives mail read as bytes the id the envelope listing gives it, a folded or missing Message-ID included", async () => {
@@ -441,14 +451,46 @@ it("threads a reply under its first email by References, the same way from a lis
   )
 })
 
-it("keeps the server's own thread and message ids where it gives them, as Gmail does", async () => {
-  fake = await serveMessages([
-    { uid: 5, raw: raw("r1", "Re: question", "References: <root@example.com>\r\n"), emailId: "E5", threadId: "T9" },
-  ])
+const REPLY = {
+  uid: 5,
+  raw: raw("r1", "Re: question", "References: <root@example.com>\r\n"),
+  emailId: "E5",
+  threadId: "T9",
+}
+
+it("keeps Gmail's own thread and message ids, which stored Gmail mail is keyed on", async () => {
+  fake = await startFakeImap({
+    login: "me@example.com",
+    password: "app-secret-1",
+    gmail: true,
+    folders: [{ name: "INBOX", messages: [REPLY] }],
+  })
   const source = sourceOf(fake.port)
   const [listed] = await source.list(FROM, "INBOX")
   await source.close()
   expect(listed).toMatchObject({ messageId: "E5", threadId: "T9" })
+})
+
+it("decodes Gmail labels once: R&D-team and a Cyrillic label arrive named as memo names them", async () => {
+  fake = await startFakeImap({
+    login: "me@example.com",
+    password: "app-secret-1",
+    gmail: true,
+    folders: [{ name: "INBOX", messages: [{ ...REPLY, labels: ["\\Inbox", "R&-D-team", "&BCAEMAQxBD4EQgQw-"] }] }],
+  })
+  const source = sourceOf(fake.port)
+  const [listed] = await source.list(FROM, "INBOX")
+  await source.close()
+  expect(listed?.labels).toEqual(["Inbox", "R&D-team", "Работа"])
+})
+
+it("ignores OBJECTID's EMAILID: the id is the Message-ID's, as memo makes it, and stays so", async () => {
+  fake = await serveMessages([REPLY])
+  const source = sourceOf(fake.port)
+  const [listed] = await source.list(FROM, "INBOX")
+  await source.close()
+  const digest = (id: string) => `imap:${createHash("sha256").update(id).digest("hex")}`
+  expect(listed).toMatchObject({ messageId: digest("<r1@example.com>"), threadId: digest("<root@example.com>") })
 })
 
 it("names Gmail labels as memo does, so stored label:Inbox mailboxes keep matching", () => {
@@ -456,7 +498,7 @@ it("names Gmail labels as memo does, so stored label:Inbox mailboxes keep matchi
     uid: 1,
     seq: 1,
     flags: new Set(["\\Flagged"]),
-    labels: new Set(["\\Inbox", "\\Important", "&BCAEMAQxBD4EQgQw-"]),
+    labels: new Set(["\\Inbox", "\\Important", "Работа", "R&D-team"]),
   } as unknown as FetchMessageObject
-  expect(quickOf(message, "[Gmail]/All Mail").labels).toEqual(["Important", "Inbox", "Starred", "Работа"])
+  expect(quickOf(message, "[Gmail]/All Mail").labels).toEqual(["Important", "Inbox", "R&D-team", "Starred", "Работа"])
 })

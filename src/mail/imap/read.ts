@@ -1,6 +1,6 @@
 import { CliError } from "@wirecat/cli-base"
-import type { MailSource, Quick, Searched } from "@wirecat/cli-core/mail"
-import type { FetchMessageObject } from "imapflow"
+import type { Listed, MailSource, Quick, Searched } from "@wirecat/cli-core/mail"
+import type { ImapFlow } from "imapflow"
 import { type Connections, IMAP_DEFAULTS, type ImapTuning } from "./connection.js"
 import { mapImapError } from "./errors.js"
 import { HEADER_FIELDS, listedOf, quickOf, rawIdsOf } from "./messages.js"
@@ -41,6 +41,20 @@ const groupByFolder = (items: Quick[]): Map<string, Quick[]> => {
   return byFolder
 }
 
+/** imapflow asks a server with OBJECTID for EMAILID, not X-GM-MSGID: Gmail's stored mail would get new ids. */
+const gmailOf = (open: ImapFlow): boolean => {
+  if (!open.capabilities.has("X-GM-EXT-1")) return false
+  if (open.capabilities.has("OBJECTID"))
+    throw new CliError(
+      "provider_error",
+      "Gmail now announces OBJECTID; this mail build cannot read its X-GM-MSGID ids",
+      {
+        reason: "mail.gmail-objectid",
+      },
+    )
+  return true
+}
+
 type Reads = Required<Pick<MailSource, "listBatch" | "fetchBatch" | "search" | "present" | "quick" | "identify">> &
   Pick<MailSource, "list" | "fetchRaw">
 
@@ -52,8 +66,8 @@ export const imapReads = (pool: Connections, tuning: ImapTuning = {}): Reads => 
   const search = async (since: Date, folder: string): Promise<Searched> => {
     const found = await inFolder(folder, async (open, validity) => {
       const uids = await open.search({ since }, { uid: true })
-      // Message ids come free with OBJECTID and Gmail's extensions; without them the envelope costs a read per message.
-      const quick = !open.capabilities.has("OBJECTID") && !open.capabilities.has("X-GM-EXT-1")
+      // Only Gmail's ids come free; elsewhere the id is the Message-ID, and the envelope costs a read per message.
+      const quick = !open.capabilities.has("X-GM-EXT-1")
       return { ...(validity ? { validity } : {}), uids: (uids || []).map(String), ...(quick ? { quick } : {}) }
     })
     if (found.validity) validities.set(folder, found.validity)
@@ -86,8 +100,9 @@ export const imapReads = (pool: Connections, tuning: ImapTuning = {}): Reads => 
         spread(
           folder,
           batches,
-          (open, batch) =>
-            open.fetchAll(
+          async (open, batch) => {
+            const gmail = gmailOf(open)
+            const fetched = await open.fetchAll(
               batch.join(","),
               {
                 uid: true,
@@ -100,7 +115,9 @@ export const imapReads = (pool: Connections, tuning: ImapTuning = {}): Reads => 
                 headers: HEADER_FIELDS,
               },
               { uid: true },
-            ),
+            )
+            return fetched.map((message) => listedOf(message, folder, validity, gmail))
+          },
           validity,
           (error) => {
             const mapped = mapImapError(error)
@@ -110,7 +127,7 @@ export const imapReads = (pool: Connections, tuning: ImapTuning = {}): Reads => 
         )
       const batches = chunks(searched.uids, listSize)
       const parts = await listing(batches)
-      const messages: FetchMessageObject[] = []
+      const messages: Listed[] = []
       for (const [index, part] of parts.entries()) {
         if (!(part instanceof Error)) for (const message of part) messages.push(message)
         // Yandex refuses even the headers of a message it can never read, and with it the whole FETCH.
@@ -118,7 +135,7 @@ export const imapReads = (pool: Connections, tuning: ImapTuning = {}): Reads => 
           for (const single of await listing((batches[index] as string[]).map((uid) => [uid])))
             if (!(single instanceof Error)) for (const message of single) messages.push(message)
       }
-      return messages.map((message) => listedOf(message, folder, validity))
+      return messages
     },
 
     quick: async (_since, folder, { searched }) => {
