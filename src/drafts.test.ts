@@ -47,6 +47,8 @@ describe("drafts on an IMAP server", () => {
       "create",
       "--to",
       "Anna <anna@example.com>",
+      "--cc",
+      "carl@example.com",
       "--bcc",
       "boss@example.com",
       "--subject",
@@ -107,6 +109,39 @@ describe("drafts on an IMAP server", () => {
     expect(now).toContain("To: anna@example.com")
     expect(now).toContain("Second text")
     expect(commands()).toContain("UID EXPUNGE 1")
+
+    const readdressed = await mail([
+      "ya",
+      "drafts",
+      "update",
+      id,
+      "--to",
+      "boris@example.com",
+      "--cc",
+      "carl@example.com",
+      "--bcc",
+      "boss@example.com",
+      "--subject",
+      "Plan B",
+      "--json",
+    ])
+    expect(readdressed.code, readdressed.err).toBe(0)
+    const latest = draftsIn(all)[0]?.raw ?? ""
+    expect(latest).toContain("To: boris@example.com")
+    expect(latest).toContain("Cc: carl@example.com")
+    expect(latest).toContain("Bcc: boss@example.com")
+    expect(latest).toContain("Subject: Plan B")
+    expect(latest).toContain("Second text")
+
+    const dry = await mail(["ya", "drafts", "update", id, "Third", "--dry-run", "--json"])
+    expect(item(dry.out)).toMatchObject({ applied: false })
+    expect(draftsIn(all)).toHaveLength(1)
+    expect(draftsIn(all)[0]?.raw).toContain("Second text")
+
+    await mail(["ya", "drafts", "create", "--to", "anna@example.com", "Another", "--json"])
+    const one = JSON.parse((await mail(["ya", "drafts", "list", "--limit", "1", "--json"])).out)
+    expect(one.items).toHaveLength(1)
+    expect(one.items[0].text).toBe("Another")
   })
 
   it("deletes a draft only with --yes, and a dry run changes nothing", async () => {

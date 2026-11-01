@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto"
 import { CliError } from "@wirecat/cli-base"
 import { annotate } from "@wirecat/cli-base/commands"
 import {
@@ -18,7 +19,6 @@ import * as v from "valibot"
 import { IDENTITY } from "../identity.js"
 import {
   build,
-  messageIdFor,
   type Draft as Outgoing,
   originalOf,
   type Person,
@@ -217,7 +217,8 @@ const createCommand = () =>
           bcc: listed(options.bcc, "--bcc") ?? [],
           subject: options.subject ?? reply?.subject ?? "",
           text: body,
-          messageId: messageIdFor(newOperationId(), from),
+          // A UUID, not an operation id: the owner types this id, and one starting with "-" reads as an option.
+          messageId: `<${randomUUID()}@${from.split("@")[1] ?? "localhost"}>`,
           date: new Date(),
           ...(reply ? { inReplyTo: reply.inReplyTo, references: reply.references } : {}),
           files: [],

@@ -7,7 +7,7 @@ ran it · ⛔ not tested offline, with the reason and where it is checked instea
 Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 [TESTING.md](TESTING.md) for how, and for the states and failures that cut across commands.
 
-**182 ✅ · 26 ⛔ · 0 ❌** — 60 commands, 148 options.
+**209 ✅ · 26 ⛔ · 0 ❌** — 67 commands, 168 options.
 
 | Command | Option | | Note |
 |---|---|---|---|
@@ -136,6 +136,33 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `stats messages top` |  | ✅ |  |
 | `stats messages top` | `--by` | ✅ |  |
 | `stats messages top` | `--limit` | ✅ |  |
+| `drafts list` |  | ✅ |  |
+| `drafts list` | `--limit` | ✅ |  |
+| `drafts create` |  | ✅ |  |
+| `drafts create` | `--to` | ✅ |  |
+| `drafts create` | `--cc` | ✅ |  |
+| `drafts create` | `--bcc` | ✅ |  |
+| `drafts create` | `--subject` | ✅ |  |
+| `drafts create` | `--dry-run` | ✅ |  |
+| `drafts create` | `--reply-to` | ✅ |  |
+| `drafts create` | `--reply-all` | ✅ |  |
+| `drafts update` |  | ✅ |  |
+| `drafts update` | `--to` | ✅ |  |
+| `drafts update` | `--cc` | ✅ |  |
+| `drafts update` | `--bcc` | ✅ |  |
+| `drafts update` | `--subject` | ✅ |  |
+| `drafts update` | `--dry-run` | ✅ |  |
+| `drafts delete` |  | ✅ |  |
+| `drafts delete` | `--yes` | ✅ |  |
+| `drafts delete` | `--dry-run` | ✅ |  |
+| `tags add` |  | ✅ |  |
+| `tags add` | `--message` | ✅ |  |
+| `tags add` | `--chat` | ✅ |  |
+| `tags remove` |  | ✅ |  |
+| `tags remove` | `--message` | ✅ |  |
+| `tags remove` | `--chat` | ✅ |  |
+| `tags list` |  | ✅ |  |
+| `tags list` | `--limit` | ✅ |  |
 | `doctor` |  | ✅ |  |
 | `doctor` | `--online` | ✅ |  |
 | `skill show` |  | ✅ |  |
