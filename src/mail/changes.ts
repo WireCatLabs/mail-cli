@@ -120,12 +120,23 @@ export class ChangeLog {
   }
 }
 
-export const appendRestore = (path: string, ids: string[], at: number) =>
-  appendFileSync(path, `${JSON.stringify({ type: "restore", at: new Date(at).toISOString(), ids })}\n`)
+export const appendRestore = (path: string, ids: string[], at: number) => {
+  // A file another program wrote may end without a newline, and the line would join its last one and be lost.
+  const lead = readFileSync(path, "utf8").endsWith("\n") ? "" : "\n"
+  appendFileSync(path, `${lead}${JSON.stringify({ type: "restore", at: new Date(at).toISOString(), ids })}\n`)
+}
 
 /** Gmail's own names for its system labels, as `X-GM-LABELS` takes them. */
 const SYSTEM_LABELS = new Set(["Inbox", "Important", "Starred", "Sent", "Drafts", "Spam", "Trash"])
 const gmailLabel = (label: string) => (SYSTEM_LABELS.has(label) ? `\\${label}` : label)
+
+/** What came back from a memo run: memo wrote `restored`, a restore made here writes `ids`. */
+const memoRestored = (lines: Record<string, unknown>[]) =>
+  new Set(
+    lines
+      .filter(({ type }) => type === "restore")
+      .flatMap((line) => [...((line.restored as string[]) ?? []), ...((line.ids as string[]) ?? [])]),
+  )
 
 /**
  * A cleanup run memo made before the cleanup moved here: memo kept it under its own state folder, one file per run,
@@ -167,9 +178,7 @@ const memoRun = (env: NodeJS.ProcessEnv, account: string, id: string): { path: s
         },
         // Every logged email, not only those a batch line confirms: a move Gmail made but did not answer leaves none.
         steps: [{ step }],
-        restored: new Set(
-          lines.filter(({ type }) => type === "restore").flatMap((line) => (line.restored as string[]) ?? []),
-        ),
+        restored: memoRestored(lines),
       },
     }
   }
@@ -252,9 +261,7 @@ const memoSummaries = (env: NodeJS.ProcessEnv): RunSummary[] => {
         const head = lines.find(({ type }) => type === "run")
         if (!head) return []
         const started = String(head.started_at ?? "")
-        const restored = new Set(
-          lines.filter(({ type }) => type === "restore").flatMap((line) => (line.restored as string[]) ?? []),
-        )
+        const restored = memoRestored(lines)
         const moved = lines.filter(({ type }) => type === "batch").flatMap((line) => (line.moved as string[]) ?? [])
         return [
           {

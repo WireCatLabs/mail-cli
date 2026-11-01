@@ -53,6 +53,8 @@ export interface FakeOptions {
   gmail?: boolean
   /** The folders take no keywords of their own: PERMANENTFLAGS without `\\*`, as some servers answer. */
   noKeywords?: boolean
+  /** Folders whose STATUS gives UNSEEN but no MESSAGES count, as a server may answer. */
+  uncounted?: string[]
 }
 
 export interface FakeImap {
@@ -282,7 +284,8 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
           const folder = folderNamed(name?.[1] ?? name?.[2] ?? "")
           if (!folder) return send(`${tag} NO [NONEXISTENT] no such folder`)
           const unseen = folder.messages.filter((message) => !message.flags?.includes("\\Seen")).length
-          send(`* STATUS ${quote(folder.name)} (MESSAGES ${folder.messages.length} UNSEEN ${unseen})`)
+          const counted = options.uncounted?.includes(folder.name) ? "" : `MESSAGES ${folder.messages.length} `
+          send(`* STATUS ${quote(folder.name)} (${counted}UNSEEN ${unseen})`)
           return send(`${tag} OK done`)
         }
         case "SELECT":

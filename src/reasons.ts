@@ -15,6 +15,7 @@ const ENTRIES: [reason: string, code: string, message: string][] = [
   ["mail.folder-not-empty", "validation_error", "the folder still holds mail"],
   ["mail.run-unknown", "not_found", "no change run has this id for this mailbox"],
   ["mail.archive-unverified", "validation_error", "no store backup under 8 days old is recorded"],
+  ["mail.cleanup-scheduled", "permission_error", "messages delete --rules does not run from a schedule"],
 ]
 
 /** mail's own error reasons, so an agent can tell one refusal from another by its id. */

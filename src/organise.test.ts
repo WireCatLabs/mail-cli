@@ -12,6 +12,7 @@ import type { MailEndpoint, RunBounds } from "./mail/backend.js"
 import { imapBackend } from "./mail/imap/index.js"
 import { createProgram, run } from "./program.js"
 import { type FakeFolder, type FakeImap, type FakeOptions, startFakeImap } from "./testing/fake-imap.js"
+import { mcpClient } from "./testing/mcp.js"
 
 const PASSWORD = "fixture-app-password-7Kq2"
 const ADDRESS = "me@example.com"
@@ -86,12 +87,9 @@ const harness = async (given: Partial<FakeOptions> & { provider?: string } = {})
     MESSAGING_STORE: join(mkdtempSync(join(tmpdir(), "store-")), "wirecat.db"),
   }
   delete env.CI
-  const mail = async (argv: string[], extra: Partial<MailEnvironment> & { password?: string; env?: object } = {}) => {
-    const out: string[] = []
-    const err: string[] = []
+  const options = (extra: Partial<MailEnvironment> & { password?: string; env?: object } = {}) => {
     const { password, env: more, ...rest } = extra
-    const code = await run(argv, {
-      streams: { data: (text) => out.push(text), diagnostic: (text) => err.push(text) },
+    return {
       tty: false,
       env: { ...env, ...(password === undefined ? {} : { MAIL_PASSWORD: password }), ...more },
       keyring,
@@ -103,6 +101,14 @@ const harness = async (given: Partial<FakeOptions> & { provider?: string } = {})
           ...bounds,
         }),
       ...rest,
+    } as MailEnvironment & Record<string, unknown>
+  }
+  const mail = async (argv: string[], extra: Partial<MailEnvironment> & { password?: string; env?: object } = {}) => {
+    const out: string[] = []
+    const err: string[] = []
+    const code = await run(argv, {
+      ...options(extra),
+      streams: { data: (text) => out.push(text), diagnostic: (text) => err.push(text) },
     } as MailEnvironment & Record<string, unknown>)
     return { code, out: out.join("\n"), err: err.join("\n") }
   }
@@ -133,7 +139,7 @@ const harness = async (given: Partial<FakeOptions> & { provider?: string } = {})
       await store.close()
     }
   }
-  return { mail, json, refOf, env, stored, commands: () => fake?.commands ?? [] }
+  return { mail, options, json, refOf, env, stored, commands: () => fake?.commands ?? [] }
 }
 
 const item = (text: string) => JSON.parse(text).item
@@ -343,6 +349,27 @@ describe("messages move, copy and delete on an IMAP server", () => {
     expect(commands()).toContain("UID EXPUNGE 1")
   })
 
+  it("undoes a copy by the UID the server gave it, and keeps the original that came to the same folder later", async () => {
+    const folders = yandex()
+    const { mail, refOf, commands } = await harness({ folders })
+    const copied = item(
+      (await mail(["ya", "messages", "copy", await refOf("lunch"), "--folder", "Archive", "--json"])).out,
+    )
+    const archive = folders[1] as FakeFolder
+    const copy = archive.messages[0] as FakeFolder["messages"][number]
+    const inbox = folders[0] as FakeFolder
+    const at = inbox.messages.findIndex(({ raw }) => raw === copy.raw)
+    const [original] = inbox.messages.splice(at, 1)
+    archive.messages.push({ ...(original as FakeFolder["messages"][number]), uid: copy.uid + 1 })
+
+    const restored = await mail(["ya", "messages", "restore", "--run", copied.run, "--yes", "--json"])
+    expect(restored.code, restored.err).toBe(0)
+    expect(item(restored.out)).toMatchObject({ restored: 1 })
+    expect(archive.messages.map(({ uid }) => uid)).toEqual([copy.uid + 1])
+    expect(commands()).toContain(`UID EXPUNGE ${copy.uid}`)
+    expect(commands()).not.toContain(`UID EXPUNGE ${copy.uid + 1}`)
+  })
+
   it("refuses a folder that does not exist", async () => {
     const { mail, refOf } = await harness()
     const failed = await mail(["ya", "messages", "move", await refOf("lunch"), "--folder", "Nowhere", "--json"])
@@ -492,6 +519,8 @@ describe("Gmail: labels, Trash and memo's runs", () => {
     expect(restored).toMatchObject({ command: "memo mail delete", restored: 1 })
     const back = folders[1]?.messages.find(({ emailId }) => emailId === "1002")
     expect(back?.labels?.sort()).toEqual(["Promo", "\\Inbox"])
+    const again = item((await mail(["ya", "messages", "restore", "--run", id, "--json"])).out)
+    expect(again).toMatchObject({ logged: 1, restorable: 0, missing: 0 })
   })
 })
 
@@ -524,6 +553,11 @@ describe("messages delete --rules", () => {
     const marker = join(dirname(storePath(env)), "backups", "last.json")
     mkdirSync(dirname(marker), { recursive: true })
     writeFileSync(marker, JSON.stringify({ at: new Date().toISOString() }))
+    const timed = await mail(["ya", "messages", "delete", "--rules", "--yes", "--json"], {
+      env: { MAIL_SCHEDULED: "cleanup" },
+    })
+    expect(JSON.parse(timed.err).error).toMatchObject({ code: "permission_error", reason: "mail.cleanup-scheduled" })
+    expect(folders[2]?.messages).toHaveLength(0)
     const done = item((await mail(["ya", "messages", "delete", "--rules", "--yes", "--json"])).out)
     expect(done).toMatchObject({ applied: true, changed: 1 })
     expect(folders[2]?.messages).toHaveLength(1)
@@ -547,8 +581,9 @@ describe("folders create, rename and delete", () => {
     expect(folders.map(({ name }) => name)).toContain("Invoices")
     const special = await mail(["ya", "folders", "delete", "INBOX", "--yes", "--json"])
     expect(special.code).not.toBe(0)
-    const asked = await mail(["ya", "folders", "delete", "Invoices", "--json"])
-    expect(JSON.parse(asked.err).error.code).toBe("confirmation_required")
+    const preview = await mail(["ya", "folders", "delete", "Invoices", "--json"])
+    expect(item(preview.out)).toMatchObject({ action: "delete", applied: false, folder: "Invoices", messages: 0 })
+    expect(folders.map(({ name }) => name)).toContain("Invoices")
     expect((await mail(["ya", "folders", "delete", "Invoices", "--yes", "--json"])).code).toBe(0)
     expect(folders.map(({ name }) => name)).not.toContain("Invoices")
     expect((await mail(["ya", "folders", "create", "Old", "--json"])).code).toBe(0)
@@ -557,7 +592,7 @@ describe("folders create, rename and delete", () => {
     expect(JSON.parse(full.err).error.reason).toBe("mail.folder-not-empty")
     const dangerous = await mail(["ya", "folders", "delete", "Old", "--yes", "--allow-dangerous", "--json"])
     expect(dangerous.code, dangerous.err).toBe(0)
-    expect(item(dangerous.out)).toMatchObject({ action: "delete", messages: 1 })
+    expect(item(dangerous.out)).toMatchObject({ action: "delete", applied: true, messages: 1 })
     expect(commands().filter((line) => /^(CREATE|RENAME|DELETE) /.test(line))).toEqual([
       "CREATE Receipts",
       "RENAME Receipts Invoices",
@@ -565,5 +600,51 @@ describe("folders create, rename and delete", () => {
       "CREATE Old",
       "DELETE Old",
     ])
+  })
+
+  it("takes a folder whose message count the server does not give for one that holds mail", async () => {
+    const folders = [...yandex(), { name: "Unknown", uidValidity: 31, messages: [] }]
+    const { mail, commands } = await harness({ folders, uncounted: ["Unknown"] })
+    const refused = await mail(["ya", "folders", "delete", "Unknown", "--yes", "--json"])
+    expect(JSON.parse(refused.err).error).toMatchObject({
+      reason: "mail.folder-not-empty",
+      message: expect.stringContaining("an unknown number of"),
+    })
+    expect(commands().some((line) => line.startsWith("DELETE "))).toBe(false)
+  })
+
+  it("never offers an agent --allow-dangerous, so over MCP only an empty folder goes, and only with yes", async () => {
+    const tools = toolsFromCommands(describeProgram(createProgram()), { permissions: configuration.permissions })
+    const remove = tools.find((tool) => tool.command === "folders delete")
+    expect(Object.keys(remove?.input.entries ?? {})).toEqual(expect.arrayContaining(["folder", "yes", "dry_run"]))
+    expect(remove?.input.entries).not.toHaveProperty("allow_dangerous")
+
+    const folders = yandex()
+    folders.push(
+      { name: "Old", uidValidity: 32, messages: [{ uid: 1, raw: raw("kept", "Kept", "Kept"), flags: [] }] },
+      { name: "Empty", uidValidity: 33, messages: [] },
+    )
+    const { options } = await harness({ folders })
+    const { client, close } = await mcpClient(options() as Parameters<typeof mcpClient>[0], [], "ya")
+    try {
+      const call = (args: Record<string, unknown>) =>
+        client.callTool({ name: "mail_write", arguments: { command: "folders delete", arguments: args } }) as Promise<{
+          isError?: boolean
+          content?: { text?: string }[]
+        }>
+      const preview = await call({ folder: "Empty" })
+      expect(JSON.stringify(preview.content)).toContain("a preview")
+      expect(folders.map(({ name }) => name)).toContain("Empty")
+      const full = await call({ folder: "Old", yes: true })
+      expect(full.isError).toBe(true)
+      expect(JSON.stringify(full.content)).toContain("mail.folder-not-empty")
+      const forced = await call({ folder: "Old", yes: true, allow_dangerous: true })
+      expect(forced.isError).toBe(true)
+      expect(folders.map(({ name }) => name)).toContain("Old")
+      expect((await call({ folder: "Empty", yes: true })).isError).not.toBe(true)
+      expect(folders.map(({ name }) => name)).not.toContain("Empty")
+    } finally {
+      expect(await close()).toBe(0)
+    }
   })
 })

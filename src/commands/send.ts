@@ -7,6 +7,7 @@ import {
   environmentOf,
   itemOf,
   outputFor,
+  ownerOnlyOption,
   REMOTE_WRITE,
   renderAnswer,
 } from "@wirecat/cli-core/cli"
@@ -79,7 +80,8 @@ export const operationIdOf = (given: string | undefined) => {
   return given
 }
 
-const ownerOf = (opened: Opened, command: Command): Set<string> => {
+/** The owner's own addresses: the profile's address and a login that is an address too. */
+export const ownerOf = (opened: Opened, command: Command): Set<string> => {
   const { mailbox } = contextOf(command).settings
   return new Set(
     [mailbox.address, mailbox.login]
@@ -305,7 +307,9 @@ const recipients = (command: Command) =>
 const sending = (command: Command) =>
   command
     .option("--file <file>", "attach this file, as named, never a pattern; repeat it for more", collect)
-    .option("--allow-any-file", "attach a file even from credential folders or this CLI's own folders")
+    .addOption(
+      ownerOnlyOption("--allow-any-file", "attach a file even from credential folders or this CLI's own folders"),
+    )
     .option("--operation-id <id>", "repeat a send whose outcome was unknown; Sent is checked first, so it goes once")
     .option("--yes", "answer the question before sending to anyone but you")
     .option("--dry-run", "build the message and show what would go; send nothing")
