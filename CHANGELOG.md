@@ -44,7 +44,7 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   here: envelope mail the rules let go, each decided again, with Gmail's labels and stars read again just before the
   move, a fresh store backup required and a first run of at most 100; it refuses to run from a schedule.
 - **`messages restore --run <id>`** undoes a change run, last step first: Trash back to where the mail was (on Gmail
-  with its labels), moves back, copies removed, flags as they were. `memo mail delete` run ids restore here too.
+  with its labels), moves back, copies removed, flags as they were. memo's `mail delete` run ids restore here too.
   Outside Gmail a copy is removed for good by the UID the server gave it, never by a Message-ID search that could find
   the original.
 - **`folders create|rename|delete`**; `delete` is a preview until `--yes`, and refuses a folder that holds mail, or
