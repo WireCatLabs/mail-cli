@@ -33,8 +33,8 @@ The rules are the handbook's [Releases page](../../../../node_modules/@wirecat/c
    section as `## <version> — DD.MM.YYYY`, run `pnpm release:check` again, and open the pull request
    `chore(release): <version>`.
 8. **The publish.** Merge it when its checks pass, then run `bin/release` on a clean `main`: it starts
-   `release.yml` and follows it (`WC-REL-11`). A messenger CLI also needs the owner's signed release report
-   (`WC-REL-10`). Never `bin/release --local`: that is the owner's, for the first release before npm trusts
+   `release.yml` and follows it (`WC-REL-11`). A messenger CLI also needs the owner's yes for that version in the
+   conversation (`WC-REL-10`): ask before you run `bin/release`. Never `bin/release --local`: that is the owner's, for the first release before npm trusts
    `release.yml`, with `NPM_TOKEN`, the npm token in the keyring, or the owner's own npm login.
    The keyring is read only when `NPM_KEYRING_ACCOUNT` names the account the token is stored under (service `npm`);
    there is no default account. When that lookup fails, `bin/release` stops; it does not fall back to the npm login.
