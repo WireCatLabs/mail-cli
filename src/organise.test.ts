@@ -113,8 +113,9 @@ const harness = async (given: Partial<FakeOptions> & { provider?: string } = {})
   expect(started.code, started.err).toBe(0)
   const synced = await mail(["ya", "sync", "--since-time", "2026-01-01", "--json"])
   expect(synced.code, synced.err).toBe(0)
+  // These tests read back what a change left in the store; the server search has tests of its own.
   const json = async (...argv: string[]) => {
-    const answer = await mail(["ya", ...argv, "--json"])
+    const answer = await mail(["ya", ...argv, ...(argv[0] === "search" ? ["--backend", "archive"] : []), "--json"])
     expect(answer.code, answer.err).toBe(0)
     return JSON.parse(answer.out)
   }

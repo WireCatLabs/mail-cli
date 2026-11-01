@@ -46,6 +46,13 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 - **`mail doctor`** says when a change run stopped part way, and when mail a run moved to Gmail's Trash is within five
   days of Gmail emptying it, with the `messages restore` command for each. memo's doctor said this until the cleanup
   moved here; memo's own cleanup runs count too. It needs cli-core 0.524.0 (`appDoctorCommand`'s `local` check).
+- **`search messages` asks the mail server too** for mail sync has not read yet: `--backend archive|server|both`
+  (default `both`) and `--server-time` (default 5s), as `tg search messages` has them. Gmail is searched once in All
+  Mail with its own syntax (X-GM-RAW); other servers with IMAP `UID SEARCH` in INBOX, Sent and Archive, or the
+  profile's `folders`. The server gets the words, `from:`, `to:`, `cc:`, `subject:`, `body:`, `is:` and `date:`; what
+  it finds is stored, and the same query then runs on the store, so the answer means the same on both backends and
+  each hit says `found_in`. The mailbox is opened read only. `permissions.messages.server-search=deny` turns it off;
+  `--offline` and `MAIL_READ_ONLY` keep to the store (cli-core 0.525.0).
 
 ### Changed — may break callers
 

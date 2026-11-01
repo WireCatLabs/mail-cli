@@ -80,7 +80,7 @@ export const wholeNumberFor =
 export const foldersFor = async (
   explicit: string[] | undefined,
   configured: string[] | undefined,
-  defaults: SyncFolders,
+  defaults: Pick<SyncFolders, "roles" | "otherwise">,
   list: () => Promise<{ path: string; role: string | null }[]>,
 ): Promise<string[]> => {
   if (explicit?.length) return explicit
