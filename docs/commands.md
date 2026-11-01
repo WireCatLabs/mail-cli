@@ -396,11 +396,11 @@ mail search messages <query> [options]
 | `--backend <archive\|server\|both>` | where to search: the local archive, the mail server (default: both), or both. |
 | `--server-time <duration>` | stop waiting for the server after this long (default: 5s). |
 
-**Returns:** message hit — ref, timestamp, sender_name, sender_is_me, chat_title, excerpt, matched_in, score, and 8 more; every field: mail commands info search messages
+**Returns:** message hit — ref, timestamp, sender_name, sender_is_me, chat_title, excerpt, matched_in, score, and 9 more; every field: mail commands info search messages
 
 **Next usually:** `mail messages show <message>`, `mail attachments list <message>`, `mail messages forward <message> [text]`
 
-**Example:** `mail ya search messages invoice`, `mail ya search messages 'from:ann@example.com has:attachment date>30d'`, `mail ya search messages 'list:github.com is:unread' --newest`
+**Example:** `mail personal search messages invoice`, `mail personal search messages 'from:ann@example.com has:attachment date>30d'`, `mail personal search messages 'list:github.com is:unread' --newest`
 
 ## `mail messages`
 
@@ -425,7 +425,7 @@ mail messages show <message> [options]
 
 **Returns:** one stored email whole, with the text of its attachments
 
-**Example:** `mail ya messages show 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E'`, `mail ya messages show 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E' --before-n 2`
+**Example:** `mail personal messages show 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E'`, `mail personal messages show 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E' --before-n 2`
 
 ### `mail messages export`
 
@@ -768,7 +768,7 @@ mail conversations list [query] [options]
 
 **Returns:** mail thread — ref, subject, emails_count, last_email_at, untrusted; every field: mail commands info conversations list
 
-**Example:** `mail ya conversations list`, `mail ya conversations list subject:invoice emails_count>1`
+**Example:** `mail personal conversations list`, `mail personal conversations list subject:invoice emails_count>1`
 
 ### `mail conversations show`
 
@@ -784,7 +784,7 @@ mail conversations show <conversation>
 
 **Returns:** one email thread, every email oldest first
 
-**Example:** `mail ya conversations show 'chat:email/me%40example.com/thread-1'`, `mail ya conversations show 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E'`
+**Example:** `mail personal conversations show 'chat:email/me%40example.com/thread-1'`, `mail personal conversations show 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E'`
 
 ## `mail attachments`
 
@@ -1437,7 +1437,7 @@ mail schedule command <name> <args> [options]
 
 **Returns:** run mail <args…> on a timer — reads save what they read, so this is how a…
 
-**Example:** `mail personal schedule command daily <args>`
+**Example:** `mail personal schedule command health --every 1h -- doctor`, `mail personal schedule command morning-check --at 08:00 -- doctor`
 
 ### `mail schedule agent`
 
@@ -1464,7 +1464,7 @@ mail schedule agent <name> <harness> <prompt> [options]
 
 **Returns:** start an agent (claude or codex) with a prompt on a timer; it runs with…
 
-**Example:** `mail personal schedule agent daily claude <prompt>`
+**Example:** `mail personal schedule agent review claude "review what came in overnight and draft replies" --at 08:30`, `mail personal schedule agent triage codex "list what needs an answer today" --every 2h --max-cost 1`
 
 ### `mail schedule list`
 
@@ -1480,7 +1480,7 @@ mail schedule list [query]
 
 **Returns:** scheduled job — name, kind, when, last; every field: mail commands info schedule list
 
-**Example:** `mail personal schedule list`
+**Example:** `mail personal schedule list`, `mail personal schedule list kind:agent`
 
 ### `mail schedule run`
 
@@ -1494,11 +1494,11 @@ mail schedule run <name>
 
 | Argument | | What it is |
 |---|---|---|
-| `name` | required |  |
+| `name` | required | the schedule's name, as `schedule list` shows it. |
 
 **Returns:** run a schedule now, as its timer would, and wait for it
 
-**Example:** `mail personal schedule run daily`
+**Example:** `mail personal schedule run health`
 
 ### `mail schedule remove`
 
@@ -1512,11 +1512,11 @@ mail schedule remove <name>
 
 | Argument | | What it is |
 |---|---|---|
-| `name` | required |  |
+| `name` | required | the schedule's name, as `schedule list` shows it. |
 
 **Returns:** stop a schedule and remove its timer; its past output stays
 
-**Example:** `mail personal schedule remove daily`
+**Example:** `mail personal schedule remove health`
 
 ### `mail schedule exec`
 
@@ -1530,11 +1530,11 @@ mail schedule exec <file>
 
 | Argument | | What it is |
 |---|---|---|
-| `file` | required |  |
+| `file` | required | the schedule's schedule.json in the state folder, as the timer passes it. |
 
 **Returns:** what a timer runs, given the schedule's file; to run one by hand, use run
 
-**Example:** `mail personal schedule exec ./report.pdf`
+**Example:** `mail personal schedule exec ~/.local/share/mail-cli/schedules/health/schedule.json`
 
 ## Exit codes
 
