@@ -7,7 +7,7 @@ import type { MailEnvironment } from "./commands/context.js"
 import type { MailEndpoint, RunBounds } from "./mail/backend.js"
 import { imapBackend } from "./mail/imap/index.js"
 import { run } from "./program.js"
-import { type FakeFolder, type FakeImap, startFakeImap } from "./testing/fake-imap.js"
+import { type FakeFolder, type FakeImap, type FakeOptions, startFakeImap } from "./testing/fake-imap.js"
 
 const PASSWORD = "fixture-app-password-4Rt9"
 
@@ -22,7 +22,12 @@ afterEach(async () => {
 })
 
 /** A mailbox whose server search answers by subject and body words, as a substring search does. */
-const harness = async (address: string, folders: FakeFolder[], capabilities: string[] = []) => {
+const harness = async (
+  address: string,
+  folders: FakeFolder[],
+  capabilities: string[] = [],
+  server: Partial<FakeOptions> = {},
+) => {
   const byText = (criteria: string, folder: string) => {
     const words = [...criteria.matchAll(/(?:TEXT|X-GM-RAW) (?:"([^"]*)"|(\S+))/g)].flatMap(([, quoted, bare]) =>
       (quoted ?? bare ?? "").split(" ").filter((word) => !word.includes(":")),
@@ -32,7 +37,9 @@ const harness = async (address: string, folders: FakeFolder[], capabilities: str
       .filter(({ raw }) => words.every((word) => raw.toLowerCase().includes(word.toLowerCase())))
       .map(({ uid }) => uid)
   }
-  fake = await startFakeImap({ login: address, password: PASSWORD, folders, capabilities, search: byText })
+  fake = await startFakeImap(
+    Object.assign(server, { login: address, password: PASSWORD, folders, capabilities, search: byText }),
+  )
   const port = fake.port
   const env: NodeJS.ProcessEnv = {
     ...process.env,
@@ -68,7 +75,13 @@ const harness = async (address: string, folders: FakeFolder[], capabilities: str
   }
   expect((await mail(["ya", "session", "start", "--address", address, "--json"])).code).toBe(0)
   const searches = () => (fake as FakeImap).commands.filter((line) => /^UID SEARCH (?!UID |SINCE )/.test(line))
-  return { mail, json, searches }
+  return { mail, json, searches, fake }
+}
+
+/** The connections a run left open, once the ones it closed have had a moment to go. */
+const leftOpen = async (server: FakeImap) => {
+  for (let tries = 0; tries < 50 && server.connections() > 0; tries++) await new Promise((r) => setTimeout(r, 20))
+  return server.connections()
 }
 
 const foundIn = (items: { email: { subject: string }; found_in?: string }[]) =>
@@ -144,5 +157,80 @@ describe("search messages --backend", () => {
     expect(denied.code).not.toBe(0)
     expect(denied.err).toContain("permission_error")
     expect(searches()).toEqual([])
+  })
+
+  it("answers in part within --server-time when SEARCH hangs, and leaves no connection open", async () => {
+    const server: Partial<FakeOptions> = {}
+    const { mail, fake } = await harness(
+      "me@example.com",
+      [
+        { name: "INBOX", messages: [] },
+        { name: "Sent", attributes: ["\\Sent"], messages: [] },
+      ],
+      [],
+      server,
+    )
+    expect((await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])).code).toBe(0)
+    server.hangSearches = true
+    const started = Date.now()
+    const answer = await mail([
+      "ya",
+      "search",
+      "messages",
+      "invoice",
+      "--backend",
+      "server",
+      "--server-time",
+      "1s",
+      "--json",
+    ])
+    expect(answer.code, answer.err).toBe(0)
+    expect(Date.now() - started).toBeLessThan(5_000)
+    const { meta } = JSON.parse(answer.out)
+    expect(meta.complete).toBe(false)
+    expect(meta.issues).toEqual([{ code: "timeout", reason: "search.server-timeout", source: "server" }])
+    expect(await leftOpen(fake)).toBe(0)
+  })
+
+  it("counts a folder whose SEARCH is refused as failed, not as empty", async () => {
+    const server: Partial<FakeOptions> = {}
+    const { mail, fake } = await harness(
+      "me@example.com",
+      [
+        { name: "INBOX", messages: [] },
+        { name: "Sent", attributes: ["\\Sent"], messages: [] },
+      ],
+      [],
+      server,
+    )
+    expect((await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])).code).toBe(0)
+    server.refuseSearches = true
+    const answer = await mail(["ya", "search", "messages", "invoice", "--backend", "server", "--json"])
+    expect(answer.code, answer.err).toBe(0)
+    const { meta } = JSON.parse(answer.out)
+    expect(meta.complete).toBe(false)
+    expect(meta.issues).toEqual([{ code: "provider_unavailable", reason: "search.server-failed", source: "server" }])
+    expect(await leftOpen(fake)).toBe(0)
+  })
+
+  it("closes every connection after reading finds from two folders at once", async () => {
+    const inbox: FakeFolder = { name: "INBOX", messages: [] }
+    const sent: FakeFolder = { name: "Sent", attributes: ["\\Sent"], messages: [] }
+    const { mail, json, fake } = await harness("me@example.com", [inbox, sent])
+    expect((await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])).code).toBe(0)
+    for (const [folder, id] of [
+      [inbox, "a"],
+      [sent, "b"],
+    ] as const)
+      folder.messages.push(
+        ...Array.from({ length: 40 }, (_, at) => ({
+          uid: at + 1,
+          raw: raw(`${id}${at}`, `Invoice ${id}${at}`, "Invoice."),
+          flags: [],
+        })),
+      )
+    const found = await json(["ya", "search", "messages", "invoice", "--backend", "server", "--server-time", "20s"])
+    expect(found.page.total.value).toBe(80)
+    expect(await leftOpen(fake)).toBe(0)
   })
 })

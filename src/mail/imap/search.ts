@@ -1,3 +1,4 @@
+import { CliError } from "@wirecat/cli-base"
 import type { MailCriteria, Searched } from "@wirecat/cli-core/mail"
 import type { SearchObject } from "imapflow"
 import type { Connections } from "./connection.js"
@@ -55,10 +56,15 @@ export const imapQuery =
   ({ inFolder, validities }: Connections) =>
   async (criteria: MailCriteria, folder: string, syntax: SearchSyntax): Promise<Searched> => {
     const query = syntax === "gmail" ? { gmraw: gmailRawOf(criteria) } : imapSearchOf(criteria)
-    const found = await inFolder(folder, async (open, validity) => ({
-      ...(validity ? { validity } : {}),
-      uids: ((await open.search(query, { uid: true })) || []).map(String),
-    }))
+    const found = await inFolder(folder, async (open, validity) => {
+      // imapflow resolves a NO or BAD to SEARCH as false; read as no match, it would make the answer look complete.
+      const uids = await open.search(query, { uid: true })
+      if (uids === false)
+        throw new CliError("provider_error", `the mail server refused to search ${folder}`, {
+          reason: "mail.search-refused",
+        })
+      return { ...(validity ? { validity } : {}), uids: (uids ?? []).map(String) }
+    })
     if (found.validity) validities.set(folder, found.validity)
     return found
   }

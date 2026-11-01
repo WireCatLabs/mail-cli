@@ -50,6 +50,23 @@ const realTimer = (ms: number, fire: () => void) => {
 
 type Work<T> = (open: ImapFlow, validity: string) => Promise<T>
 
+/** How long a LOGOUT may wait for its OK before the socket is cut. */
+const LOGOUT_MS = 2_000
+
+/** LOGOUT waits behind a command the server has not answered, so a server that hangs gets its socket cut instead. */
+const farewell = async (one: ImapFlow, expireAfter: (ms: number, fire: () => void) => () => void) => {
+  let cancel = () => {}
+  const cut = new Promise<void>((resolve) => {
+    cancel = expireAfter(LOGOUT_MS, resolve)
+  })
+  try {
+    await Promise.race([one.logout().catch(() => {}), cut])
+  } finally {
+    cancel()
+    one.close()
+  }
+}
+
 /** A line that broke or a command that timed out during a write leaves it unknown whether the server made the change. */
 const writeError = (raw: unknown): CliError => {
   const error = mapImapError(raw)
@@ -91,13 +108,25 @@ export const imapConnections = (endpoint: MailEndpoint, password: string, tuning
   const { connections, requestTimeoutMs, backoff, maxAttempts } = { ...IMAP_DEFAULTS, ...tuning }
   const { canRetry, timeLeftMs, signal, sleep = realSleep, random = Math.random, expireAfter = realTimer } = tuning
   const clients: (ImapFlow | undefined)[] = []
+  const connecting: (Promise<ImapFlow> | undefined)[] = []
   const validities = new Map<string, string>()
   let closed = false
 
-  const connect = async (slot: number): Promise<ImapFlow> => {
-    if (closed) throw new CliError("cancelled", "the mail connection is already closed")
+  // Two calls on one slot share its login: a second client would replace the first in `clients`, and close never sees it.
+  const connect = (slot: number): Promise<ImapFlow> => {
+    if (closed) return Promise.reject(new CliError("cancelled", "the mail connection is already closed"))
     const existing = clients[slot]
-    if (existing?.usable) return existing
+    if (existing?.usable) return Promise.resolve(existing)
+    const pending = connecting[slot]
+    if (pending) return pending
+    const attempt = login(slot).finally(() => {
+      if (connecting[slot] === attempt) connecting[slot] = undefined
+    })
+    connecting[slot] = attempt
+    return attempt
+  }
+
+  const login = async (slot: number): Promise<ImapFlow> => {
     const next = new ImapFlow({
       host: endpoint.host,
       port: endpoint.port,
@@ -266,16 +295,7 @@ export const imapConnections = (endpoint: MailEndpoint, password: string, tuning
     close: async () => {
       closed = true
       const open = clients.splice(0)
-      await Promise.all(
-        open.map(async (one) => {
-          if (!one) return
-          try {
-            await one.logout()
-          } catch {
-            one.close()
-          }
-        }),
-      )
+      await Promise.all(open.map((one) => one && farewell(one, expireAfter)))
     },
   }
 }
