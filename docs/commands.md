@@ -1460,7 +1460,7 @@ mail schedule agent <name> <harness> <prompt> [options]
 |---|---|---|
 | `name` | required | lowercase letters, digits and dashes. |
 | `harness` | required | the agent to start. One of: `claude`, `codex`. |
-| `prompt` | required | what to do, e.g. "run the daily follow-up review: mail skill show follow-ups". |
+| `prompt` | required | what to do, e.g. "summarize what came in during the last day: mail personal search messages 'date>1d' --newest --limit 20". |
 
 | Option | What it does |
 |---|---|
