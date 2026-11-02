@@ -31,15 +31,17 @@ const bodyBatches = (items: Quick[], count: number, bytes: number): Quick[][] =>
   return out
 }
 
-const groupByFolder = (items: Quick[]): Map<string, Quick[]> => {
-  const byFolder = new Map<string, Quick[]>()
+/** Items of one folder read under one UIDVALIDITY go together: a folder is opened once per expected validity. */
+const groupByFolder = (items: Quick[]): { folder: string; validity: string | undefined; items: Quick[] }[] => {
+  const groups = new Map<string, { folder: string; validity: string | undefined; items: Quick[] }>()
   for (const item of items) {
     const folder = item.folder ?? "INBOX"
-    const group = byFolder.get(folder)
-    if (group) group.push(item)
-    else byFolder.set(folder, [item])
+    const key = `${folder}\n${item.validity ?? ""}`
+    const group = groups.get(key)
+    if (group) group.items.push(item)
+    else groups.set(key, { folder, validity: item.validity, items: [item] })
   }
-  return byFolder
+  return [...groups.values()]
 }
 
 /** imapflow asks a server with OBJECTID for EMAILID, not X-GM-MSGID: Gmail's stored mail would get new ids. */
@@ -63,6 +65,8 @@ type Reads = Required<Pick<MailSource, "listBatch" | "fetchBatch" | "search" | "
 export const imapReads = (pool: Connections, tuning: ImapTuning = {}): Reads => {
   const { listSize, quickSize, fetchSize, fetchBytes } = { ...IMAP_DEFAULTS, ...tuning }
   const { validities, inFolder, spread, connections } = pool
+  // Gmail keys its stored mail on X-GM-MSGID, which the bytes do not carry; fetchRaw reads it beside them.
+  const gmailIds = new WeakMap<Quick, { messageId: string; threadId: string }>()
 
   const search = async (since: Date, folder: string): Promise<Searched> => {
     const found = await inFolder(folder, async (open, validity) => {
@@ -152,27 +156,39 @@ export const imapReads = (pool: Connections, tuning: ImapTuning = {}): Reads => 
     },
 
     identify: (raw, item) => {
-      const validity = validities.get(item.folder ?? "INBOX") ?? ""
-      return rawIdsOf(raw, item.folder ?? "INBOX", validity, item.uid)
+      const folder = item.folder ?? "INBOX"
+      return gmailIds.get(item) ?? rawIdsOf(raw, folder, item.validity ?? validities.get(folder) ?? "", item.uid)
     },
 
     fetchRaw: async (items, options) => {
       const read = new Map<Quick, Uint8Array | Error>()
-      const bodies = (folder: string, batches: Quick[][]) =>
+      const bodies = (folder: string, batches: Quick[][], validity: string | undefined) =>
         spread(
           folder,
           batches,
           async (open, batch) => {
             const found = new Map<string, Uint8Array>()
+            const gmail = gmailOf(open)
             const messages = await open.fetchAll(
               batch.map(({ uid }) => uid).join(","),
-              { uid: true, source: options?.bytes ? { maxLength: options.bytes } : true },
+              {
+                uid: true,
+                source: options?.bytes ? { maxLength: options.bytes } : true,
+                ...(gmail ? { threadId: true } : {}),
+              },
               { uid: true },
             )
-            for (const message of messages) if (message.source) found.set(String(message.uid), message.source)
+            const byUid = new Map(batch.map((item) => [item.uid, item]))
+            for (const message of messages) {
+              if (!message.source) continue
+              found.set(String(message.uid), message.source)
+              const item = byUid.get(String(message.uid))
+              if (gmail && item && message.emailId && message.threadId)
+                gmailIds.set(item, { messageId: String(message.emailId), threadId: String(message.threadId) })
+            }
             return found
           },
-          undefined,
+          validity,
           (error) => {
             // A throttled or dropped connection fails the whole run; one unreadable batch costs only itself.
             const mapped = mapImapError(error)
@@ -180,9 +196,9 @@ export const imapReads = (pool: Connections, tuning: ImapTuning = {}): Reads => 
             return mapped
           },
         )
-      for (const [folder, group] of groupByFolder(items)) {
+      for (const { folder, validity, items: group } of groupByFolder(items)) {
         const batches = bodyBatches(group, fetchSize, fetchBytes)
-        const answers = await bodies(folder, batches)
+        const answers = await bodies(folder, batches, validity)
         for (const [index, batch] of batches.entries()) {
           let answer = answers[index]
           // Yandex refuses a whole FETCH when one of its messages cannot be read; one by one, only that one is lost.
@@ -190,6 +206,7 @@ export const imapReads = (pool: Connections, tuning: ImapTuning = {}): Reads => 
             const singles = await bodies(
               folder,
               batch.map((item) => [item]),
+              validity,
             )
             answer = new Map()
             for (const [at, item] of batch.entries()) {

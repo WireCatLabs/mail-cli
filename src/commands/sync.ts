@@ -13,7 +13,13 @@ import {
   renderAnswer,
   runBudgetOf,
 } from "@wirecat/cli-core/cli"
-import { type MailSyncResult, mailAccountKey, storedMailRuleSet, syncMail } from "@wirecat/cli-core/mail"
+import {
+  type MailSyncResult,
+  mailAccountKey,
+  SEARCH_REFUSED,
+  storedMailRuleSet,
+  syncMail,
+} from "@wirecat/cli-core/mail"
 import { Command } from "commander"
 import * as v from "valibot"
 import { configuration } from "../config.js"
@@ -66,7 +72,7 @@ const issuesOf = (report: MailSyncResult) => [
     ? [{ code: BUDGET_CODES[report.stopped], reason: `budget.${report.stopped}`, source: "sync" }]
     : []),
   ...(report.refusedFolders?.length
-    ? [{ code: "provider_error" as const, reason: "mail.search-refused", source: "sync" }]
+    ? [{ code: "provider_error" as const, reason: SEARCH_REFUSED, source: "sync" }]
     : []),
 ]
 
@@ -108,6 +114,11 @@ const mailSync = v.strictObject({
   deletions_skipped: v.optional(v.string()),
   /** Folders whose server refused SEARCH: nothing of them was read, moved or marked deleted. */
   refused_folders: v.optional(v.array(v.string())),
+  /**
+   * Emails a server search stored text-first: read whole this run, still waiting for a later run, and given up on
+   * because the server no longer gives them where they were stored (they stay readable without their attachments).
+   */
+  partial_emails: v.optional(v.strictObject({ completed: v.number(), left: v.number(), stuck: v.number() })),
   hint: v.optional(v.string()),
 })
 
@@ -267,6 +278,7 @@ export const syncCommand = (): Command =>
                 : {}),
               ...(report.deletionsSkipped ? { deletions_skipped: report.deletionsSkipped } : {}),
               ...(refused.length ? { refused_folders: refused } : {}),
+              ...(report.partial ? { partial_emails: report.partial } : {}),
               ...(hint ? { hint } : {}),
             },
             {

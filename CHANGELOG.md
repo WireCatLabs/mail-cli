@@ -4,6 +4,26 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ## Unreleased
 
+### Changed — may break callers
+
+- **`search messages` says `search.server-partial`, not `search.server-too-large`.** It downloads the first 256 KiB of
+  each message the server finds and stores a bigger one with its text and without its attachments; the next `sync`
+  reads it whole. Before, a candidate over 5 MB was left on the server and a smaller one was downloaded with all its
+  attachments. A script that matched `search.server-too-large` matches `search.server-partial` instead.
+- **After `messages send`, `stored` is true only when this message is in the store**, not when any other mail of the
+  last 10 minutes was. A caller that read `stored: true` as "some mail was synced" reads it now as "this message is
+  stored".
+- **`mail.search-refused` is cli-core's reason now** (cli-core 0.550.0); the reason, its code and its message are
+  the same.
+
+### Added
+
+- **`--compact` answers one line per item** (cli-base 0.74.0). mail now needs `@wirecat/cli-core` 0.550.0 and
+  `@wirecat/cli-base` 0.74.0.
+- **`sync` says what became of the emails a search stored text-first**: `partial_emails` with `completed` (read whole
+  this run), `left` (waiting for a later run) and `stuck` (given up on: the server no longer gives them where they
+  were stored). It is absent when there are none.
+
 ### Fixed
 
 - **A Microsoft sign-in whose new token the mail server refuses says how to turn IMAP on.** On Outlook.com IMAP is
@@ -14,11 +34,14 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   the rest: the answer is partial, names it in `refused_folders` with a `mail.search-refused` issue, and nothing of it
   is marked deleted. `messages move`, `copy`, `delete`, `restore` and `drafts` stop with `mail.search-refused`
   instead of acting on nothing (cli-core).
-- **`search messages --backend` reads a big email's text, not the whole message.** It downloads the first 256 KiB,
-  stores the text without the attachments and says `search.server-partial`; the next `sync` reads the email whole.
-  Before, a candidate over 5 MB was left on the server and a smaller one was downloaded with all its attachments.
-- **After `messages send`, `stored` is true only when this message is in the store**, not when any other mail of the
-  last 10 minutes was.
+- **On Gmail, an email a search stored text-first is read whole by the next `sync`.** It was never completed there:
+  mail worked out its id from the Message-ID, and Gmail's mail is stored under its X-GM-MSGID, so every sync downloaded
+  the whole message again and threw it away. `fetchRaw` now reads Gmail's ids beside the bytes.
+- **An email a search stored text-first is no longer downloaded whole on every sync when the server no longer gives
+  it.** It is read under the UIDVALIDITY it was stored with, and given up on after three failed tries, or at once when
+  its place holds another message; it no longer holds back newer ones (cli-core).
+- **A search no longer stores a text-first copy over an email a sync in another process stored whole meanwhile**,
+  which dropped its attachments (cli-core).
 - **The reader of your own Google `--client-file` and the browser opener come from `@wirecat/cli-core` 0.546.0**, not
   copies in mail. The file shapes, the `chmod 600` check and the errors are unchanged.
 

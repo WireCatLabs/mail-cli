@@ -38,8 +38,8 @@ export interface FakeOptions {
   dropSearches?: number
   /** Never answers a UID SEARCH, as a server busy with a large folder does. */
   hangSearches?: boolean
-  /** Answers every UID SEARCH with a tagged NO, as a server that cannot search a folder does. */
-  refuseSearches?: boolean
+  /** Answers every UID SEARCH, or each whose criteria the function picks, with a tagged NO, as a server that cannot search a folder does. */
+  refuseSearches?: boolean | ((criteria: string) => boolean)
   /** UIDs a FETCH answers with an untagged `NO [UNAVAILABLE]` instead of the message, as Yandex does; each once. */
   unavailableOnce?: number[]
   /** Closes the connection on this many UID FETCH commands, after answering the first of their messages. */
@@ -344,7 +344,9 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
               return socket.destroy()
             }
             if (options.hangSearches) return
-            if (options.refuseSearches) return send(`${tag} NO search failed`)
+            const refuse = options.refuseSearches
+            if (refuse === true || (typeof refuse === "function" && refuse(more.join(" "))))
+              return send(`${tag} NO search failed`)
             const messages = selected?.messages ?? []
             const all = messages.map((message) => message.uid)
             const test = criteria(tokens(more.join(" ")))
