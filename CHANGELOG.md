@@ -7,6 +7,9 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 ### Added
 
 - **Every answer's `meta` says `now` and `now_local`**, the moment it was made (cli-core 0.541.0, cli-base 0.72.0).
+- **Microsoft sign-in works without a config**: WireCat's Microsoft app is built in. The sign-in sends
+  `http://localhost:<port>/callback`, the address registered for it (docs/oauth-microsoft.md). Google keeps
+  `127.0.0.1`.
 
 ### Fixed
 

@@ -9,7 +9,13 @@ import { afterEach, describe, expect, it } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
 import type { MailCredential, MailEndpoint, RunBounds } from "./mail/backend.js"
 import { imapBackend } from "./mail/imap/index.js"
-import { GOOGLE_MAIL_SCOPE, MICROSOFT_IMAP_SCOPE, MICROSOFT_SMTP_SCOPE, systemBrowser } from "./oauth.js"
+import {
+  GOOGLE_MAIL_SCOPE,
+  MICROSOFT_IMAP_SCOPE,
+  MICROSOFT_SMTP_SCOPE,
+  systemBrowser,
+  WIRECAT_MICROSOFT_CLIENT_ID,
+} from "./oauth.js"
 import { run } from "./program.js"
 import { providerFor } from "./providers.js"
 import { type FakeImap, startFakeImap } from "./testing/fake-imap.js"
@@ -182,6 +188,9 @@ describe("Microsoft sign-in", { timeout: 20_000 }, () => {
     })
     expect(started.err).toContain("read and change your mail over IMAP")
     expect(authorizeUrls[0]?.searchParams.get("client_id")).toBe(CLIENT)
+    const redirect = authorizeUrls[0]?.searchParams.get("redirect_uri")
+    expect(redirect).toMatch(/^http:\/\/localhost:\d+\/callback$/)
+    expect(tokenCalls[0]?.get("redirect_uri")).toBe(redirect)
     expect(authorizeUrls[0]?.searchParams.get("login_hint")).toBe("me@outlook.com")
     expect(authorizeUrls[0]?.searchParams.get("scope")).toContain("offline_access")
     expect(tokenCalls[0]?.get("code_verifier")).toBeTruthy()
@@ -239,13 +248,13 @@ describe("Microsoft sign-in", { timeout: 20_000 }, () => {
     expect(leaked()).toBeNull()
   })
 
-  it("says how to set an app id when this build has none, and keeps nothing", async () => {
-    const { mail, entry } = await harness()
+  it("signs in with WireCat's own app when the config names none", async () => {
+    const { mail, authorizeUrls, tokenCalls } = await harness()
     const started = await mail(["work", "session", "start", "--address", "me@outlook.com", "--json"])
-    expect(started.code).not.toBe(0)
-    expect(failure(started.err)).toMatchObject({ reason: "mail.oauth-no-client" })
-    expect(started.err).toContain("config set --defaults microsoft_client_id")
-    expect(entry()).toBeNull()
+    expect(started.code, started.err).toBe(0)
+    expect(item(started.out)).toMatchObject({ provider: "microsoft", client: "wirecat" })
+    expect(authorizeUrls[0]?.searchParams.get("client_id")).toBe(WIRECAT_MICROSOFT_CLIENT_ID)
+    expect(tokenCalls[0]?.get("redirect_uri")).toMatch(/^http:\/\/localhost:\d+\/callback$/)
   })
 
   it("shows the sign-in without tokens, and session end forgets it and names where Microsoft lists the app", async () => {
@@ -310,6 +319,7 @@ describe("Gmail with your own Google app", { timeout: 20_000 }, () => {
     const started = await mail([...start, "--client-file", clientFile()])
     expect(started.code, started.err).toBe(0)
     expect(item(started.out)).toMatchObject({ provider: "google", client: "own" })
+    expect(tokenCalls[0]?.get("redirect_uri")).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/callback$/)
     expect(config().profiles.work).toMatchObject({ imap_host: "imap.gmail.com", auth: "oauth" })
     expect(JSON.parse(entry("google") ?? "{}")).toMatchObject({
       clientId: "own-client",
