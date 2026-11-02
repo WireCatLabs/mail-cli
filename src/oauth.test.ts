@@ -220,6 +220,17 @@ describe("Microsoft sign-in", { timeout: 20_000 }, () => {
     expect(readFileSync(join(env.MAIL_CONFIG_DIR as string, "config.json"), "utf8")).not.toContain("outlook.com")
   })
 
+  it("a token refused at sign-in names Outlook.com's IMAP switch and claims no refresh", async () => {
+    const { mail, server, leaked } = await harness()
+    await ownApp(mail)
+    server.accepts = false
+    const refused = await mail(["work", "session", "start", "--address", "me@outlook.com", "--json"])
+    expect(failure(refused.err)).toMatchObject({ reason: "mail.oauth-refused" })
+    expect(refused.err).toContain("Let devices and apps use IMAP")
+    expect(refused.err).not.toContain("after a refresh")
+    expect(leaked()).toBeNull()
+  })
+
   it("refreshes once when the server refuses a token that still looks fresh, then asks for a new sign-in", async () => {
     const { mail, accepted, server, tokenCalls, leaked } = await harness()
     await ownApp(mail)

@@ -1,7 +1,7 @@
 import { backoffMs, CliError, realSleep } from "@wirecat/cli-base"
 import { ImapFlow } from "imapflow"
 import type { MailCredential, MailEndpoint, RunBounds } from "../backend.js"
-import { mapImapError } from "./errors.js"
+import { causeOf, mapImapError, responseCodeOf } from "./errors.js"
 
 /**
  * How the source spends a connection. The defaults come from measuring Yandex 360 (cli-testing,
@@ -105,12 +105,14 @@ export interface Connections {
 
 const refusedLogin = (error: unknown) => (error as { authenticationFailed?: boolean }).authenticationFailed === true
 
-const oauthRefused = (credential: MailCredential) =>
+// A token just received at sign-in has no sign-in to refresh, so "after a refresh" would be false there.
+const oauthRefused = (credential: MailCredential, error: unknown) =>
   new CliError(
     "authentication_error",
-    "the mail server refused the OAuth token even after a refresh; sign in again" +
-      (credential.signInCommand ? `: \`${credential.signInCommand}\`` : ""),
-    { reason: "mail.oauth-refused" },
+    credential.signInCommand
+      ? `the mail server refused the OAuth token even after a refresh; sign in again: \`${credential.signInCommand}\``
+      : "the mail server refused the OAuth token from this sign-in",
+    { reason: "mail.oauth-refused", ...causeOf(responseCodeOf(error)) },
   )
 
 /**
@@ -176,7 +178,7 @@ export const imapConnections = (
       try {
         next = await open(true)
       } catch (again) {
-        throw refusedLogin(again) ? oauthRefused(credential) : again
+        throw refusedLogin(again) ? oauthRefused(credential, again) : again
       }
     }
     // A close that ran while this one was logging in found nothing to close.
