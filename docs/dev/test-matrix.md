@@ -7,7 +7,7 @@ ran it · ⛔ not tested offline, with the reason and where it is checked instea
 Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 [TESTING.md](TESTING.md) for how, and for the states and failures that cut across commands.
 
-**246 ✅ · 26 ⛔ · 0 ❌** — 72 commands, 200 options.
+**247 ✅ · 26 ⛔ · 0 ❌** — 72 commands, 201 options.
 
 | Command | Option | | Note |
 |---|---|---|---|
@@ -278,6 +278,7 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | *global* | `--max-output-bytes` | ✅ |  |
 | *global* | `--brief` | ✅ |  |
 | *global* | `--full` | ✅ |  |
+| *global* | `--compact` | ✅ |  |
 | *global* | `--dry-run` | ✅ |  |
 | *global* | `--yes` | ✅ |  |
 | *global* | `--record` | ✅ |  |

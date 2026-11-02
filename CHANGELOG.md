@@ -13,11 +13,13 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 - **After `messages send`, `stored` is true only when this message is in the store**, not when any other mail of the
   last 10 minutes was. A caller that read `stored: true` as "some mail was synced" reads it now as "this message is
   stored".
-- **`mail.search-refused` is cli-core's reason now** (cli-core 0.549.0); the reason, its code and its message are
+- **`mail.search-refused` is cli-core's reason now** (cli-core 0.550.0); the reason, its code and its message are
   the same.
 
 ### Added
 
+- **`--compact` answers one line per item** (cli-base 0.74.0). mail now needs `@wirecat/cli-core` 0.550.0 and
+  `@wirecat/cli-base` 0.74.0.
 - **`sync` says what became of the emails a search stored text-first**: `partial_emails` with `completed` (read whole
   this run), `left` (waiting for a later run) and `stuck` (given up on: the server no longer gives them where they
   were stored). It is absent when there are none.

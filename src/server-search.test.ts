@@ -331,6 +331,20 @@ describe("a refused SEARCH and big finds on a real IMAP connection", () => {
     expect((await json(["ya", "search", "messages", "note", "--backend", "archive"])).items).toHaveLength(6)
   })
 
+  it("answers one line per hit under --compact", async () => {
+    const inbox: FakeFolder = {
+      name: "INBOX",
+      messages: [{ uid: 1, raw: raw("inv", "Invoice October", "Pay it"), flags: [] }],
+    }
+    const { mail } = await harness("me@example.com", [inbox])
+    expect((await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])).code).toBe(0)
+    const compact = await mail(["ya", "search", "messages", "invoice", "--backend", "archive", "--compact"])
+    expect(compact.code, compact.err).toBe(0)
+    const lines = compact.out.split("\n").filter((line) => line.startsWith("msg:"))
+    expect(lines).toHaveLength(1)
+    expect(lines[0]).toContain("Invoice October · Ann")
+  })
+
   it("stores a big find from its first bytes, and the next sync reads it whole", async () => {
     const inbox: FakeFolder = { name: "INBOX", messages: [] }
     const { mail, json, fake: server } = await harness("me@example.com", [inbox])
