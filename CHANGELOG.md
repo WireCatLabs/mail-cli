@@ -2,6 +2,13 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Fixed
+
+- **The reader of your own Google `--client-file` and the browser opener come from `@wirecat/cli-core` 0.546.0**, not
+  copies in mail. The file shapes, the `chmod 600` check and the errors are unchanged.
+
 ## 0.9.0 — 02.11.2026
 
 ### Added
