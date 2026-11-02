@@ -6,6 +6,10 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Fixed
 
+- **A Microsoft sign-in whose new token the mail server refuses says how to turn IMAP on.** On Outlook.com IMAP is
+  off by default; the error now names the switch (Settings, "Mail", "Forwarding and IMAP", "Let devices and apps use
+  IMAP") and no longer claims a refresh was tried. The answer carries the server's response code as `cause_code`, never
+  its text.
 - **A server that refuses SEARCH no longer looks like an empty folder.** `sync` leaves that folder unread and reads
   the rest: the answer is partial, names it in `refused_folders` with a `mail.search-refused` issue, and nothing of it
   is marked deleted. `messages move`, `copy`, `delete`, `restore` and `drafts` stop with `mail.search-refused`

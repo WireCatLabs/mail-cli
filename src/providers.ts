@@ -275,7 +275,8 @@ const TABLE = {
       ],
       notes: [],
       refused:
-        'IMAP may be off: turn on "Let devices and apps use IMAP" in Outlook.com\'s settings, then sign in again.',
+        'IMAP is off: Outlook.com turns it off by default. In Outlook.com open Settings (the cog), "Mail", ' +
+        '"Forwarding and IMAP", turn on "Let devices and apps use IMAP", click "Save", then sign in again.',
       sources: [OUTLOOK_SETTINGS, MICROSOFT_OAUTH],
     },
   },

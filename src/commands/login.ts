@@ -3,9 +3,11 @@ import { IDENTITY } from "../identity.js"
 import type { MailBackend } from "../mail/backend.js"
 import type { Prepare } from "../providers.js"
 
+const REFUSED = new Set(["mail.login-refused", "mail.oauth-refused"])
+
 /** A refused login, with the provider's likely cause and where the steps are; any other error passes through. */
 const explained = (error: unknown, prepare: Prepare): unknown =>
-  isCliError(error) && error.details.reason === "mail.login-refused"
+  isCliError(error) && REFUSED.has(String(error.details.reason))
     ? new CliError(
         error.code,
         `${error.message}. Likely cause: ${prepare.refused} Run \`${IDENTITY.command} <profile> session start\` to see the steps again.`,
