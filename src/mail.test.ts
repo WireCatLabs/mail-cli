@@ -1017,7 +1017,7 @@ describe("review", () => {
     return `${pad(at.getUTCDate())}-${month}-${at.getUTCFullYear()} ${pad(at.getUTCHours())}:${pad(at.getUTCMinutes())}:${pad(at.getUTCSeconds())} +0000`
   }
 
-  it("reviews what sync stored: review --new shows it once, and --unanswered keeps mail owed an answer", async () => {
+  it("reviews what sync stored: --new once, --unanswered, and a holder's mark that status shows", async () => {
     const h = await harness({
       fake: {
         folders: [
@@ -1052,5 +1052,13 @@ describe("review", () => {
     expect((await json("--new")).items).toEqual([])
     expect((await json("--unanswered", "1h")).items).toHaveLength(1)
     expect((await json("--waiting")).items).toEqual([])
+
+    const start = await json("--holder", "triage")
+    expect(start.items).toEqual([])
+    const cursor = start.next.find((one: { step: string }) => one.step === "mail-messages.acknowledge").args.cursor
+    const acked = await h.mail(["ya", "messages", "acknowledge", "--holder", "triage", "--cursor", cursor, "--json"])
+    expect(acked.code, acked.err).toBe(0)
+    const status = JSON.parse((await h.mail(["ya", "status", "--json"])).out).item
+    expect(status.holders).toMatchObject([{ holder: "triage", read: 0, held: 0 }])
   })
 })

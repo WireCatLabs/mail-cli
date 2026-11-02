@@ -115,6 +115,18 @@ sender's score, so you or an agent can sort. Mail newer than the last finished s
 never moves yours. Without a date, `--unanswered` and `--waiting` look at threads active in the last 30 days.
 `memo tasks agenda --source email:<address>` lists the same owed and waiting threads.
 
+An agent or a pipeline that processes your mail keeps its own mark of how far it got, in the shared store, by the
+order mail was stored — so mail stored late, with an old date, is not skipped:
+
+```sh
+mail ya review --holder mail-triage --json        # what is stored past its mark; the answer gives a cursor
+mail ya messages acknowledge --holder mail-triage --cursor <cursor>   # once processed: move the mark there
+mail ya status                                    # how far each holder got, what it held and skipped
+```
+
+The mark only moves forward. Mail sent to many, envelopes and drafts are skipped and counted; an email still being
+read whole (partial) is held until it is, up to 7 days. A new holder starts from the mail stored now.
+
 ## Search your mail
 
 `mail` searches and reads the mail its profile synced, in the local store, and asks the mail server for mail `sync`

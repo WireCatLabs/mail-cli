@@ -7,7 +7,7 @@ ran it · ⛔ not tested offline, with the reason and where it is checked instea
 Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 [TESTING.md](TESTING.md) for how, and for the states and failures that cut across commands.
 
-**247 ✅ · 26 ⛔ · 0 ❌** — 72 commands, 201 options.
+**257 ✅ · 26 ⛔ · 0 ❌** — 75 commands, 208 options.
 
 | Command | Option | | Note |
 |---|---|---|---|
@@ -74,9 +74,17 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `search messages` | `--timezone` | ✅ |  |
 | `search messages` | `--backend` | ✅ |  |
 | `search messages` | `--server-time` | ✅ |  |
+| `review` |  | ✅ |  |
+| `review` | `--unanswered` | ✅ |  |
+| `review` | `--waiting` | ✅ |  |
+| `review` | `--holder` | ✅ |  |
+| `review` | `--new` | ✅ |  |
 | `messages show` |  | ✅ |  |
 | `messages show` | `--before-n` | ✅ |  |
 | `messages show` | `--after-n` | ✅ |  |
+| `messages acknowledge` |  | ✅ |  |
+| `messages acknowledge` | `--holder` | ✅ |  |
+| `messages acknowledge` | `--cursor` | ✅ |  |
 | `messages export` |  | ✅ |  |
 | `messages export` | `--format` | ✅ |  |
 | `messages export` | `--output` | ✅ |  |
@@ -244,6 +252,8 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `config unset` | `--defaults` | ✅ |  |
 | `config unset` | `--personal` | ✅ |  |
 | `config unset` | `--bot` | ✅ |  |
+| `config repair` |  | ✅ |  |
+| `config repair` | `--dry-run` | ✅ |  |
 | `runs list` |  | ✅ |  |
 | `runs list` | `--limit` | ✅ |  |
 | `runs list` | `--page` | ✅ |  |

@@ -1,4 +1,4 @@
-import { chmodSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs"
+import { chmodSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { resolvePaths } from "@wirecat/cli-base"
 import { appDoctorReport } from "@wirecat/cli-core/cli"
@@ -67,6 +67,24 @@ it("doctor reports invalid JSON as an issue", async () => {
   await withConfig('{\n  "defaults": {\n', (config) =>
     expect(config).toMatchObject({ found: true, issues: [{ kind: "invalid_json", line: 3 }] }),
   )
+})
+
+it("config repair previews, then mends broken JSON syntax so doctor finds no issue", async () => {
+  const dir = process.env.MAIL_CONFIG_DIR ?? ""
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(join(dir, "config.json"), '{ "defaults": { "limit": 5, }, }')
+  try {
+    const preview = await ran(["config", "repair", "--dry-run", "--json"])
+    expect(preview.code).toBe(0)
+    expect(json(preview.out).item).toMatchObject({ found: true, repaired: false, dry_run: true })
+
+    const repaired = await ran(["config", "repair", "--json"])
+    expect(repaired.code).toBe(0)
+    expect(json(repaired.out).item).toMatchObject({ repaired: true, backup: expect.any(String) })
+    expect(json((await ran(["doctor", "--json"])).out).item.config).toMatchObject({ found: true, issues: [] })
+  } finally {
+    for (const name of readdirSync(dir)) if (name.startsWith("config.json")) rmSync(join(dir, name))
+  }
 })
 
 it("doctor reports an unknown setting with the command that removes it", async () => {
