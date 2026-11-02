@@ -1,7 +1,8 @@
 import { CliError } from "@wirecat/cli-base"
 
 /** The raw error code (ECONNRESET, ETIMEDOUT) so a failed run can be diagnosed; never the server's text. */
-const causeOf = (code: string | undefined) => (code && /^[A-Za-z0-9_.-]{1,40}$/.test(code) ? { cause_code: code } : {})
+export const causeOf = (code: string | undefined) =>
+  code && /^[A-Za-z0-9_.-]{1,40}$/.test(code) ? { cause_code: code } : {}
 
 // imapflow strips `[CODE]` from responseText and sets serverResponseCode on some commands only; the code is
 // always in the parsed response.
