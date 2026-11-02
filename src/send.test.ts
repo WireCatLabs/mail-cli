@@ -436,12 +436,12 @@ describe("messages send over SMTP", { timeout: 20_000 }, () => {
   })
 
   it("answers network_error, nothing sent, when the submission server cannot be reached", async () => {
-    const closed = createServer()
-    await new Promise<void>((resolve) => closed.listen(0, "127.0.0.1", resolve))
-    const port = (closed.address() as { port: number }).port
-    await new Promise((resolve) => closed.close(resolve))
+    const dropping = createServer((socket) => socket.destroy())
+    await new Promise<void>((resolve) => dropping.listen(0, "127.0.0.1", resolve))
+    const port = (dropping.address() as { port: number }).port
     const { mail } = await harness({ smtpPort: port })
     const failed = await mail(["ya", "messages", "send", "--to", ADDRESS, "--subject", "x", "y", "--json"])
+    await new Promise((resolve) => dropping.close(resolve))
     expect(errorOf(failed.err).code).toBe("network_error")
   })
 
