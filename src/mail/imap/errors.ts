@@ -3,6 +3,13 @@ import { CliError } from "@wirecat/cli-base"
 /** The raw error code (ECONNRESET, ETIMEDOUT) so a failed run can be diagnosed; never the server's text. */
 const causeOf = (code: string | undefined) => (code && /^[A-Za-z0-9_.-]{1,40}$/.test(code) ? { cause_code: code } : {})
 
+// imapflow strips `[CODE]` from responseText and sets serverResponseCode on some commands only; the code is
+// always in the parsed response.
+export const responseCodeOf = (error: unknown): string => {
+  const e = error as { serverResponseCode?: string; response?: { attributes?: { section?: { value?: unknown }[] }[] } }
+  return e.serverResponseCode ?? String(e.response?.attributes?.[0]?.section?.[0]?.value ?? "").toUpperCase()
+}
+
 /** The server's error text can quote mail or names, so only its codes reach the caller. */
 export const mapImapError = (error: unknown): CliError => {
   if (error instanceof CliError) return error
@@ -16,10 +23,7 @@ export const mapImapError = (error: unknown): CliError => {
     throttleReset?: number
     response?: { attributes?: { section?: { value?: unknown }[] }[] }
   }
-  // imapflow strips `[CODE]` from responseText and sets serverResponseCode on some commands only; the code is
-  // always in the parsed response.
-  const responseCode =
-    e.serverResponseCode ?? String(e.response?.attributes?.[0]?.section?.[0]?.value ?? "").toUpperCase()
+  const responseCode = responseCodeOf(error)
   if (e.authenticationFailed)
     return new CliError(
       "authentication_error",
