@@ -1,5 +1,5 @@
 import { describeProgram } from "@wirecat/cli-base/commands"
-import { changesAuthorityAt, fetchesOnlyAt } from "@wirecat/cli-core/cli"
+import { changesAuthorityAt, readsOverMcpAt } from "@wirecat/cli-core/cli"
 import { toolsFromCommands } from "@wirecat/cli-core/mcp"
 import { expect, it } from "vitest"
 import { configuration } from "./config.js"
@@ -62,7 +62,7 @@ it("pins the commands an agent can find, and whether each reads or writes", asyn
     includeUnavailable: true,
     exclude: [["mcp"]],
     authority: changesAuthorityAt(program),
-    fetchOnly: fetchesOnlyAt(program),
+    fetchOnly: readsOverMcpAt(program),
     permissions: configuration.permissions,
   })
   const catalogue = Object.fromEntries(tools.map((tool) => [tool.command, tool.writes ? "write" : "read"]))
