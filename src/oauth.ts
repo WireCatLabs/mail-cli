@@ -1,14 +1,13 @@
-import { spawn } from "node:child_process"
 import { mkdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { CliError, isMovedRun, type KeyringStore, resolvePaths, systemKeyring } from "@wirecat/cli-base"
-import { privateFiles } from "@wirecat/cli-core/cli"
 import { writeFileAtomic } from "@wirecat/cli-core/files"
 import {
   credentialStorage,
   type OAuthClient,
   type OAuthProvider,
   oauthAccount,
+  readClientFile,
   standardCodec,
   type TokenCodec,
   type TokenKeeper,
@@ -111,10 +110,6 @@ const googleCodec: TokenCodec = {
   },
 }
 
-const ClientFile = v.object({
-  installed: v.object({ client_id: v.pipe(v.string(), v.minLength(1)), client_secret: v.optional(v.string()) }),
-})
-
 /** The owner's Desktop client: `--client-file` (private to the owner), else MAIL_GOOGLE_CLIENT_ID; no bundled one. */
 export const googleClient = (env: NodeJS.ProcessEnv, file?: string, platform = process.platform): OAuthClient => {
   if (!file) {
@@ -127,26 +122,7 @@ export const googleClient = (env: NodeJS.ProcessEnv, file?: string, platform = p
       { reason: "mail.oauth-no-client" },
     )
   }
-  const mode = privateFiles({ files: [file], dirs: [] }, platform)
-  if (mode.checked && !mode.ok)
-    throw new CliError(
-      "configuration_error",
-      `the client file can be read by other users of this computer; run chmod 600 ${file} and try again`,
-      { reason: "sign-in.client-file-open" },
-    )
-  try {
-    const { installed } = v.parse(ClientFile, JSON.parse(readFileSync(file, "utf8")))
-    return {
-      clientId: installed.client_id,
-      ...(installed.client_secret ? { clientSecret: installed.client_secret } : {}),
-    }
-  } catch {
-    throw new CliError(
-      "configuration_error",
-      "could not read a Desktop app OAuth client JSON from the client file; its contents were not logged",
-      { reason: "sign-in.client-file-invalid" },
-    )
-  }
+  return readClientFile(file, { platform })
 }
 
 const UserInfo = v.object({ email: v.optional(v.string()), email_verified: v.optional(v.boolean()) })
@@ -287,20 +263,3 @@ export const recordSignIn = async (env: NodeJS.ProcessEnv, profile: string, reco
   mkdirSync(paths(env).state, { recursive: true })
   await writeFileAtomic(recordsPath(env), `${JSON.stringify(records, null, 2)}\n`, { mode: 0o600 })
 }
-
-/** The system browser; the sign-in link is printed too, so a failure here only means opening it by hand. */
-export const systemBrowser = (url: string, platform = process.platform, start = spawn): Promise<void> =>
-  new Promise((resolve, reject) => {
-    const [command, args]: [string, string[]] =
-      platform === "darwin"
-        ? ["open", [url]]
-        : platform === "win32"
-          ? ["rundll32.exe", ["url.dll,FileProtocolHandler", url]]
-          : ["xdg-open", [url]]
-    const child = start(command, args, { detached: true, stdio: "ignore", windowsHide: true })
-    child.once("error", () => reject(new CliError("configuration_error", `could not start ${command}`)))
-    child.once("spawn", () => {
-      child.unref()
-      resolve()
-    })
-  })

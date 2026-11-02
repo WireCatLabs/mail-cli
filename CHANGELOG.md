@@ -15,6 +15,8 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   Before, a candidate over 5 MB was left on the server and a smaller one was downloaded with all its attachments.
 - **After `messages send`, `stored` is true only when this message is in the store**, not when any other mail of the
   last 10 minutes was.
+- **The reader of your own Google `--client-file` and the browser opener come from `@wirecat/cli-core` 0.546.0**, not
+  copies in mail. The file shapes, the `chmod 600` check and the errors are unchanged.
 
 ## 0.9.0 — 02.11.2026
 
