@@ -1,5 +1,5 @@
 import { CliError, realSleep } from "@wirecat/cli-base"
-import { type MailSyncResult, storedMailRules, syncMail } from "@wirecat/cli-core/mail"
+import { mailIds, storedMailRules, syncMail } from "@wirecat/cli-core/mail"
 import {
   DEFAULT_PACE,
   type GuardRequest,
@@ -94,18 +94,43 @@ const fileCopy = async (sending: Sending, messageId: string, copy: Uint8Array): 
 
 const SYNC_WINDOW_MS = 10 * 60 * 1000
 
+/**
+ * Whether the store holds this Message-ID under the id sync gives it: the hash of the Message-ID, or on Gmail the
+ * server's own id, which only the server knows.
+ */
+const holdsSent = async (sending: Sending, folders: string[], gmail: boolean, messageId: string) => {
+  const { store, accountId, writes } = sending.mailbox
+  if (!gmail)
+    return (
+      (await store.mail.email(
+        accountId,
+        mailIds({ messageId, head: "", folder: "", validity: "", uid: "" }).messageId,
+      )) !== null
+    )
+  for (const folder of folders) {
+    const { validity, uids } = await writes.locate(folder, { messageIds: [messageId] })
+    const uid = uids.get(messageId)
+    if (uid === undefined) continue
+    const [listed] = await sending.backend.list(new Date(0), folder, { searched: { validity, uids: [String(uid)] } })
+    if (listed && (await store.mail.email(accountId, listed.messageId)) !== null) return true
+  }
+  return false
+}
+
 /** The sent copy into the store the way `sync` reads it, so it has the server's id and no second row ever appears. */
-const storeSent = async (sending: Sending): Promise<boolean> => {
+const storeSent = async (sending: Sending, messageId: string): Promise<boolean> => {
   try {
     const { folders, mode } = await sending.syncFolders()
     const address = sending.mailbox.key.account
     const rules = await storedMailRules(sending.mailbox.store, { address })
-    const report: MailSyncResult = await syncMail(sending.backend, sending.mailbox.store, {
+    await syncMail(sending.backend, sending.mailbox.store, {
       account: { address, mode, folders, rules },
       since: new Date(Date.now() - SYNC_WINDOW_MS),
       saveCoverage: false,
+      completePartial: false,
     })
-    return report.saved + report.alreadyStored > 0
+    // Any other mail of the window is stored too; only this Message-ID says the sent copy is.
+    return await holdsSent(sending, folders, mode === "gmail", messageId)
   } catch {
     sending.warn(`the message was sent; \`${IDENTITY.command} ${sending.profile} sync\` stores it`)
     return false
@@ -237,7 +262,7 @@ export const sendOut = async (sending: Sending, outgoing: Outgoing): Promise<Sen
   const markedOriginal = outgoing.original
     ? await markOriginal(sending, outgoing.original, outgoing.original.flag)
     : null
-  const stored = await storeSent(sending)
+  const stored = await storeSent(sending, draft.messageId)
   return {
     operationId,
     messageId: draft.messageId,

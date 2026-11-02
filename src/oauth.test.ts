@@ -1,5 +1,3 @@
-import type { spawn } from "node:child_process"
-import { EventEmitter } from "node:events"
 import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -9,13 +7,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
 import type { MailCredential, MailEndpoint, RunBounds } from "./mail/backend.js"
 import { imapBackend } from "./mail/imap/index.js"
-import {
-  GOOGLE_MAIL_SCOPE,
-  MICROSOFT_IMAP_SCOPE,
-  MICROSOFT_SMTP_SCOPE,
-  systemBrowser,
-  WIRECAT_MICROSOFT_CLIENT_ID,
-} from "./oauth.js"
+import { GOOGLE_MAIL_SCOPE, MICROSOFT_IMAP_SCOPE, MICROSOFT_SMTP_SCOPE, WIRECAT_MICROSOFT_CLIENT_ID } from "./oauth.js"
 import { run } from "./program.js"
 import { providerFor } from "./providers.js"
 import { type FakeImap, startFakeImap } from "./testing/fake-imap.js"
@@ -408,25 +400,5 @@ describe("Google sign-in edges", { timeout: 20_000 }, () => {
     const none = await mail(["work", "session", "start", "--json"])
     expect(failure(none.err)).toMatchObject({ reason: "mail.oauth-no-client" })
     expect(none.err).toContain("oauth-google.md")
-  })
-})
-
-describe("the system browser", () => {
-  const fakeSpawn = (event: "spawn" | "error", seen: string[][]) =>
-    ((command: string, args: string[]) => {
-      seen.push([command, ...args])
-      const child = Object.assign(new EventEmitter(), { unref: () => {} })
-      queueMicrotask(() => child.emit(event))
-      return child
-    }) as unknown as typeof spawn
-
-  it("opens the link with each platform's opener, and says so when none starts", async () => {
-    const seen: string[][] = []
-    for (const platform of ["linux", "darwin", "win32"] as const)
-      await systemBrowser("https://example.test/x", platform, fakeSpawn("spawn", seen))
-    expect(seen.map(([command]) => command)).toEqual(["xdg-open", "open", "rundll32.exe"])
-    await expect(systemBrowser("https://example.test/x", "linux", fakeSpawn("error", seen))).rejects.toMatchObject({
-      code: "configuration_error",
-    })
   })
 })

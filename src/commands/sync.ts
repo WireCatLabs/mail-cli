@@ -65,6 +65,9 @@ const issuesOf = (report: MailSyncResult) => [
   ...(report.stopped
     ? [{ code: BUDGET_CODES[report.stopped], reason: `budget.${report.stopped}`, source: "sync" }]
     : []),
+  ...(report.refusedFolders?.length
+    ? [{ code: "provider_error" as const, reason: "mail.search-refused", source: "sync" }]
+    : []),
 ]
 
 /** The provider's folders by role (INBOX and Sent, All Mail on Gmail), unless the profile or `--folder` names some. */
@@ -103,6 +106,8 @@ const mailSync = v.strictObject({
   /** What it does not know of them, such as `condition label`. */
   rules_unread_why: v.optional(v.array(v.string())),
   deletions_skipped: v.optional(v.string()),
+  /** Folders whose server refused SEARCH: nothing of them was read, moved or marked deleted. */
+  refused_folders: v.optional(v.array(v.string())),
   hint: v.optional(v.string()),
 })
 
@@ -198,8 +203,9 @@ export const syncCommand = (): Command =>
           (report.state ?? (report.complete ? "complete" : "partial")) === "partial" || limited || unthreaded
         const moved = report.saved + report.alreadyStored + report.skipped + report.envelopes > 0 || unthreaded
         const timeout = this.optsWithGlobals<{ timeout?: string }>().timeout
+        const refused = report.refusedFolders ?? []
         const next: NextStep[] =
-          partial && moved
+          partial && moved && refused.length === 0
             ? [
                 {
                   kind: "command",
@@ -226,11 +232,13 @@ export const syncCommand = (): Command =>
             : []
         const hint = !partial
           ? undefined
-          : limited
-            ? `${report.remaining ?? 0} new emails are left; run sync again to save the next ${args.limit}`
-            : moved
-              ? `run sync again to continue; ${IDENTITY.command} ${context.profile} status shows how far it is`
-              : "this run moved nothing on: raise --timeout or --max-pages, then run sync again"
+          : refused.length
+            ? `the server refused to search ${refused.join(", ")}; nothing there was read or marked deleted — run sync again later, or name the other folders with --folder`
+            : limited
+              ? `${report.remaining ?? 0} new emails are left; run sync again to save the next ${args.limit}`
+              : moved
+                ? `run sync again to continue; ${IDENTITY.command} ${context.profile} status shows how far it is`
+                : "this run moved nothing on: raise --timeout or --max-pages, then run sync again"
         renderAnswer(
           this,
           outputFor(this),
@@ -258,6 +266,7 @@ export const syncCommand = (): Command =>
                   }
                 : {}),
               ...(report.deletionsSkipped ? { deletions_skipped: report.deletionsSkipped } : {}),
+              ...(refused.length ? { refused_folders: refused } : {}),
               ...(hint ? { hint } : {}),
             },
             {

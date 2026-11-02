@@ -6,6 +6,7 @@ import {
   FETCH,
   itemOf,
   logsInOrOut,
+  openBrowser,
   outputFor,
   refuseCommandName,
   refuseUnderReadOnly,
@@ -30,7 +31,6 @@ import {
   SCOPE_WORDS,
   scopesOf,
   sendScopeOf,
-  systemBrowser,
   tokenCredential,
 } from "../oauth.js"
 import { profileOf, writeProfile } from "../profile.js"
@@ -110,7 +110,7 @@ const signInWithOAuth = async (command: Command, context: ReturnType<typeof cont
   const { scopes } = await baseContext(command, configuration.resolveSettings).run(() =>
     keeper.signIn({
       scopes: scopesAsked,
-      openBrowser: given.browser ? (environment.openBrowser ?? systemBrowser) : async () => {},
+      openBrowser: given.browser ? (environment.openBrowser ?? openBrowser) : async () => {},
       showUrl: (url) => output.streams.diagnostic(`Open ${name} sign-in: ${url}\n`),
       accept: async (tokens) => {
         if (!tokens.accessToken) throw new CliError("authentication_error", `${name} returned no access token`)

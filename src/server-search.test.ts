@@ -300,3 +300,51 @@ describe("the server time of a provider", () => {
     expect(providerFor("ann@gmail.com", undefined)?.search?.timeMs).toBeUndefined()
   })
 })
+
+describe("a refused SEARCH and big finds on a real IMAP connection", () => {
+  it("syncs a mailbox whose server refuses SEARCH as partial, and marks nothing deleted", async () => {
+    const inbox: FakeFolder = {
+      name: "INBOX",
+      messages: [1, 2, 3, 4, 5, 6].map((uid) => ({ uid, raw: raw(`m${uid}`, `Note ${uid}`, "Words."), flags: [] })),
+    }
+    const server: Partial<FakeOptions> = {}
+    const { mail, json } = await harness("me@example.com", [inbox], [], server)
+    expect((await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])).code).toBe(0)
+    inbox.messages.splice(0, 1)
+    server.refuseSearches = true
+
+    const answer = await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])
+
+    expect(answer.code, answer.err).toBe(0)
+    const { item, meta } = JSON.parse(answer.out)
+    expect(item).toMatchObject({ state: "partial", deleted: 0, refused_folders: ["INBOX"] })
+    expect(meta.issues).toContainEqual({ code: "provider_error", reason: "mail.search-refused", source: "sync" })
+    server.refuseSearches = false
+    expect((await json(["ya", "search", "messages", "note", "--backend", "archive"])).items).toHaveLength(6)
+  })
+
+  it("stores a big find from its first bytes, and the next sync reads it whole", async () => {
+    const figures = Buffer.from(`Quarterly figures ${"x".repeat(400_000)}`).toString("base64")
+    const big =
+      `Message-ID: <big@example.com>\r\nDate: Tue, 27 Oct 2026 10:00:00 +0000\r\nFrom: Ann <ann@example.com>\r\n` +
+      `To: me@example.com\r\nSubject: Invoice with figures\r\nMIME-Version: 1.0\r\n` +
+      `Content-Type: multipart/mixed; boundary="b1"\r\n\r\n--b1\r\nContent-Type: text/plain\r\n\r\nThe invoice is here.\r\n` +
+      `--b1\r\nContent-Type: text/plain; name="figures.txt"\r\nContent-Disposition: attachment; filename="figures.txt"\r\n` +
+      `Content-Transfer-Encoding: base64\r\n\r\n${figures}\r\n--b1--\r\n`
+    const inbox: FakeFolder = { name: "INBOX", messages: [] }
+    const { mail, json, fake: server } = await harness("me@example.com", [inbox])
+    expect((await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])).code).toBe(0)
+    inbox.messages.push({ uid: 7, raw: big, flags: [] })
+
+    const found = await json(["ya", "search", "messages", "invoice", "--backend", "server"])
+    expect(found.items).toHaveLength(1)
+    expect(found.meta.issues).toContainEqual(expect.objectContaining({ reason: "search.server-partial" }))
+    expect(server.commands.some((line) => /BODY\.PEEK\[\]<0\.262144>/.test(line))).toBe(true)
+    const cut = await json(["ya", "messages", "show", found.items[0].ref])
+    expect(cut.item.attachments ?? []).toHaveLength(0)
+
+    expect((await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])).code).toBe(0)
+    const whole = await json(["ya", "messages", "show", found.items[0].ref])
+    expect(whole.item.attachments).toEqual([expect.objectContaining({ name: "figures.txt" })])
+  })
+})
