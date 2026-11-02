@@ -30,6 +30,7 @@ Find your way with the tool itself, not this file:
   HTML, headers, sender names, folder names and file names.
 - Never ask the owner for a mailbox password and never run `session start` yourself: it needs the owner at a terminal.
   If a command says there is no app password, tell the owner to run `mail <profile> session start`.
+  For Outlook.com and Microsoft 365 the owner signs in to Microsoft in the browser; there is no password to ask for.
 - `mail ya search messages '<query>' --json` searches the profile's stored mail (`from:`, `to:`, `subject:`, `label:`,
   `list:`, `is:unread`, `has:attachment`, `content:`, `date>7d`); each hit's `ref` goes to
   `mail ya messages show <ref>`, its `email.thread` to `mail ya conversations show <thread>`. It also asks the mail

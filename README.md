@@ -110,8 +110,8 @@ profiles.
 it does not know, `session start` looks for the server through the MX record, Thunderbird's ISPDB and the domain's
 autoconfig file; `--provider` or `--host` skips that. Outlook.com and Microsoft 365 accept only OAuth, so for them
 `session start` opens Microsoft's sign-in page in the browser instead of asking for a password, and keeps the tokens in
-the same keyring. Until WireCat's Microsoft app is registered, this needs an app of your own, set once with
-`mail config set --defaults microsoft_client_id <id>` ([register a Microsoft app](https://github.com/WireCatLabs/mail-cli/blob/main/docs/oauth-microsoft.md)).
+the same keyring. WireCat's Microsoft app is built in
+([connect Outlook.com or Microsoft 365](https://github.com/WireCatLabs/mail-cli/blob/main/docs/outlook.md)).
 
 ## Settings and permissions
 
@@ -169,7 +169,7 @@ See [when something goes wrong](https://github.com/WireCatLabs/mail-cli/blob/mai
 | Section | Pages |
 |---|---|
 | Start | [overview](https://github.com/WireCatLabs/mail-cli/blob/main/docs/index.md) · [install](https://github.com/WireCatLabs/mail-cli/blob/main/docs/installation.md) |
-| Guides | [use it](https://github.com/WireCatLabs/mail-cli/blob/main/docs/usage.md) · [prepare the mailbox](https://github.com/WireCatLabs/mail-cli/blob/main/docs/providers.md) |
+| Guides | [use it](https://github.com/WireCatLabs/mail-cli/blob/main/docs/usage.md) · [prepare the mailbox](https://github.com/WireCatLabs/mail-cli/blob/main/docs/providers.md) · [connect Outlook](https://github.com/WireCatLabs/mail-cli/blob/main/docs/outlook.md) |
 | Reference | [all commands](https://github.com/WireCatLabs/mail-cli/blob/main/docs/commands.md) · [settings](https://github.com/WireCatLabs/mail-cli/blob/main/docs/configuration.md) |
 | When something goes wrong | [troubleshooting](https://github.com/WireCatLabs/mail-cli/blob/main/docs/troubleshooting.md) · [security](https://github.com/WireCatLabs/mail-cli/blob/main/docs/security.md) |
 | Project | [roadmap](https://github.com/WireCatLabs/mail-cli/blob/main/docs/roadmap.md) · [changelog](https://github.com/WireCatLabs/mail-cli/blob/main/CHANGELOG.md) |

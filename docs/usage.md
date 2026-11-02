@@ -33,8 +33,8 @@ domain's own settings file. If none knows the server, set it yourself with `--ho
 
 At a terminal, `session start` asks for what is missing: the provider and the address. Without a terminal it asks
 nothing. A missing `--address` or password is then an error, and it reads the password from `MAIL_PASSWORD`. The
-profile is saved only after the server accepts the app password. Outlook accepts only OAuth for IMAP, so
-`session start` refuses it for now. To change the server of an existing profile, use `config set` or a new profile
+profile is saved only after the server accepts the app password. Outlook.com and Microsoft 365 accept only OAuth, so
+`session start` opens the browser for them ([connect Outlook](outlook.md)). To change the server of an existing profile, use `config set` or a new profile
 name.
 
 `session start` takes the password from the terminal or from `MAIL_PASSWORD`. It never takes it from an option or a

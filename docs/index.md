@@ -10,7 +10,7 @@ Commands: `session` (start: create the profile, check and keep the app password;
 `folders create|rename|delete`, `drafts`, `attachments`, `rules` and `tags`, plus the commands every WireCat CLI
 shares: `doctor`, `commands`, `config`, `skill`, `mcp`, `runs` and `upgrade`.
 Start with [installation](installation.md), then [usage](usage.md). Before the first login, prepare the mailbox:
-[the steps for each provider](providers.md).
+[the steps for each provider](providers.md). For Outlook.com or Microsoft 365: [connect Outlook](outlook.md).
 
 ## Search your mail
 
