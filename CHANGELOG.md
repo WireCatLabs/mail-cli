@@ -2,6 +2,26 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Added
+
+- **Every answer's `meta` says `now` and `now_local`**, the moment it was made (cli-core 0.541.0, cli-base 0.72.0).
+
+### Fixed
+
+- **`search messages` waits 20 seconds for a Yandex server by default**, not 5: one IMAP SEARCH of a large Yandex
+  INBOX takes 5 to 7 seconds, so the old default always ran out. `--server-time` still sets it; the provider registry
+  holds the value.
+- **A scheduled sync no longer fails at 30 seconds while it goes on running.** `schedule exec` waited for the sync with
+  the 30 s deadline of a one-shot command, answered `timeout` (exit 9) and left the sync writing for up to 15 minutes.
+  It now waits as long as the sync's own deadline allows, and a stop of the run stops the sync too (cli-core).
+- **A Gmail sync uses about 200 MB, not 1 to 1.7 GB.** Each round asked the store about every stored email of the
+  account; on a 260,000-email mailbox a 30-day sync now takes seconds instead of minutes (cli-core).
+- **`search messages --backend` stays inside its time bound**: reading the finds and their attachments counts toward
+  `--server-time`, the bound ends before the command's deadline, nothing is written after the command is stopped,
+  and a find over 5 MB is left on the server (`search.server-too-large`) (cli-core).
+
 ## 0.7.0 — 01.11.2026
 
 ### Changed — may break callers

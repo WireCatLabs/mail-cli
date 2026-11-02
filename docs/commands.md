@@ -400,7 +400,7 @@ mail search messages <query> [options]
 | `--plain-order` | best first by the words alone, without moving mail from suspicious senders down. |
 | `--timezone <zone>` | the IANA timezone for calendar date boundaries. |
 | `--backend <archive\|server\|both>` | where to search: the local archive, the mail server (default: both), or both. |
-| `--server-time <duration>` | stop waiting for the server after this long (default: 5s). |
+| `--server-time <duration>` | stop waiting for the server after this long (default: 5s, 20s on Yandex). |
 
 **Returns:** message hit — ref, timestamp, sender_name, sender_is_me, chat_title, excerpt, matched_in, score, and 9 more; every field: mail commands info search messages
 

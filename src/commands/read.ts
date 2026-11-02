@@ -14,6 +14,7 @@ import { serverAccess } from "./server-search.js"
 const reads: MailReads = {
   app: IDENTITY,
   server: serverAccess,
+  serverTimeDefault: "5s, 20s on Yandex",
   read: async (command, work) => {
     const context = contextOf(command)
     const address = context.settings.mailbox.address

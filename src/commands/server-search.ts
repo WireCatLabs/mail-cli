@@ -11,14 +11,15 @@ import { foldersFor } from "./sync.js"
 export const serverAccess = (command: Command): MailServerAccess => {
   const context = contextOf(command)
   const { settings } = context
+  const { address, host, folders: configured } = settings.mailbox
+  const search = providerFor(address ?? "", host)?.search ?? DEFAULT_SEARCH
   return {
+    ...(search.timeMs === undefined ? {} : { timeMs: search.timeMs }),
     offline: context.flags.offline === true,
     permissions: settings.permissions,
     readOnly: settings.readOnlyLock !== undefined,
     open: async () => {
       const { backend } = await openMail(context)
-      const { address, host, folders: configured } = settings.mailbox
-      const search = providerFor(address ?? "", host)?.search ?? DEFAULT_SEARCH
       const serverQuery = backend.serverQuery
       try {
         const folders = await foldersFor(undefined, configured, search, () => backend.folderList())

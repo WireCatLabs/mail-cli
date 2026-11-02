@@ -34,6 +34,8 @@ export interface ServerSearch {
   syntax: SearchSyntax
   roles: string[]
   otherwise: string
+  /** The default `--server-time` when the provider's search is slower than cli-core's 5 s. */
+  timeMs?: number
 }
 
 /** How a change reaches the mailbox, where providers differ. */
@@ -96,6 +98,8 @@ const TABLE = {
     smtp: { ...tls("smtp.yandex.ru", 465), sources: [YANDEX_CLIENTS] },
     auth: "app-password",
     note: "turn on IMAP and app passwords in Yandex settings, then make a password of type Mail",
+    // One UID SEARCH TEXT over a 253,000-message INBOX takes 5 to 7 s, so cli-core's 5 s always ran out.
+    search: { syntax: "imap", roles: ["inbox", "sent", "archive"], otherwise: "INBOX", timeMs: 20_000 },
     organise: { trash: ["Trash", "Удалённые", "Удаленные"], drafts: ["Drafts", "Черновики"] },
     prepare: {
       steps: [
