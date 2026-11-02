@@ -350,6 +350,32 @@ describe("messages move, copy and delete on an IMAP server", () => {
     expect(folders[0]?.messages).toHaveLength(2)
   })
 
+  it("records what a restore put back before a refused SEARCH stopped it, and the next restore does the rest", async () => {
+    const folders = yandex()
+    ;(folders[3] as FakeFolder).messages.push({
+      uid: 1,
+      raw: raw("quote", "Quote sent", "The quote for the invoice"),
+      flags: ["\\Seen"],
+      date: OLD,
+    })
+    const { mail, refOf, server } = await harness({ folders })
+    const refs = [await refOf("october"), await refOf("quote")]
+    const moved = item((await mail(["ya", "messages", "move", ...refs, "--folder", "archive", "--json"])).out)
+    expect(moved).toMatchObject({ applied: true, changed: 2 })
+    server.refuseSearches = (criteria) => criteria.includes("invoice@example.com")
+
+    const stopped = await mail(["ya", "messages", "restore", "--run", moved.run, "--yes", "--json"])
+    expect(JSON.parse(stopped.err).error.reason, stopped.err).toBe("mail.search-refused")
+    expect((folders[3] as FakeFolder).messages).toHaveLength(1)
+    expect((folders[1] as FakeFolder).messages).toHaveLength(1)
+
+    server.refuseSearches = false
+    const rest = item((await mail(["ya", "messages", "restore", "--run", moved.run, "--yes", "--json"])).out)
+    expect(rest).toMatchObject({ restored: 1, missing: 0 })
+    expect((folders[1] as FakeFolder).messages).toHaveLength(0)
+    expect((folders[0] as FakeFolder).messages).toHaveLength(3)
+  })
+
   it("copies an email and takes only the copy away on restore", async () => {
     const folders = yandex()
     const { mail, refOf, commands } = await harness({ folders })

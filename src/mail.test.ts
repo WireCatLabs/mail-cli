@@ -439,6 +439,7 @@ describe("session", () => {
       const paths = { appName: "mail-cli", prefix: "MAIL", env }
       expect(pathsAreOverridden(paths)).toBe(false)
       expect(isMovedRun(paths)).toBe(true)
+      // systemKeyring itself, so cli-base treats the run as moved; every call is answered from this map, never the OS.
       const entries = new Map<string, string>([["mail-cli\u0000ya", "owners-password"]])
       const key = (service: string, account: string) => `${service}\u0000${account}`
       vi.spyOn(systemKeyring, "get").mockImplementation(
@@ -470,9 +471,13 @@ describe("session", () => {
     it("ends a sign-in the run made itself, and removes only its temporary entry", async () => {
       const { end, entries, deleted, temporary } = await movedHome()
       entries.set(temporary, "own-password")
+      const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true)
 
       const ended = await end()
 
+      expect(stderr.mock.calls.map(([text]) => String(text)).join("")).toContain(
+        "removed this run's own sign-in of ya from the OS keyring and kept the owner's",
+      )
       expect(item(ended.out)).toEqual({ profile: "ya", ended: true, mail: "retained" })
       expect(deleted.mock.calls.map(([service]) => service)).not.toContain("mail-cli")
       expect(entries.has(temporary)).toBe(false)

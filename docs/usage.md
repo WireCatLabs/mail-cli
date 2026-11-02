@@ -124,8 +124,10 @@ finds is stored and the same query decides, so each hit says `found_in`: `archiv
 or `both`. `--backend archive` keeps to the store, `--backend server` answers only what the server found, and
 `--server-time 20s` waits longer than the default: 5 seconds, 20 on Yandex, whose search of a large INBOX takes 5 to
 7 seconds. The wait always ends before the command's own deadline, so a slow server gives a partial answer, not a
-timeout. A message over 5 MB the server finds is not downloaded during a search; sync reads it, and the answer says
-so (`search.server-too-large`). The server reads words, `from:`, `to:`, `cc:`,
+timeout. A search downloads only the first 256 KiB of each message the server finds: a bigger one is stored with its
+text and without its attachments, and the answer says so (`search.server-partial`). The next `sync` reads it whole and
+says how many in `partial_emails` (`completed`, `left`); one the server no longer gives where it was stored is given
+up on after three tries and counted in `stuck`, and stays readable without its attachments. The server reads words, `from:`, `to:`, `cc:`,
 `subject:`, `body:`, `is:` and `date:`; the rest of the query is applied to what it returns. IMAP SEARCH matches parts
 of words and no other forms of a word, so a server can miss a hit that the store, with every form, finds after sync.
 `permissions.messages.server-search=deny` in the profile turns the server search off.

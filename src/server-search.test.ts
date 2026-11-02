@@ -16,6 +16,14 @@ const raw = (id: string, subject: string, body: string, from = "Ann <ann@example
   `Message-ID: <${id}@example.com>\r\nDate: Tue, 27 Oct 2026 10:00:00 +0000\r\nFrom: ${from}\r\n` +
   `To: me@example.com\r\nSubject: ${subject}\r\n\r\n${body}\r\n`
 
+const figures = Buffer.from(`Quarterly figures ${"x".repeat(400_000)}`).toString("base64")
+const big =
+  `Message-ID: <big@example.com>\r\nDate: Tue, 27 Oct 2026 10:00:00 +0000\r\nFrom: Ann <ann@example.com>\r\n` +
+  `To: me@example.com\r\nSubject: Invoice with figures\r\nMIME-Version: 1.0\r\n` +
+  `Content-Type: multipart/mixed; boundary="b1"\r\n\r\n--b1\r\nContent-Type: text/plain\r\n\r\nThe invoice is here.\r\n` +
+  `--b1\r\nContent-Type: text/plain; name="figures.txt"\r\nContent-Disposition: attachment; filename="figures.txt"\r\n` +
+  `Content-Transfer-Encoding: base64\r\n\r\n${figures}\r\n--b1--\r\n`
+
 let fake: FakeImap | undefined
 afterEach(async () => {
   await fake?.close()
@@ -324,13 +332,6 @@ describe("a refused SEARCH and big finds on a real IMAP connection", () => {
   })
 
   it("stores a big find from its first bytes, and the next sync reads it whole", async () => {
-    const figures = Buffer.from(`Quarterly figures ${"x".repeat(400_000)}`).toString("base64")
-    const big =
-      `Message-ID: <big@example.com>\r\nDate: Tue, 27 Oct 2026 10:00:00 +0000\r\nFrom: Ann <ann@example.com>\r\n` +
-      `To: me@example.com\r\nSubject: Invoice with figures\r\nMIME-Version: 1.0\r\n` +
-      `Content-Type: multipart/mixed; boundary="b1"\r\n\r\n--b1\r\nContent-Type: text/plain\r\n\r\nThe invoice is here.\r\n` +
-      `--b1\r\nContent-Type: text/plain; name="figures.txt"\r\nContent-Disposition: attachment; filename="figures.txt"\r\n` +
-      `Content-Transfer-Encoding: base64\r\n\r\n${figures}\r\n--b1--\r\n`
     const inbox: FakeFolder = { name: "INBOX", messages: [] }
     const { mail, json, fake: server } = await harness("me@example.com", [inbox])
     expect((await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])).code).toBe(0)
@@ -346,5 +347,32 @@ describe("a refused SEARCH and big finds on a real IMAP connection", () => {
     expect((await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])).code).toBe(0)
     const whole = await json(["ya", "messages", "show", found.items[0].ref])
     expect(whole.item.attachments).toEqual([expect.objectContaining({ name: "figures.txt" })])
+  })
+
+  it("completes a big Gmail find by its X-GM-MSGID on the next sync, and reads it whole only once", async () => {
+    const all: FakeFolder = { name: "[Gmail]/All Mail", attributes: ["\\All"], messages: [] }
+    const {
+      mail,
+      json,
+      fake: server,
+    } = await harness("me@gmail.com", [{ name: "INBOX", messages: [] }, all], ["X-GM-EXT-1"], { gmail: true })
+    const sync = async () => {
+      const answer = await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])
+      expect(answer.code, answer.err).toBe(0)
+      return JSON.parse(answer.out).item
+    }
+    await sync()
+    const id = "1800000000000000001"
+    all.messages.push({ uid: 7, raw: big, flags: [], emailId: id, threadId: id, labels: ["\\Inbox"] })
+
+    const found = await json(["ya", "search", "messages", "invoice", "--backend", "server"])
+    expect(found.items).toHaveLength(1)
+    expect(found.meta.issues).toContainEqual(expect.objectContaining({ reason: "search.server-partial" }))
+
+    expect((await sync()).partial_emails).toEqual({ completed: 1, left: 0, stuck: 0 })
+    const whole = await json(["ya", "messages", "show", found.items[0].ref])
+    expect(whole.item.attachments).toEqual([expect.objectContaining({ name: "figures.txt" })])
+    expect((await sync()).partial_emails).toBeUndefined()
+    expect(server.commands.filter((line) => /UID FETCH 7 .*BODY\.PEEK\[\](?!<)/.test(line))).toHaveLength(1)
   })
 })

@@ -593,119 +593,125 @@ export const restoreRun = async (
     restored: 0,
   }
   const restored: string[] = []
-  for (const { step, done } of [...steps].reverse()) {
-    const items = step.items.filter(({ id }) => !before.has(id))
-    plan.logged += step.items.length
-    if (items.length === 0) continue
-    const folder = step.folder || (step.op === "trash" ? await allMailOf(mailbox) : step.folder)
-    if (step.op === "flag" || step.op === "label") {
-      // A flag or a label does not move a message, so the UID it had is still its UID.
-      const { validity, found } = await whereNow(mailbox, folder, items, {
-        uids: Object.fromEntries(items.map(({ id, uid }) => [id, uid])),
-        validity: step.validity,
-      })
+  // A step can fail after earlier ones changed the mailbox; what came back is recorded, so the next restore skips it.
+  try {
+    for (const { step, done } of [...steps].reverse()) {
+      const items = step.items.filter(({ id }) => !before.has(id))
+      plan.logged += step.items.length
+      if (items.length === 0) continue
+      const folder = step.folder || (step.op === "trash" ? await allMailOf(mailbox) : step.folder)
+      if (step.op === "flag" || step.op === "label") {
+        // A flag or a label does not move a message, so the UID it had is still its UID.
+        const { validity, found } = await whereNow(mailbox, folder, items, {
+          uids: Object.fromEntries(items.map(({ id, uid }) => [id, uid])),
+          validity: step.validity,
+        })
+        const here = items.filter(({ id }) => found.has(id))
+        plan.restorable += here.length
+        plan.missing += items.length - here.length
+        if (!apply) continue
+        for (const group of groupBy(here, (item) => JSON.stringify(inverse(step.change, item))).values()) {
+          const back = inverse(step.change, group[0] as ChangedItem)
+          if (back.add.length === 0 && back.remove.length === 0) continue
+          const uids = group.map(({ id }) => found.get(id) as number)
+          const ids = group.map(({ id }) => id)
+          await changer.step(
+            {
+              op: step.op,
+              folder,
+              validity,
+              change: back,
+              items: group.map((item) => ({ ...item, uid: found.get(item.id) as number })),
+            },
+            () => (step.op === "flag" ? mailbox.writes.flag : mailbox.writes.label)(folder, validity, uids, back),
+          )
+          if (step.op === "flag") {
+            const flags = flagChanges(back)
+            if (Object.keys(flags).length)
+              await mailbox.store.mail.setFlags(mailbox.accountId, new Map(ids.map((id) => [id, flags])), mailbox.now())
+          } else await relabel(mailbox, ids, back.add, back.remove)
+          for (const id of ids) restored.push(id)
+        }
+        continue
+      }
+      const to = step.to || (await trashOf(mailbox))
+      const { validity, found } =
+        step.op === "copy"
+          ? await copiesNow(mailbox, to, items, done)
+          : await whereNow(mailbox, to, items, {
+              ...(done?.uids ? { uids: done.uids } : {}),
+              ...(done?.to_validity ? { validity: done.to_validity } : {}),
+            })
       const here = items.filter(({ id }) => found.has(id))
       plan.restorable += here.length
       plan.missing += items.length - here.length
-      if (!apply) continue
-      for (const group of groupBy(here, (item) => JSON.stringify(inverse(step.change, item))).values()) {
-        const back = inverse(step.change, group[0] as ChangedItem)
-        if (back.add.length === 0 && back.remove.length === 0) continue
-        const uids = group.map(({ id }) => found.get(id) as number)
-        const ids = group.map(({ id }) => id)
-        await changer.step(
-          {
-            op: step.op,
-            folder,
-            validity,
-            change: back,
-            items: group.map((item) => ({ ...item, uid: found.get(item.id) as number })),
-          },
-          () => (step.op === "flag" ? mailbox.writes.flag : mailbox.writes.label)(folder, validity, uids, back),
+      if (!apply || here.length === 0) continue
+      if (step.op === "copy") {
+        const uids = here.map(({ id }) => found.get(id) as number)
+        await changer.step({ op: "copy", folder: to, validity, items: here }, () =>
+          mailbox.writes.expunge(to, validity, uids),
         )
-        if (step.op === "flag") {
-          const flags = flagChanges(back)
-          if (Object.keys(flags).length)
-            await mailbox.store.mail.setFlags(mailbox.accountId, new Map(ids.map((id) => [id, flags])), mailbox.now())
-        } else await relabel(mailbox, ids, back.add, back.remove)
-        for (const id of ids) restored.push(id)
-      }
-      continue
-    }
-    const to = step.to || (await trashOf(mailbox))
-    const { validity, found } =
-      step.op === "copy"
-        ? await copiesNow(mailbox, to, items, done)
-        : await whereNow(mailbox, to, items, {
-            ...(done?.uids ? { uids: done.uids } : {}),
-            ...(done?.to_validity ? { validity: done.to_validity } : {}),
-          })
-    const here = items.filter(({ id }) => found.has(id))
-    plan.restorable += here.length
-    plan.missing += items.length - here.length
-    if (!apply || here.length === 0) continue
-    if (step.op === "copy") {
-      const uids = here.map(({ id }) => found.get(id) as number)
-      await changer.step({ op: "copy", folder: to, validity, items: here }, () =>
-        mailbox.writes.expunge(to, validity, uids),
-      )
-      await mailbox.store.mail.setMailboxes(
-        mailbox.accountId,
-        [storeBox(to)],
-        new Map(here.map(({ id }) => [id, []])),
-        mailbox.now(),
-      )
-      for (const { id } of here) restored.push(id)
-      continue
-    }
-    const gmailTrash = step.op === "trash" && mailbox.organise.labels === true
-    const groups = gmailTrash
-      ? groupBy(here, (item) => ((item.labels ?? []).includes("\\Inbox") ? "INBOX" : folder))
-      : new Map([[folder, here]])
-    for (const [back, group] of groups) {
-      const uids = group.map(({ id }) => found.get(id) as number)
-      await changer.step({ op: "move", folder: to, validity, to: back, items: group }, () =>
-        mailbox.writes.move(to, validity, uids, back),
-      )
-      const ids = group.map(({ id }) => id)
-      if (step.op === "move")
         await mailbox.store.mail.setMailboxes(
           mailbox.accountId,
-          [storeBox(to), storeBox(back)],
-          new Map(ids.map((id) => [id, [back]])),
+          [storeBox(to)],
+          new Map(here.map(({ id }) => [id, []])),
           mailbox.now(),
         )
-      for (const id of ids) restored.push(id)
-    }
-    if (gmailTrash) {
-      const all = await allMailOf(mailbox)
-      const labelled = here.filter((item) => (item.labels ?? []).some((label) => label !== "\\Inbox"))
-      if (labelled.length) {
-        const { validity: allValidity, found: inAll } = await whereNow(mailbox, all, labelled, {})
-        for (const group of groupBy(labelled, (item) =>
-          JSON.stringify((item.labels ?? []).filter((l) => l !== "\\Inbox").sort()),
-        ).values()) {
-          const labels = ((group[0] as ChangedItem).labels ?? []).filter((label) => label !== "\\Inbox")
-          const placed = group.filter(({ id }) => inAll.has(id))
-          if (placed.length === 0) continue
-          await mailbox.writes.label(
-            all,
-            allValidity,
-            placed.map(({ id }) => inAll.get(id) as number),
-            { add: labels.filter((label) => !SYSTEM.has(label) || label === "\\Starred" || label === "\\Important") },
+        for (const { id } of here) restored.push(id)
+        continue
+      }
+      const gmailTrash = step.op === "trash" && mailbox.organise.labels === true
+      const groups = gmailTrash
+        ? groupBy(here, (item) => ((item.labels ?? []).includes("\\Inbox") ? "INBOX" : folder))
+        : new Map([[folder, here]])
+      for (const [back, group] of groups) {
+        const uids = group.map(({ id }) => found.get(id) as number)
+        await changer.step({ op: "move", folder: to, validity, to: back, items: group }, () =>
+          mailbox.writes.move(to, validity, uids, back),
+        )
+        const ids = group.map(({ id }) => id)
+        if (step.op === "move")
+          await mailbox.store.mail.setMailboxes(
+            mailbox.accountId,
+            [storeBox(to), storeBox(back)],
+            new Map(ids.map((id) => [id, [back]])),
+            mailbox.now(),
           )
+        for (const id of ids) restored.push(id)
+      }
+      if (gmailTrash) {
+        const all = await allMailOf(mailbox)
+        const labelled = here.filter((item) => (item.labels ?? []).some((label) => label !== "\\Inbox"))
+        if (labelled.length) {
+          const { validity: allValidity, found: inAll } = await whereNow(mailbox, all, labelled, {})
+          for (const group of groupBy(labelled, (item) =>
+            JSON.stringify((item.labels ?? []).filter((l) => l !== "\\Inbox").sort()),
+          ).values()) {
+            const labels = ((group[0] as ChangedItem).labels ?? []).filter((label) => label !== "\\Inbox")
+            const placed = group.filter(({ id }) => inAll.has(id))
+            if (placed.length === 0) continue
+            await mailbox.writes.label(
+              all,
+              allValidity,
+              placed.map(({ id }) => inAll.get(id) as number),
+              { add: labels.filter((label) => !SYSTEM.has(label) || label === "\\Starred" || label === "\\Important") },
+            )
+          }
         }
       }
+      if (step.op === "trash") {
+        // Only an envelope comes back whole at once: it has no text to lose. Full mail is saved again by the next sync.
+        const envelopes = (await mailbox.store.mail.emailRefs({ accountId: mailbox.accountId, includeDeleted: true }))
+          .filter(
+            ({ externalId, mailboxes }) => found.has(externalId) && mailboxes.some(({ kind }) => kind === ENVELOPE),
+          )
+          .map(({ externalId }) => externalId)
+        if (envelopes.length) await mailbox.store.mail.markRestored(mailbox.accountId, envelopes, mailbox.now())
+      }
     }
-    if (step.op === "trash") {
-      // Only an envelope comes back whole at once: it has no text to lose. Full mail is saved again by the next sync.
-      const envelopes = (await mailbox.store.mail.emailRefs({ accountId: mailbox.accountId, includeDeleted: true }))
-        .filter(({ externalId, mailboxes }) => found.has(externalId) && mailboxes.some(({ kind }) => kind === ENVELOPE))
-        .map(({ externalId }) => externalId)
-      if (envelopes.length) await mailbox.store.mail.markRestored(mailbox.accountId, envelopes, mailbox.now())
-    }
+  } finally {
+    if (restored.length) appendRestore(path, restored, mailbox.now())
   }
-  if (restored.length) appendRestore(path, restored, mailbox.now())
   plan.restored = restored.length
   return plan
 }
