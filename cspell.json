@@ -21,6 +21,7 @@
     "notmuch",
     "EMAILID",
     "XOAUTH",
-    "PKCE"
+    "PKCE",
+    "JMAP"
   ]
 }

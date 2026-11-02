@@ -138,7 +138,7 @@ mail ya config show                            # every setting and where it came
 - Search reads the store and asks the mail server for mail `sync` has not read yet; `--backend archive` keeps to
   the store.
 
-What comes next, such as OAuth sign-in, is on the
+What comes next is on the
 [roadmap](https://github.com/WireCatLabs/mail-cli/blob/main/docs/roadmap.md).
 
 ## Security
