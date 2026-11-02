@@ -34,29 +34,13 @@ desktop app has no secret.
    needs.
 5. Allow the desktop sign-in: under **Manage**, select **Authentication**. Under **Advanced settings**, set **Allow
    public client flows** to **Yes**, and select **Save**.
-6. Add the redirect URI `http://127.0.0.1/callback`. `mail` listens on `127.0.0.1` with a new port each time, but the
-   portal's box refuses an `http` address on `127.0.0.1`, so it goes into the manifest
-   ([redirect URI rules](https://learn.microsoft.com/en-us/entra/identity-platform/reply-url)):
-   1. Under **Manage**, select **Manifest**.
-   2. The manifest comes in one of two shapes. Find the one you have and add the address:
-      - Microsoft Graph format (has `"publicClient"`): put it in `publicClient.redirectUris`:
-
-        ```json
-        "publicClient": {
-          "redirectUris": ["http://127.0.0.1/callback"]
-        },
-        ```
-
-      - Azure AD Graph format (has `"replyUrlsWithType"`; an app made with a personal Microsoft account shows this
-        one): add an entry to `replyUrlsWithType`:
-
-        ```json
-        "replyUrlsWithType": [
-          { "url": "http://127.0.0.1/callback", "type": "InstalledClient" }
-        ],
-        ```
-
-   3. Select **Save**. Back on **Authentication**, the address is listed under **Mobile and desktop applications**.
+6. Add the redirect URI. Under **Manage**, select **Authentication**, then **Add a platform**, then **Mobile and desktop
+   applications**. In **Custom redirect URIs** enter `http://localhost/callback`, with no port, and select **Configure**.
+   `mail` signs in through `http://localhost:<port>/callback` with a new port each time; Microsoft ignores the port only
+   for `localhost` addresses and requires the path to match
+   ([redirect URI rules](https://learn.microsoft.com/en-us/entra/identity-platform/reply-url)). No manifest edit is
+   needed. Do not put the address under a **Web** platform: that kind of app expects a client secret, and a public
+   client sign-in with it fails. If the address is already listed under **Web**, remove it there.
 7. List the permissions, so the consent page and admins see them up front. The sign-in asks for them by name anyway
    ([scopes](https://learn.microsoft.com/en-us/exchange/client-developer/legacy-protocols/how-to-authenticate-an-imap-pop-smtp-application-by-using-oauth)),
    so this step is recommended, not required. Microsoft's page gives no portal steps for these delegated permissions;
@@ -69,8 +53,7 @@ desktop app has no secret.
    Select **Add permissions**. Do not grant admin consent for these: each person allows them for their own mailbox
    when they sign in. Microsoft lets users do that by default for their own mail
    ([user consent](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-user-consent)).
-8. Test the redirect, which no document promises for `127.0.0.1` (Microsoft writes "the port is ignored" only for
-   `localhost`). Put the id into your config as above, then sign in twice:
+8. Test the redirect. Put the id into your config as above, then sign in twice:
 
    ```sh
    mail config set --defaults microsoft_client_id <application-client-id>
@@ -79,8 +62,7 @@ desktop app has no secret.
    ```
 
    Both must end with `signed_in: true`. If Microsoft's page shows an error with `AADSTS50011` (the redirect URI does
-   not match), the port is not ignored for `127.0.0.1`: keep the app, and tell the `mail` maintainers, who then switch
-   the sign-in to `http://localhost/callback` (a small change in cli-core's sign-in).
+   not match), check that the address under **Mobile and desktop applications** is exactly `http://localhost/callback`.
 9. For WireCat's own app: send the Application (client) ID to the maintainers. They put it into
    `WIRECAT_MICROSOFT_CLIENT_ID` in `src/oauth.ts`, and the next release signs in without any config.
 

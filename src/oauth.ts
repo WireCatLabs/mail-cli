@@ -22,11 +22,8 @@ import type { MailCredential } from "./mail/backend.js"
 
 export type OAuthKind = "microsoft" | "google"
 
-/**
- * WireCat's Microsoft app: a public client for any Entra tenant and personal accounts. Empty until WireCat registers
- * it (docs/oauth-microsoft.md); until then a sign-in needs `microsoft_client_id` in the config.
- */
-export const WIRECAT_MICROSOFT_CLIENT_ID = ""
+/** WireCat's Microsoft app: a public client for any Entra tenant and personal accounts (docs/oauth-microsoft.md). */
+export const WIRECAT_MICROSOFT_CLIENT_ID = "f7f05d3a-b948-4d50-b3ce-59c816ce69e9"
 
 export const OAUTH_GUIDE = "https://github.com/WireCatLabs/mail-cli/blob/main/docs/oauth-microsoft.md"
 
@@ -57,14 +54,14 @@ export const scopesOf = (kind: OAuthKind): readonly string[] =>
 export const sendScopeOf = (kind: OAuthKind) => (kind === "microsoft" ? MICROSOFT_SMTP_SCOPE : GOOGLE_MAIL_SCOPE)
 
 // https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow: a public client sends no secret,
-// and `common` takes work, school and personal accounts.
+// and `common` takes work, school and personal accounts. Microsoft ignores the port only for `localhost`.
 const microsoftProvider = (client: OAuthClient, address?: string): OAuthProvider => ({
   id: "microsoft",
   name: "Microsoft",
   authorizeUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
   tokenUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
   client,
-  redirect: { kind: "loopback" },
+  redirect: { kind: "loopback", host: "localhost" },
   authorizeParams: { prompt: "select_account", ...(address ? { login_hint: address } : {}) },
 })
 
