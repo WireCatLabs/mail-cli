@@ -4,6 +4,7 @@ import type { ImapFlow } from "imapflow"
 import { type Connections, IMAP_DEFAULTS, type ImapTuning } from "./connection.js"
 import { mapImapError } from "./errors.js"
 import { HEADER_FIELDS, listedOf, quickOf, rawIdsOf } from "./messages.js"
+import { searchUids } from "./search.js"
 
 const chunks = <T>(items: T[], size: number): T[][] => {
   const out: T[][] = []
@@ -65,10 +66,10 @@ export const imapReads = (pool: Connections, tuning: ImapTuning = {}): Reads => 
 
   const search = async (since: Date, folder: string): Promise<Searched> => {
     const found = await inFolder(folder, async (open, validity) => {
-      const uids = await open.search({ since }, { uid: true })
+      const uids = await searchUids(open, { since }, folder)
       // Only Gmail's ids come free; elsewhere the id is the Message-ID, and the envelope costs a read per message.
       const quick = !open.capabilities.has("X-GM-EXT-1")
-      return { ...(validity ? { validity } : {}), uids: (uids || []).map(String), ...(quick ? { quick } : {}) }
+      return { ...(validity ? { validity } : {}), uids: uids.map(String), ...(quick ? { quick } : {}) }
     })
     if (found.validity) validities.set(folder, found.validity)
     return found
@@ -88,7 +89,7 @@ export const imapReads = (pool: Connections, tuning: ImapTuning = {}): Reads => 
     present: (uids, folder) =>
       inFolder(folder, async (open) => {
         if (uids.length === 0) return []
-        const held = new Set((await open.search({ uid: uids.join(",") }, { uid: true })) || [])
+        const held = new Set(await searchUids(open, { uid: uids.join(",") }, folder))
         return uids.filter((uid) => held.has(Number(uid)))
       }),
 
@@ -155,7 +156,7 @@ export const imapReads = (pool: Connections, tuning: ImapTuning = {}): Reads => 
       return rawIdsOf(raw, item.folder ?? "INBOX", validity, item.uid)
     },
 
-    fetchRaw: async (items) => {
+    fetchRaw: async (items, options) => {
       const read = new Map<Quick, Uint8Array | Error>()
       const bodies = (folder: string, batches: Quick[][]) =>
         spread(
@@ -165,7 +166,7 @@ export const imapReads = (pool: Connections, tuning: ImapTuning = {}): Reads => 
             const found = new Map<string, Uint8Array>()
             const messages = await open.fetchAll(
               batch.map(({ uid }) => uid).join(","),
-              { uid: true, source: true },
+              { uid: true, source: options?.bytes ? { maxLength: options.bytes } : true },
               { uid: true },
             )
             for (const message of messages) if (message.source) found.set(String(message.uid), message.source)

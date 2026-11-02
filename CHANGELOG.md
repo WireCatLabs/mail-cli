@@ -6,6 +6,15 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Fixed
 
+- **A server that refuses SEARCH no longer looks like an empty folder.** `sync` leaves that folder unread and reads
+  the rest: the answer is partial, names it in `refused_folders` with a `mail.search-refused` issue, and nothing of it
+  is marked deleted. `messages move`, `copy`, `delete`, `restore` and `drafts` stop with `mail.search-refused`
+  instead of acting on nothing (cli-core).
+- **`search messages --backend` reads a big email's text, not the whole message.** It downloads the first 256 KiB,
+  stores the text without the attachments and says `search.server-partial`; the next `sync` reads the email whole.
+  Before, a candidate over 5 MB was left on the server and a smaller one was downloaded with all its attachments.
+- **After `messages send`, `stored` is true only when this message is in the store**, not when any other mail of the
+  last 10 minutes was.
 - **The reader of your own Google `--client-file` and the browser opener come from `@wirecat/cli-core` 0.546.0**, not
   copies in mail. The file shapes, the `chmod 600` check and the errors are unchanged.
 
