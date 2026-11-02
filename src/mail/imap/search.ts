@@ -59,7 +59,7 @@ export const searchUids = async (open: ImapFlow, query: SearchObject, folder: st
   const uids = await open.search(query, { uid: true })
   if (uids === false)
     throw new CliError("provider_error", `the mail server refused to search ${folder}`, { reason: SEARCH_REFUSED })
-  return uids
+  return uids ?? []
 }
 
 /** The server's own search of one folder; nothing is marked read, since the folder opens read only. */
