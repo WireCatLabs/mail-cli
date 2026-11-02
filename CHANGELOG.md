@@ -17,7 +17,7 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 - **`config repair`** mends a settings file whose JSON is broken only in its syntax, with a backup; `--dry-run`
   previews. From cli-core.
 
-### Changed
+### Fixed
 
 - **The browser login page of `mail mcp serve --http` says the app asks to reach your mail** and names
   `mail mcp serve --http`. It said "your messages" and `mail mcp --http`. From cli-core 0.551.0.
