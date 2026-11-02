@@ -17,6 +17,7 @@
   "rules import": "write",
   "status": "read",
   "search messages": "read",
+  "review": "read",
   "messages show": "read",
   "messages export": "write",
   "messages mark-read": "write",

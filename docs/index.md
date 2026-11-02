@@ -5,7 +5,8 @@ scripts and for AI agents. It signs in with an app password kept in the OS keyri
 server, keeps drafts, and sends, replies and forwards over SMTP with the same app password.
 
 Commands: `session` (start: create the profile, check and keep the app password; status; end; list),
-`account check`, `folders list`, `sync` and `status` (how far a sync is), `search messages`, `messages show` and
+`account check`, `folders list`, `sync` and `status` (how far a sync is), `review` (what is new, owed and waiting),
+`search messages`, `messages show` and
 `conversations list|show` (read what sync stored), `messages mark-read|move|copy|delete|restore|send|forward`,
 `folders create|rename|delete`, `drafts`, `attachments`, `rules` and `tags`, plus the commands every WireCat CLI
 shares: `doctor`, `commands`, `config`, `skill`, `mcp`, `runs` and `upgrade`.
