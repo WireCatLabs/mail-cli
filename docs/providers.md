@@ -96,7 +96,7 @@ Sending: `smtp.office365.com` port 587, STARTTLS, with the same OAuth sign-in. I
 ## Outlook
 
 1. Outlook.com: open Settings (the cog), "Mail", "Forwarding and IMAP", turn on "Let devices and apps use IMAP" and save.
-2. Then `mail` opens Microsoft's sign-in page in the browser: sign in and allow access. Outlook.com takes only OAuth for IMAP and SMTP, never an app password.
+2. Then `mail` opens Microsoft's sign-in page in the browser: sign in and allow access. Outlook.com takes only OAuth for IMAP and SMTP, never an app password. The full steps are in [connect Outlook](outlook.md).
 
 Read from: <https://support.microsoft.com/en-us/office/pop-imap-and-smtp-settings-for-outlook-com-d088b986-291d-42b8-9564-9c414e2aa040>, <https://learn.microsoft.com/en-us/exchange/client-developer/legacy-protocols/how-to-authenticate-an-imap-pop-smtp-application-by-using-oauth>
 

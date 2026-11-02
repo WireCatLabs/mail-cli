@@ -2,6 +2,13 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Added
+
+- **A guide to connect Outlook.com or Microsoft 365** ([docs/outlook.md](docs/outlook.md)): turn IMAP on, sign in
+  through the browser, sync and send, and what to do when the token is refused or an admin must allow the app.
+
 ## 0.10.0 — 02.11.2026
 
 ### Changed — may break callers
