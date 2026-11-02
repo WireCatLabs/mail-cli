@@ -407,7 +407,11 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
                   parts.push(
                     `BODY[HEADER.FIELDS (${fields[1]})] ${literal(headerBlock(message.raw, (fields[1] ?? "").split(" ")))}`,
                   )
-                if (wantsBody) parts.push(`BODY[] ${literal(message.raw)}`)
+                if (wantsBody) {
+                  const cut = /BODY(?:\.PEEK)?\[\]<0\.(\d+)>/i.exec(items)
+                  if (cut) parts.push(`BODY[]<0> ${literal(message.raw.slice(0, Number(cut[1])))}`)
+                  else parts.push(`BODY[] ${literal(message.raw)}`)
+                }
                 send(`* ${messages.indexOf(message) + 1} FETCH (${parts.join(" ")})`)
               }
               return send(`${tag} OK done`)

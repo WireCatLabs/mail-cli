@@ -76,7 +76,8 @@ const gmail = (): FakeFolder[] => [
 
 const harness = async (given: Partial<FakeOptions> & { provider?: string } = {}) => {
   const { provider, ...fakeOptions } = given
-  fake = await startFakeImap({ login: ADDRESS, password: PASSWORD, folders: yandex(), ...fakeOptions })
+  const server: FakeOptions = { login: ADDRESS, password: PASSWORD, folders: yandex(), ...fakeOptions }
+  fake = await startFakeImap(server)
   const port = fake.port
   const keyring = memoryKeyring()
   const env: NodeJS.ProcessEnv = {
@@ -139,7 +140,7 @@ const harness = async (given: Partial<FakeOptions> & { provider?: string } = {})
       await store.close()
     }
   }
-  return { mail, options, json, refOf, env, stored, commands: () => fake?.commands ?? [] }
+  return { mail, options, json, refOf, env, stored, server, commands: () => fake?.commands ?? [] }
 }
 
 const item = (text: string) => JSON.parse(text).item
@@ -332,6 +333,21 @@ describe("messages move, copy and delete on an IMAP server", () => {
     expect(folders[1]?.messages).toHaveLength(0)
     expect(folders[0]?.messages).toHaveLength(3)
     expect((await json("search", "messages", "mailbox:INBOX")).items).toHaveLength(3)
+  })
+
+  it("refuses a restore when the server refuses SEARCH, and moves nothing", async () => {
+    const folders = yandex()
+    const { mail, refOf, server } = await harness({ folders })
+    const moved = item(
+      (await mail(["ya", "messages", "move", await refOf("invoice"), "--folder", "archive", "--json"])).out,
+    )
+    server.refuseSearches = true
+
+    const restored = await mail(["ya", "messages", "restore", "--run", moved.run, "--yes", "--json"])
+
+    expect(JSON.parse(restored.err).error.reason, restored.err).toBe("mail.search-refused")
+    expect(folders[1]?.messages).toHaveLength(1)
+    expect(folders[0]?.messages).toHaveLength(2)
   })
 
   it("copies an email and takes only the copy away on restore", async () => {

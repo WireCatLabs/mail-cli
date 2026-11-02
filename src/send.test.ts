@@ -450,7 +450,7 @@ describe("messages send over SMTP", { timeout: 20_000 }, () => {
     const { mail } = await harness({ folders })
     const sent = await mail(["ya", "messages", "send", "--to", ADDRESS, "--subject", "x", "y", "--json"])
     expect(sent.code, sent.err).toBe(0)
-    expect(item(sent.out).sent_copy).toBe("no-sent-folder")
+    expect(item(sent.out)).toMatchObject({ sent_copy: "no-sent-folder", stored: false })
   })
 
   it("never saves attachments into a credential folder", async () => {
