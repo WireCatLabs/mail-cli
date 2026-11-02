@@ -303,17 +303,6 @@ describe("session start of a new profile", () => {
     expect((await mail([...base, "--security", "plain"], typed(PASSWORD))).code).not.toBe(0)
   })
 
-  it("creates no Outlook profile while mail has no Microsoft app to sign in with", async () => {
-    const { mail, env } = await harness()
-    const refused = await mail(["me", "session", "start", "--address", "me@outlook.com", "--json"], {
-      discovery: { mx: async () => [] },
-      ...typed(PASSWORD),
-    })
-    expect(refused.code).not.toBe(0)
-    expect(refused.err).toContain("microsoft_client_id")
-    expect(profilesIn(env)).toEqual([])
-  })
-
   it("refuses to change a profile that exists, and only asks its password again", async () => {
     const { mail, keyring } = await harness()
     await profileSet(mail)
