@@ -1008,3 +1008,57 @@ describe("search, show and threads", () => {
     expect(none.err).toContain("ya sync")
   })
 })
+
+describe("review", () => {
+  const imapDate = (ms: number) => {
+    const at = new Date(ms)
+    const month = at.toLocaleString("en-US", { month: "short", timeZone: "UTC" })
+    const pad = (n: number) => String(n).padStart(2, "0")
+    return `${pad(at.getUTCDate())}-${month}-${at.getUTCFullYear()} ${pad(at.getUTCHours())}:${pad(at.getUTCMinutes())}:${pad(at.getUTCSeconds())} +0000`
+  }
+
+  it("reviews what sync stored: --new once, --unanswered, and a holder's mark that status shows", async () => {
+    const h = await harness({
+      fake: {
+        folders: [
+          {
+            name: "INBOX",
+            messages: [
+              {
+                uid: 1,
+                raw: raw("call", "Call me", "Can you call me today?").replace(
+                  "Tue, 27 Oct 2026 10:00:00 +0000",
+                  new Date(Date.now() - 3 * 3_600_000).toUTCString(),
+                ),
+                date: imapDate(Date.now() - 3 * 3_600_000),
+              },
+            ],
+          },
+        ],
+      },
+    })
+    await profileSet(h.mail)
+    expect((await h.mail(["ya", "session", "start", "--json"], typed(PASSWORD))).code).toBe(0)
+    const since = new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10)
+    expect((await h.mail(["ya", "sync", "--since-time", since, "--folder", "INBOX", "--json"])).code).toBe(0)
+    const json = async (...argv: string[]) => {
+      const answer = await h.mail(["ya", "review", ...argv, "--json"])
+      expect(answer.code, answer.err).toBe(0)
+      return JSON.parse(answer.out)
+    }
+
+    const first = await json("--new")
+    expect(first.items).toMatchObject([{ chat_title: "Call me", sender_is_me: false, email: { bulk: false } }])
+    expect((await json("--new")).items).toEqual([])
+    expect((await json("--unanswered", "1h")).items).toHaveLength(1)
+    expect((await json("--waiting")).items).toEqual([])
+
+    const start = await json("--holder", "triage")
+    expect(start.items).toEqual([])
+    const cursor = start.next.find((one: { step: string }) => one.step === "mail-messages.acknowledge").args.cursor
+    const acked = await h.mail(["ya", "messages", "acknowledge", "--holder", "triage", "--cursor", cursor, "--json"])
+    expect(acked.code, acked.err).toBe(0)
+    const status = JSON.parse((await h.mail(["ya", "status", "--json"])).out).item
+    expect(status.holders).toMatchObject([{ holder: "triage", read: 0, held: 0 }])
+  })
+})

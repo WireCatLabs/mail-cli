@@ -3,7 +3,8 @@ import { CliError } from "@wirecat/cli-base"
 import { annotate } from "@wirecat/cli-base/commands"
 import { progressOf } from "@wirecat/cli-core/background"
 import { answerEntity, baseContext, itemOf, LOCAL_READ, outputFor, renderAnswer } from "@wirecat/cli-core/cli"
-import { mailAccountKey, mailProgress } from "@wirecat/cli-core/mail"
+import { mailAccountKey, mailProgress, marksOf } from "@wirecat/cli-core/mail"
+import { mailMark, markItem } from "@wirecat/cli-core/mail/cli"
 import { Command } from "commander"
 import * as v from "valibot"
 import { configuration } from "../config.js"
@@ -32,6 +33,8 @@ const mailSyncStatus = v.strictObject({
       updated_at: v.string(),
     }),
   ),
+  /** How far each holder — an agent, a pipeline — processed this mailbox (`review --holder`). */
+  holders: v.array(mailMark),
 })
 
 export const statusCommand = (): Command =>
@@ -43,29 +46,31 @@ export const statusCommand = (): Command =>
     "mail_sync_status",
     mailSyncStatus,
   )
-    .summary("how far the sync is, from what the runs saved")
+    .summary("how far the sync is, and how far each agent processed the mail")
     .description(
-      "how many messages of the synced window are read and how many are left, per folder; it asks no server, so it answers while a sync runs",
+      "how many messages of the synced window are read and how many are left, per folder, and how far each holder " +
+        "of a processing mark got and what it skipped; it asks no server, so it answers while a sync runs",
     )
     .action(async function (this: Command) {
       const context = contextOf(this)
       const address = context.settings.mailbox.address
       if (!address) throw new CliError("configuration_error", `profile ${context.profile} has no address`)
       const key = mailAccountKey(address)
-      const report = await baseContext(this, configuration.resolveSettings).run(async () => {
+      const { folders: report, holders } = await baseContext(this, configuration.resolveSettings).run(async () => {
         const { storePath } = await import("@wirecat/cli-core/store")
-        if (!existsSync(storePath(context.env))) return []
+        if (!existsSync(storePath(context.env))) return { folders: [], holders: [] }
         // Read-only, so it answers while a sync holds the write lock.
         const store = await openMailStore(context.env, { readOnly: true })
         context.environment.trackCloseable?.(store)
         try {
-          return (await mailProgress(store, key)).map(({ folder, since, done, total, updatedAt }) => ({
+          const folders = (await mailProgress(store, key)).map(({ folder, since, done, total, updatedAt }) => ({
             folder,
             since,
             done,
             total,
             updated_at: updatedAt,
           }))
+          return { folders, holders: await marksOf(store, key) }
         } finally {
           await store.close()
         }
@@ -81,5 +86,5 @@ export const statusCommand = (): Command =>
         ...(report.length ? { total: report.reduce((sum, { total }) => sum + total, 0) } : {}),
         ...(updatedAt === undefined ? {} : { updatedAt }),
       })
-      renderAnswer(this, outputFor(this), itemOf({ ...progress, folders: report }))
+      renderAnswer(this, outputFor(this), itemOf({ ...progress, folders: report, holders: holders.map(markItem) }))
     })

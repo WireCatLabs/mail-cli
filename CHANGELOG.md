@@ -2,6 +2,21 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Added
+
+- **`review`: what is new, what you owe, what waits for an answer**, with tg's words: `review "date>2h"`, `--new`
+  (a point per mailbox and reader), `--unanswered [duration]` (newest email came to you in To or Cc, no answer),
+  `--waiting [duration]` (you wrote last), and `bulk:false` to leave out mail sent to many. Each email carries
+  `bulk`, `list_id` and `rule_id`. It reads the store only; over MCP it is the read tool `review`. From cli-core.
+- **A processing mark per agent**: `review --holder <name>` reads what is stored past that holder's mark, by store
+  order, so late-synced mail is not skipped; `messages acknowledge --holder <name> --cursor <cursor>` moves it forward.
+  Bulk mail, envelopes and drafts are skipped and counted, partial mail held. `status` lists each holder: how far it
+  got, held, read and skipped by reason. From cli-core 0.556.0.
+- **`config repair`** mends a settings file whose JSON is broken only in its syntax, with a backup; `--dry-run`
+  previews. From cli-core.
+
 ## 0.12.0 — 02.11.2026
 
 ### Added

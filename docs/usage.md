@@ -97,6 +97,36 @@ For ChatGPT and Claude in the browser,
 server in the background, `mcp server status` shows its port, the login code and the apps logged in, and
 `mcp server stop` ends it.
 
+## Review: what is new, what you owe, what waits
+
+`review` reads the mail sync stored and asks the server nothing. It speaks tg's words:
+
+```sh
+mail ya review "date>2h"            # every email, yours too, in threads that changed in the last 2 hours
+mail ya review --new                # what changed since the last `review --new`; 3 days back the first time
+mail ya review --unanswered 1d      # threads whose newest email came to you (To or Cc) and has no answer for a day
+mail ya review --waiting 7d         # threads where you wrote last and nobody answered for a week
+mail ya review "bulk:false"         # leave out threads of mail sent to many, lists and envelopes
+```
+
+Every email is shown, mail sent to many too; each item's `email` says `bulk`, `list_id` and `rule_id` beside the
+sender's score, so you or an agent can sort. Mail newer than the last finished sync waits for the next review.
+`--new` keeps a point per mailbox and reader: yours, an agent's over MCP, and one per scheduled run, so a schedule
+never moves yours. Without a date, `--unanswered` and `--waiting` look at threads active in the last 30 days.
+`memo tasks agenda --source email:<address>` lists the same owed and waiting threads.
+
+An agent or a pipeline that processes your mail keeps its own mark of how far it got, in the shared store, by the
+order mail was stored — so mail stored late, with an old date, is not skipped:
+
+```sh
+mail ya review --holder mail-triage --json        # what is stored past its mark; the answer gives a cursor
+mail ya messages acknowledge --holder mail-triage --cursor <cursor>   # once processed: move the mark there
+mail ya status                                    # how far each holder got, what it held and skipped
+```
+
+The mark only moves forward. Mail sent to many, envelopes and drafts are skipped and counted; an email still being
+read whole (partial) is held until it is, up to 7 days. A new holder starts from the mail stored now.
+
 ## Search your mail
 
 `mail` searches and reads the mail its profile synced, in the local store, and asks the mail server for mail `sync`
