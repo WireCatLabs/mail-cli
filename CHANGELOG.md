@@ -2,6 +2,14 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Added
+
+- **Work or school accounts: what to do when Microsoft asks for admin approval** ([docs/outlook.md](docs/outlook.md)):
+  why `AADSTS90094` appears, the admin-consent link for WireCat's app with how to revoke it, and how an organisation
+  registers its own app.
+
 ## 0.11.0 — 02.11.2026
 
 ### Added
