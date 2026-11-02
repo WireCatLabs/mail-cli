@@ -7,6 +7,7 @@ import type { MailEnvironment } from "./commands/context.js"
 import type { MailCredential, MailEndpoint, RunBounds } from "./mail/backend.js"
 import { imapBackend } from "./mail/imap/index.js"
 import { run } from "./program.js"
+import { providerFor } from "./providers.js"
 import { type FakeFolder, type FakeImap, type FakeOptions, startFakeImap } from "./testing/fake-imap.js"
 
 const PASSWORD = "fixture-app-password-4Rt9"
@@ -216,6 +217,40 @@ describe("search messages --backend", () => {
     expect(await leftOpen(fake)).toBe(0)
   })
 
+  it("ends a long --server-time before the command's deadline, answers in part, and writes nothing after", async () => {
+    const server: Partial<FakeOptions> = {}
+    const inbox: FakeFolder = { name: "INBOX", messages: [] }
+    const { mail, json, fake } = await harness("me@example.com", [inbox], [], server)
+    expect((await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])).code).toBe(0)
+    for (let uid = 10; uid < 310; uid++)
+      inbox.messages.push({ uid, raw: raw(`n${uid}`, `Invoice ${uid}`, "Invoice."), flags: [] })
+    server.hangFetches = true
+    const started = Date.now()
+    const answer = await mail([
+      "ya",
+      "search",
+      "messages",
+      "invoice",
+      "--backend",
+      "server",
+      "--server-time",
+      "60s",
+      "--timeout",
+      "7s",
+      "--json",
+    ])
+    expect(Date.now() - started).toBeLessThan(6_500)
+    expect(answer.code, answer.err).toBe(0)
+    expect(JSON.parse(answer.out).meta.issues).toEqual([
+      { code: "timeout", reason: "search.server-timeout", source: "server" },
+    ])
+    expect(await leftOpen(fake)).toBe(0)
+    const commands = fake.commands.length
+    await new Promise((resolve) => setTimeout(resolve, 1_500))
+    expect(fake.commands.length).toBe(commands)
+    expect((await json(["ya", "search", "messages", "invoice", "--backend", "archive"])).items).toEqual([])
+  }, 30_000)
+
   it("counts a folder whose SEARCH is refused as failed, not as empty", async () => {
     const server: Partial<FakeOptions> = {}
     const { mail, fake } = await harness(
@@ -256,5 +291,12 @@ describe("search messages --backend", () => {
     const found = await json(["ya", "search", "messages", "invoice", "--backend", "server", "--server-time", "20s"])
     expect(found.page.total.value).toBe(80)
     expect(await leftOpen(fake)).toBe(0)
+  })
+})
+
+describe("the server time of a provider", () => {
+  it("gives Yandex 20 s, since one SEARCH of a large INBOX outlasts the 5 s others keep", () => {
+    expect(providerFor("ann@yandex.ru", undefined)?.search?.timeMs).toBe(20_000)
+    expect(providerFor("ann@gmail.com", undefined)?.search?.timeMs).toBeUndefined()
   })
 })

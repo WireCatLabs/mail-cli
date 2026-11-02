@@ -122,7 +122,10 @@ is no raw source to show.
 over All Mail, other servers with IMAP SEARCH in INBOX, Sent and Archive (or the profile's `folders`). What the server
 finds is stored and the same query decides, so each hit says `found_in`: `archive`, `server` (new from the server)
 or `both`. `--backend archive` keeps to the store, `--backend server` answers only what the server found, and
-`--server-time 20s` waits longer than the default 5 seconds. The server reads words, `from:`, `to:`, `cc:`,
+`--server-time 20s` waits longer than the default: 5 seconds, 20 on Yandex, whose search of a large INBOX takes 5 to
+7 seconds. The wait always ends before the command's own deadline, so a slow server gives a partial answer, not a
+timeout. A message over 5 MB the server finds is not downloaded during a search; sync reads it, and the answer says
+so (`search.server-too-large`). The server reads words, `from:`, `to:`, `cc:`,
 `subject:`, `body:`, `is:` and `date:`; the rest of the query is applied to what it returns. IMAP SEARCH matches parts
 of words and no other forms of a word, so a server can miss a hit that the store, with every form, finds after sync.
 `permissions.messages.server-search=deny` in the profile turns the server search off.
