@@ -7,12 +7,15 @@ root=$(cd "$(dirname "$0")/.." && pwd)
 command=$(node --input-type=module -e "import('$root/dist/identity.js').then((m) => console.log(m.IDENTITY.command))")
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT
+# Read before HOME moves, so the install reuses the owner's npm cache instead of downloading every CLI again.
+npm_cache=$(npm config get cache)
 # A CLI that starts may move the store under HOME; every CLI run here gets a throwaway one.
 # Moved folders do not hide the keyring: it is reached over D-Bus.
 export HOME="$scratch/home" MESSAGING_STORE="$scratch/store" WIRECAT_STATE_DIR="$scratch/state"
 export DBUS_SESSION_BUS_ADDRESS=disabled:
 mkdir -p "$HOME"
-npm install -g --prefix "$scratch/prefix" --ignore-scripts --no-audit --no-fund --loglevel error \
+npm install -g --prefix "$scratch/prefix" --cache "$npm_cache" --fetch-retries 6 --fetch-retry-mintimeout 20000 \
+  --fetch-retry-maxtimeout 120000 --maxsockets 4 --ignore-scripts --no-audit --no-fund --loglevel error \
   @wirecat/tg-cli @wirecat/max-cli @wirecat/whatsapp-cli @wirecat/cli-memo @wirecat/drive-cli @wirecat/zoom-cli \
   @wirecat/gcal-cli
 bin="$scratch/prefix/bin"
