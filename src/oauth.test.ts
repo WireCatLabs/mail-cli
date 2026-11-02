@@ -281,7 +281,7 @@ describe("Microsoft sign-in", { timeout: 20_000 }, () => {
 
     const ended = await mail(["work", "session", "end", "--json"])
     expect(item(ended.out)).toMatchObject({ ended: true, mail: "retained" })
-    expect(ended.err).toContain("account.live.com")
+    expect(ended.err).toContain("microsoft.com/consent")
     expect(entry()).toBeNull()
     expect(item((await mail(["work", "session", "status", "--json"])).out)).toMatchObject({ state: "missing" })
     expect((await mail(["doctor", "--json"])).err).toContain("no OAuth sign-in on record")

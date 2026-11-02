@@ -88,4 +88,4 @@ desktop app has no secret.
 
 The tokens stay in the system keyring of the computer that signed in, as the app passwords do. `mail <profile> session
 end` forgets them; Microsoft keeps listing the app until you remove it at
-<https://account.live.com/consent/Manage> (personal account) or <https://myapps.microsoft.com> (work or school).
+<https://www.microsoft.com/consent> (personal account) or <https://myapps.microsoft.com> (work or school).

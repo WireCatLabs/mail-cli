@@ -147,7 +147,7 @@ const endCommand = () =>
         // https://learn.microsoft.com/en-us/entra/identity-platform/refresh-tokens: no revoke a public client can call.
         if (kind === "microsoft")
           note(
-            "Microsoft still lists mail's access until you remove it: https://account.live.com/consent/Manage for a " +
+            "Microsoft still lists mail's access until you remove it: https://www.microsoft.com/consent for a " +
               "personal account, https://myapps.microsoft.com for a work or school account",
           )
         // https://developers.google.com/identity/protocols/oauth2/native-app: a revoke ends the whole project's grants.

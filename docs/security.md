@@ -30,7 +30,7 @@ to `mail` on `127.0.0.1` only, checked with PKCE and a random `state`. The new t
 saved. The access and refresh tokens are kept like the app password, in the keyring entry `oauth:microsoft:<profile>`
 (or the private file when no keyring works), and are never printed, logged or passed on the command line. A refresh
 happens under a lock every `mail` process shares. `session end` removes the entry; Microsoft has no way for a desktop
-app to revoke it, so remove the app at <https://account.live.com/consent/Manage> or <https://myapps.microsoft.com>.
+app to revoke it, so remove the app at <https://www.microsoft.com/consent> or <https://myapps.microsoft.com>.
 Each change run keeps, under `mail`'s state folder and readable by you only, the folder, UID, flags, Gmail labels and
 Message-ID of each message it changed, so `messages restore` can undo it; never a subject or a body.
 
