@@ -4,6 +4,16 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ## Unreleased
 
+### Changed — may break callers
+
+- **The profile sets whether and up to what size `sync` reads attachments, and one run can override it.** The
+  profile's `read_attachments` (default `true`) and `max_attachment_mb` (default 10) set it; `--no-attachments`,
+  `--attachments` and `--max-attachment-mb <n>` override it for one run. A file left unread is stored with its name and
+  size, its extraction `not-read` or `too-large`. No file is kept either way.
+- **`messages show` reads an email again when one of its attachments was left unread**, every attachment whatever
+  its size, so the command now reaches the mail server for such an email. `--offline` or a failed read shows the stored
+  email with `meta.complete: false` and the issue `mail.attachments-unread`. `attachments download` keeps a file.
+
 ### Added
 
 - **`account inspect` groups the mailbox's mail by sender and list before you sync it**: emails, MB, unread and bulk

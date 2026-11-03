@@ -45,7 +45,12 @@ name). An existing Himalaya setup then needs no new password.
 
 `sync` reads INBOX and the Sent folder; on Gmail it reads All Mail, since archived mail leaves INBOX. `--folder` or the
 profile's `folders` setting names other folders. It reads the newest mail first. `--limit` caps the new mail of one
-run. `--rescan` lists the whole window again. It saves text and headers, and the text of each attachment it can read, not the files. The
+run. `--rescan` lists the whole window again. It saves text and headers, and the text of each attachment it can read, not the files. It reads attachments up to
+10 MB each: the profile's `read_attachments` (`false` reads none) and `max_attachment_mb` change that, and
+`--no-attachments`, `--attachments` and `--max-attachment-mb <n>` change it for one run. A file left unread keeps its
+name and size. `messages show` of an email with such a file reads that email again from the server, every attachment
+whatever its size, and shows the text; `--offline` shows the stored email instead. To keep a file, use
+`attachments download`. The
 account's rules (`mail <profile> rules`, the same table memo reads) hold here too: mail a skip rule names is not read,
 and an envelope rule keeps only its sender, date and size.
 

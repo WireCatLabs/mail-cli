@@ -40,7 +40,11 @@ interface SyncFlags {
   maxPages?: number
   folder?: string[]
   rescan?: boolean
+  attachments?: boolean
+  maxAttachmentMb?: number
 }
+
+const MB = 1024 * 1024
 
 /** A time without a zone is read in `zone`, and a date alone starts at its local midnight (WC-TIME-3, WC-TIME-5). */
 export const sinceOf = (value: string | undefined, zone: string, now: number): Date => {
@@ -161,6 +165,13 @@ export const syncCommand = (): Command =>
         "a folder to read; repeat it for more (default: the profile's folders, else INBOX and Sent; All Mail on Gmail)",
       ),
     )
+    .option("--attachments", "read attachments into the search index this run, whatever the profile's read_attachments")
+    .option("--no-attachments", "read no attachment this run; each is stored with its name and size, without text")
+    .option(
+      "--max-attachment-mb <mb>",
+      "the largest attachment to read this run, in MB (default: the profile's max_attachment_mb, else 10)",
+      positiveCount("--max-attachment-mb"),
+    )
     .option(
       "--rescan",
       "list the whole window again; also moves stored replies into their thread where the server has no thread ids",
@@ -194,6 +205,10 @@ export const syncCommand = (): Command =>
                 budget,
                 ...(args.limit === undefined ? {} : { max: args.limit }),
                 ...(args.rescan ? { rescan: true } : {}),
+                attachments: {
+                  read: args.attachments ?? mailbox.attachments.read,
+                  maxBytes: (args.maxAttachmentMb ?? mailbox.attachments.maxMb) * MB,
+                },
                 ...(signal ? { signal } : {}),
               })
               const key = mailAccountKey(address)
@@ -255,6 +270,7 @@ export const syncCommand = (): Command =>
                       timeout,
                       folder: args.folder?.length ? args.folder : undefined,
                       rescan: unthreaded ? true : undefined,
+                      max_attachment_mb: args.maxAttachmentMb,
                     }).filter(([, value]) => value !== undefined),
                   ),
                   why: limited
