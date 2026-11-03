@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/WireCatLabs/mail-cli/main/docs/images/social-preview.png" alt="Your mailbox for your AI agents" width="100%">
+</p>
+
 # mail CLI for people, scripts and agents
 
 `mail` copies your mailbox into the shared WireCat store on your computer, so you and your AI agents can search it
