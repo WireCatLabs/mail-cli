@@ -126,7 +126,7 @@ describe("messages import", () => {
       { id: "1700000000000000005", subject: "Second", labels: "Opened" },
     ])
 
-    const first = await mail(["gm", "messages", "import", file, "--limit", "1", "--json"])
+    const first = await mail(["gm", "messages", "import", file, "--since-time", "2020-01-01", "--limit", "1", "--json"])
     expect(first.item).toMatchObject({ saved: 1, complete: false, remaining: 1 })
     expect(first.item.hint).toMatch(/1 new emails are left/)
   })
@@ -172,7 +172,10 @@ describe("account inspect", () => {
     expect(item.items[1]).toMatchObject({ from: "ann@example.com", list_id: null, emails: 1, unread: 0 })
     expect(asked).toEqual([])
 
-    const text = await mail(["ya", "account", "inspect"], { rdap: fetch, tty: true })
+    const text = await mail(
+      ["ya", "account", "inspect", "--since-time", "2026-01-01", "--limit", "5", "--folder", "INBOX"],
+      { rdap: fetch, tty: true },
+    )
     expect(text.out).toMatch(/^3 emails, .* 2 groups;/)
     expect(text.out).toMatch(/emails +MB +unread +bulk +years +replied +suggest +score +sender or list/)
     expect(text.out).toContain("news.shop.example (news@shop.example)")
