@@ -53,6 +53,7 @@
   "config show": "read",
   "config set": "write",
   "config unset": "write",
+  "config migrate": "write",
   "config repair": "write",
   "runs list": "read",
   "runs show": "read",

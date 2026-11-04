@@ -425,14 +425,14 @@ mail review [query] [options]
 |---|---|
 | `--unanswered [duration]` | only threads whose newest email came to you, in To or Cc, with no answer for this long — 4h, 1d; 24h if not given. |
 | `--waiting [duration]` | only threads where you wrote last and nobody answered for this long — 3d; 7d if not given. |
-| `--holder <name>` | read for this holder — an agent or a pipeline — what is stored past its processing mark, by store order; bulk, envelopes, drafts and partial mail left out; `messages acknowledge` moves the mark. |
+| `--holder <name>` | read for this holder — an agent or a pipeline — what is stored past its processing mark, by store order; bulk, envelopes, drafts, suspicious senders and partial mail left out; `messages acknowledge` moves the mark. |
 | `--new` | what changed since the last `review --new` of this mailbox, a point per thread — for scheduled runs. |
 
 **Returns:** message summary — ref, chat_id, timestamp, sender_name, sender_is_me, outgoing, text, attachments, and 3 more; every field: mail commands info review
 
 **Next usually:** `mail messages show <message>`, `mail attachments list <message>`, `mail messages forward <message> [text]`
 
-**Example:** `mail personal review "date>2h"`, `mail personal review --new`, `mail personal review --unanswered 1d`, `mail personal review --waiting 7d`
+**Example:** `mail personal review "date>2h"`, `mail personal review --new`, `mail personal review --unanswered 1d`
 
 ## `mail messages`
 
@@ -1399,6 +1399,20 @@ mail config unset <setting> [options]
 **Returns:** remove a setting from the configuration file
 
 **Example:** `mail personal config unset limit`
+
+### `mail config migrate`
+
+write each setting the file lacks at its default, keeping yours
+
+**Changes something on this computer only.**
+
+```sh
+mail config migrate
+```
+
+**Returns:** write each setting the file lacks at its default, keeping yours
+
+**Example:** `mail config migrate`
 
 ### `mail config repair`
 
