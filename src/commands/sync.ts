@@ -211,7 +211,7 @@ export const syncCommand = (): Command =>
                       known: () => knownAges(context.env),
                       // A registry that does not answer leaves the domain unaged; the sync still succeeds.
                       lookUp: (domains) =>
-                        lookUpAges(context.env, domains, rdapDeps(context.environment.fetch), endsAt).catch(() => ({
+                        lookUpAges(context.env, domains, rdapDeps(context.environment.rdap), endsAt).catch(() => ({
                           looked: 0,
                           failed: domains.length,
                         })),

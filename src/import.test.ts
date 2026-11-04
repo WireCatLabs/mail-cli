@@ -152,7 +152,7 @@ describe("account inspect", () => {
       return new Response(null, { status: 404 })
     }) as typeof globalThis.fetch
 
-    const answer = await mail(["ya", "account", "inspect", "--json"], { fetch })
+    const answer = await mail(["ya", "account", "inspect", "--json"], { rdap: fetch })
     expect(answer.code, answer.err).toBe(0)
     const { item } = JSON.parse(answer.out)
     expect(item).toMatchObject({ address: ADDRESS, emails: 3, groups: 2 })
@@ -160,7 +160,7 @@ describe("account inspect", () => {
     expect(item.items[1]).toMatchObject({ from: "ann@example.com", list_id: null, emails: 1, unread: 0 })
     expect(asked).toEqual([])
 
-    const aged = await mail(["ya", "account", "inspect", "--domain-age", "--json"], { fetch })
+    const aged = await mail(["ya", "account", "inspect", "--domain-age", "--json"], { rdap: fetch })
     expect(aged.code, aged.err).toBe(0)
     expect(asked).toContain("https://rdap.registry.example/domain/shop.example")
     expect(JSON.parse(aged.out).item.domain_lookups).toEqual({ looked: 1, failed: 0 })

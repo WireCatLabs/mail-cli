@@ -219,7 +219,7 @@ const inspectCommand = () =>
           lookups = await lookUpAges(
             context.env,
             domainsToAge(probe.items, FREE_MAIL),
-            rdapDeps(context.environment.fetch),
+            rdapDeps(context.environment.rdap),
           )
           probe = probeMail(items, args.limit, knownAges(context.env))
         }
