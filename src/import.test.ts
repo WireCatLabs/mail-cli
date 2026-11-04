@@ -119,6 +119,18 @@ describe("messages import", () => {
     expect(again.item).toMatchObject({ saved: 0, complete: true })
   })
 
+  it("stops at --limit and says how many are left", async () => {
+    const { mail } = await gmailProfile(GMAIL, [{ name: "INBOX", messages: [] }])
+    const file = takeout([
+      { id: "1700000000000000004", subject: "First", labels: "Opened" },
+      { id: "1700000000000000005", subject: "Second", labels: "Opened" },
+    ])
+
+    const first = await mail(["gm", "messages", "import", file, "--limit", "1", "--json"])
+    expect(first.item).toMatchObject({ saved: 1, complete: false, remaining: 1 })
+    expect(first.item.hint).toMatch(/1 new emails are left/)
+  })
+
   it("refuses a profile that is not Gmail, whose ids would store every email twice", async () => {
     const { mail } = await gmailProfile("me@example.com", [{ name: "INBOX", messages: [] }])
     const file = takeout([{ id: "1700000000000000002", subject: "Old invoice", labels: "Opened" }])
@@ -159,6 +171,11 @@ describe("account inspect", () => {
     expect(item.items[0]).toMatchObject({ list_id: "news.shop.example", emails: 2, unread: 1, bulk: 1 })
     expect(item.items[1]).toMatchObject({ from: "ann@example.com", list_id: null, emails: 1, unread: 0 })
     expect(asked).toEqual([])
+
+    const text = await mail(["ya", "account", "inspect"], { rdap: fetch, tty: true })
+    expect(text.out).toMatch(/^3 emails, .* 2 groups;/)
+    expect(text.out).toMatch(/emails +MB +unread +bulk +years +replied +suggest +score +sender or list/)
+    expect(text.out).toContain("news.shop.example (news@shop.example)")
 
     const aged = await mail(["ya", "account", "inspect", "--domain-age", "--json"], { rdap: fetch })
     expect(aged.code, aged.err).toBe(0)

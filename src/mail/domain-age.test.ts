@@ -69,4 +69,20 @@ describe("lookUpAges", () => {
     expect(asked).toEqual([BOOTSTRAP_URL])
     expect(knownAges(env).size).toBe(0)
   })
+
+  it("keeps a registry's refusal unanswered, so a later run asks again", async () => {
+    const env = { MAIL_STATE_DIR: mkdtempSync(join(tmpdir(), "mail-age-")) }
+    const refusals = [JSON.stringify({ errorCode: 429, title: "slow down" }), "x".repeat(5000), "<html>busy</html>"]
+    const deps = {
+      now: () => new Date("2026-10-14T00:00:00Z"),
+      sleep: async () => {},
+      fetch: (async (url: string | URL | Request) =>
+        String(url) === BOOTSTRAP_URL
+          ? answer(200, services)
+          : new Response(refusals.shift(), { status: 429 })) as typeof fetch,
+    }
+
+    expect(await lookUpAges(env, ["a.example", "b.example", "c.example"], deps)).toEqual({ looked: 3, failed: 3 })
+    expect(knownAges(env).size).toBe(0)
+  })
 })
