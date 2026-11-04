@@ -2,6 +2,24 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Added
+
+- **`config migrate` writes each setting your config file lacks, at its default**, and keeps your values, their order
+  and keys it does not know; it creates no section and running it again adds nothing. A first run now writes every
+  shared setting into the file, and `config set` and `config unset` fill in the missing ones. `config show` gives each
+  setting its default and description, and no longer creates a missing file. From cli-core 0.563.0.
+
+### Changed — may break callers
+
+- **Mail sync reads attachments up to 10 MB a file by default**, and can skip them. From cli-core 0.563.0.
+- **`review --holder` leaves out mail from suspicious senders too**, beside bulk, envelopes, drafts and partial mail.
+  From cli-core 0.560.0.
+- **An answer over the output cap names what to run instead** (WC-OUT-22). From cli-core 0.563.0.
+- **The store moves to version 48** (invoices and payments, imports through one envelope, the cleanup of test rows
+  that leaked into a real store). The first run of this version migrates it. From cli-core 0.557.0–0.560.0.
+
 ## 0.13.0 — 02.11.2026
 
 ### Added

@@ -87,6 +87,22 @@ it("config repair previews, then mends broken JSON syntax so doctor finds no iss
   }
 })
 
+it("config migrate writes the settings the file lacks and keeps the owner's", async () => {
+  const dir = process.env.MAIL_CONFIG_DIR ?? ""
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(join(dir, "config.json"), '{ "defaults": { "limit": 5, "mine": "kept" } }')
+  try {
+    const migrated = await ran(["config", "migrate", "--json"])
+    expect(migrated.code).toBe(0)
+    expect(json(migrated.out).item.added).toContain("defaults.update_check")
+    const written = JSON.parse(readFileSync(join(dir, "config.json"), "utf8"))
+    expect(written.defaults).toMatchObject({ limit: 5, mine: "kept", update_check: true })
+    expect(json((await ran(["config", "migrate", "--json"])).out).item.added).toEqual([])
+  } finally {
+    for (const name of readdirSync(dir)) if (name.startsWith("config.json")) rmSync(join(dir, name))
+  }
+})
+
 it("doctor reports an unknown setting with the command that removes it", async () => {
   await withConfig('{ "defaults": { "limt": 3 } }', (config) =>
     expect(config).toMatchObject({
