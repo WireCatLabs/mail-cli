@@ -1,5 +1,6 @@
 import { CliError, configFilePath, resolvePaths, saveConfigFile } from "@wirecat/cli-base"
 import { readConfigFile, usableProfileName } from "@wirecat/cli-core/cli"
+import { configuration } from "./config.js"
 import type { Discovery } from "./discovery.js"
 import { IDENTITY } from "./identity.js"
 
@@ -19,7 +20,10 @@ export const profileOf = (discovery: Discovery, folders?: string[]) => ({
   ...(folders?.length ? { folders } : {}),
 })
 
-/** Adds one profile to the config file; an existing profile is replaced only when `replace` is true. */
+/**
+ * Adds one profile to the config file, with every setting the file lacks at its default (WC-CMD-30); an existing
+ * profile is replaced only when `replace` is true.
+ */
 export const writeProfile = (
   env: NodeJS.ProcessEnv,
   name: string,
@@ -39,5 +43,6 @@ export const writeProfile = (
       param: "name",
     })
   saveConfigFile(path, { ...config, profiles: { ...profiles, [name]: profile } })
+  configuration.migrate(path)
   return { path, created: !existed }
 }

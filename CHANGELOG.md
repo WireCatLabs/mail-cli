@@ -2,6 +2,14 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Fixed
+
+- **`session start` writes every setting at its default when it saves a new profile**, as `config set` does. The
+  first file a sign-in made held only the profile, so the owner could not see the other settings until a later
+  `config set` or `config migrate`.
+
 ## 0.14.0 — 05.11.2026
 
 ### Added
