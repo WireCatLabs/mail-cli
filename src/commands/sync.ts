@@ -17,6 +17,7 @@ import {
   type MailSyncResult,
   mailAccountKey,
   SEARCH_REFUSED,
+  scoreSenders,
   storedMailRuleSet,
   syncMail,
 } from "@wirecat/cli-core/mail"
@@ -24,6 +25,7 @@ import { Command } from "commander"
 import * as v from "valibot"
 import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
+import { knownAges, lookUpAges, rdapDeps } from "../mail/domain-age.js"
 import { rethreadStored } from "../mail/rethread.js"
 import { DEFAULT_SYNC, providerFor, type SyncFolders } from "../providers.js"
 import { openMailStore } from "../store.js"
@@ -41,7 +43,7 @@ interface SyncFlags {
 }
 
 /** A time without a zone is read in `zone`, and a date alone starts at its local midnight (WC-TIME-3, WC-TIME-5). */
-const sinceOf = (value: string | undefined, zone: string, now: number): Date => {
+export const sinceOf = (value: string | undefined, zone: string, now: number): Date => {
   if (value === undefined) return new Date(now - DEFAULT_DAYS * DAY_MS)
   const refuse = () =>
     new CliError("validation_error", "--since-time takes an ISO date or timestamp in the past", {
@@ -119,6 +121,10 @@ const mailSync = v.strictObject({
    * because the server no longer gives them where they were stored (they stay readable without their attachments).
    */
   partial_emails: v.optional(v.strictObject({ completed: v.number(), left: v.number(), stuck: v.number() })),
+  /** Senders scored from the stored mail, at most once a day; search ranks those with signs of fraud lower. */
+  senders: v.optional(
+    v.strictObject({ scored: v.number(), demoted: v.number(), domains_looked_up: v.number(), failed: v.number() }),
+  ),
   hint: v.optional(v.string()),
 })
 
@@ -171,7 +177,7 @@ export const syncCommand = (): Command =>
       // A retry is a request of the budget; openMail keeps it from ending after the deadline.
       const { backend } = await openMail(context, { canRetry: () => budget.take() === null })
       try {
-        const { report, rethreaded, unreadable } = await baseContext(this, configuration.resolveSettings).run(
+        const { report, rethreaded, unreadable, senders } = await baseContext(this, configuration.resolveSettings).run(
           async () => {
             const { mailbox } = context.settings
             const defaults = providerFor(address, mailbox.host)?.sync ?? DEFAULT_SYNC
@@ -184,6 +190,7 @@ export const syncCommand = (): Command =>
               const report = await syncMail(backend, store, {
                 account: { address, mode: defaults.mode ?? "imap", folders, rules },
                 since,
+                ages: knownAges(context.env),
                 budget,
                 ...(args.limit === undefined ? {} : { max: args.limit }),
                 ...(args.rescan ? { rescan: true } : {}),
@@ -194,7 +201,25 @@ export const syncCommand = (): Command =>
                 args.rescan && !report.stopped
                   ? await rethreadStored(backend, store, key, folders, since, () => budget.take() === null)
                   : undefined
-              return { report, rethreaded, unreadable }
+              const endsAt = context.environment.deadline?.()?.endsAt
+              const senders = report.stopped
+                ? undefined
+                : await scoreSenders(
+                    store,
+                    address,
+                    {
+                      known: () => knownAges(context.env),
+                      // A registry that does not answer leaves the domain unaged; the sync still succeeds.
+                      lookUp: (domains) =>
+                        lookUpAges(context.env, domains, rdapDeps(context.environment.fetch), endsAt).catch(() => ({
+                          looked: 0,
+                          failed: domains.length,
+                        })),
+                    },
+                    Date.now(),
+                    rules,
+                  )
+              return { report, rethreaded, unreadable, senders }
             } finally {
               await store.close()
             }
@@ -279,6 +304,16 @@ export const syncCommand = (): Command =>
               ...(report.deletionsSkipped ? { deletions_skipped: report.deletionsSkipped } : {}),
               ...(refused.length ? { refused_folders: refused } : {}),
               ...(report.partial ? { partial_emails: report.partial } : {}),
+              ...(senders
+                ? {
+                    senders: {
+                      scored: senders.scored,
+                      demoted: senders.demoted,
+                      domains_looked_up: senders.looked,
+                      failed: senders.failed,
+                    },
+                  }
+                : {}),
               ...(hint ? { hint } : {}),
             },
             {

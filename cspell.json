@@ -22,6 +22,7 @@
     "EMAILID",
     "XOAUTH",
     "PKCE",
-    "JMAP"
+    "JMAP",
+    "RDAP"
   ]
 }

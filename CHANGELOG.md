@@ -4,6 +4,19 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ## Unreleased
 
+### Added
+
+- **`account inspect` groups the mailbox's mail by sender and list before you sync it**: emails, MB, unread and bulk
+  shares, years, whether you replied, a `skip` suggestion and a spam or scam score, plus the rule kinds the mail would
+  match. Headers only, nothing stored. `--domain-age` asks each sender domain's registry (RDAP) when it was
+  registered. Moved from `memo mail inspect`.
+- **`messages import <file.mbox>` adds a Google Takeout archive to a Gmail profile's stored mail**, joined with what
+  `sync` stores by Gmail's ids; it only adds, leaves out Spam and Trash and follows the profile's rules. Moved from
+  memo's `mode: "mbox"` mail accounts.
+- **`sync` scores the senders of the stored mail, at most once a day**, and asks registries about new sender domains
+  until its deadline; search ranks mail from senders with signs of fraud lower. The answer's `senders` says how many.
+  `memo sync` did this before; it no longer reads mail.
+
 ### Fixed
 
 - **`session start` writes every setting at its default when it saves a new profile**, as `config set` does. The
