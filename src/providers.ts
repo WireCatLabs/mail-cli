@@ -184,10 +184,10 @@ const TABLE = {
         "Copy the password when it appears; Apple's page does not say whether it can be shown again.",
       ],
       notes: [
-        "`mail` logs in with the full address. Apple says the name before @icloud.com is the usual login; if the full address is refused, sign in with a new profile name: `mail <profile> session start --address <address> --login <name>`.",
+        "The sign-in uses the full address as the login. Apple says the name before @icloud.com is the usual login; if the full address is refused, sign in again under a new profile name and give the name before @icloud.com as the login.",
       ],
       refused:
-        "the password may be the Apple Account password instead of an app specific password, or the login may need the name before @icloud.com (--login).",
+        "the password may be the Apple Account password instead of an app specific password, or the login may need to be the name before @icloud.com instead of the full address.",
       sources: ["https://support.apple.com/en-us/102654", "https://support.apple.com/en-us/102525"],
     },
   },

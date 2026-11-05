@@ -12,6 +12,8 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Fixed
 
+- **The iCloud steps say in plain words how to sign in with the short login.** They no longer quote a command line
+  with its flags; `session start --help` still lists `--login`.
 - **Commands that talk to the mail server answer only after they closed the connection and the store.** `account
   check`, `account inspect`, `folders`, `sync`, `messages export`, the `messages` changes, `drafts` and the sends
   printed their answer first; a failing close now ends in an error instead of after a success. JSON answers are
