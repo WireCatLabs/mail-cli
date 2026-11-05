@@ -47,7 +47,7 @@ You need Node.js 22.16 or a later 22.x, or 24 or later. To try it with no instal
   attachments' text, `conversations list|show` its threads. It searches the profile's mailbox only; it also asks the mail server
   for mail `sync` has not read yet, and `--backend archive` keeps to the store.
   [memo](https://github.com/WireCatLabs/cli-memo) searches every mailbox together with your messages and notes.
-- **Export to mbox or Maildir.** `messages export 'from:ann@example.com' --output ~/mail-backup` reads the original
+- **Export to mbox or Maildir.** `messages export 'from:ann@example.com' --output-dir ~/mail-backup` reads the original
   messages from the server into a private folder, one mbox file per folder or a Maildir++ tree for mu and notmuch;
   it can be resumed and bounded. `stats messages top --by list` ranks senders, lists and domains.
 - **Sync a big mailbox in parts.** A run stops before its deadline, keeps what it read and tells you to run it again;

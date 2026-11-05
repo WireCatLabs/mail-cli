@@ -54,7 +54,7 @@ describe("a command that talks to the server answers only after it logged out", 
   it("messages export", async () => {
     const output = join(mkdtempSync(join(tmpdir(), "export-")), "out")
     const mailbox = await harness({ folders: folders() })
-    expect(await loggedOutFirst(mailbox, ["messages", "export", "--output", output])).toBe(true)
+    expect(await loggedOutFirst(mailbox, ["messages", "export", "--output-dir", output])).toBe(true)
   })
 
   it("messages mark-read", async () => {

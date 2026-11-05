@@ -36,7 +36,7 @@ const DEFAULT_DAYS = 30
 
 interface SyncFlags {
   sinceTime?: string
-  limit?: number
+  maxMessages?: number
   maxPages?: number
   folder?: string[]
   rescan?: boolean
@@ -141,7 +141,7 @@ export const syncCommand = (): Command =>
       partial: true,
       examples: [
         `${IDENTITY.command} personal sync`,
-        `${IDENTITY.command} personal sync --since-time 2026-10-01 --limit 200`,
+        `${IDENTITY.command} personal sync --since-time 2026-10-01 --max-messages 200`,
         `${IDENTITY.command} personal sync --folder INBOX`,
       ],
     }),
@@ -153,7 +153,11 @@ export const syncCommand = (): Command =>
       "--since-time <time>",
       "only mail received since this date or time; a date alone starts at local midnight, a time without a zone is local (default: 30 days)",
     )
-    .option("--limit <n>", "save at most this many new emails in this run, newest first", positiveCount("--limit"))
+    .option(
+      "--max-messages <n>",
+      "save at most this many new emails in this run, newest first",
+      positiveCount("--max-messages"),
+    )
     .option(
       "--max-pages <pages>",
       "at most this many requests to the mail server in this run; as many as fit the deadline if not given",
@@ -202,7 +206,7 @@ export const syncCommand = (): Command =>
               since,
               ages: knownAges(context.env),
               budget,
-              ...(args.limit === undefined ? {} : { max: args.limit }),
+              ...(args.maxMessages === undefined ? {} : { max: args.maxMessages }),
               ...(args.rescan ? { rescan: true } : {}),
               attachments: {
                 read: args.attachments ?? mailbox.attachments.read,
@@ -246,7 +250,8 @@ export const syncCommand = (): Command =>
           : []),
       ]
       // cli-core reports a run its `max` cut short as incomplete with what it left, but with no reason.
-      const limited = args.limit !== undefined && !report.complete && !report.stopped && report.saved >= args.limit
+      const limited =
+        args.maxMessages !== undefined && !report.complete && !report.stopped && report.saved >= args.maxMessages
       const stopped = report.stopped ?? (limited ? "limit" : undefined)
       const unthreaded = rethreaded !== undefined && !rethreaded.complete
       const partial =
@@ -264,7 +269,7 @@ export const syncCommand = (): Command =>
                 args: Object.fromEntries(
                   Object.entries({
                     since_time: args.sinceTime,
-                    limit: args.limit,
+                    max_messages: args.maxMessages,
                     max_pages: args.maxPages,
                     timeout,
                     folder: args.folder?.length ? args.folder : undefined,
@@ -273,7 +278,7 @@ export const syncCommand = (): Command =>
                   }).filter(([, value]) => value !== undefined),
                 ),
                 why: limited
-                  ? `the run saved the ${args.limit} new emails --limit allows and left ${report.remaining ?? 0}; running it again saves the next ones`
+                  ? `the run saved the ${args.maxMessages} new emails --max-messages allows and left ${report.remaining ?? 0}; running it again saves the next ones`
                   : unthreaded
                     ? "the run stopped while it moved stored replies into their threads; --rescan again goes on"
                     : "the sync stopped before its end to answer in time; running it again goes on from where it stopped",
@@ -286,7 +291,7 @@ export const syncCommand = (): Command =>
         : refused.length
           ? `the server refused to search ${refused.join(", ")}; nothing there was read or marked deleted — run sync again later, or name the other folders with --folder`
           : limited
-            ? `${report.remaining ?? 0} new emails are left; run sync again to save the next ${args.limit}`
+            ? `${report.remaining ?? 0} new emails are left; run sync again to save the next ${args.maxMessages}`
             : moved
               ? `run sync again to continue; ${IDENTITY.command} ${context.profile} status shows how far it is`
               : "this run moved nothing on: raise --timeout or --max-pages, then run sync again"

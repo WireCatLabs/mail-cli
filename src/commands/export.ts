@@ -34,9 +34,9 @@ const FETCH_SLICE = 50
 
 interface ExportFlags {
   format: ExportFormat
-  output: string
+  outputDir: string
   folder?: string[]
-  limit?: number
+  maxMessages?: number
   maxPages?: number
   resume?: boolean
   replace?: boolean
@@ -71,9 +71,9 @@ export const exportLeaf = (): Command =>
       cooperative: true,
       partial: true,
       examples: [
-        `${IDENTITY.command} personal messages export 'from:ann@example.com' --output ~/mail-backup`,
-        `${IDENTITY.command} personal messages export --folder INBOX --format maildir --output ~/Maildir`,
-        `${IDENTITY.command} personal messages export 'date>30d' --limit 500 --output ~/mail-backup --resume`,
+        `${IDENTITY.command} personal messages export 'from:ann@example.com' --output-dir ~/mail-backup`,
+        `${IDENTITY.command} personal messages export --folder INBOX --format maildir --output-dir ~/Maildir`,
+        `${IDENTITY.command} personal messages export 'date>30d' --max-messages 500 --output-dir ~/mail-backup --resume`,
       ],
     }),
     "mail_export",
@@ -90,7 +90,7 @@ export const exportLeaf = (): Command =>
       new Option("--format <format>", "mbox files or a Maildir++ tree").choices(["mbox", "maildir"]).default("mbox"),
     )
     .requiredOption(
-      "--output <file>",
+      "--output-dir <dir>",
       "the folder to write the export into (not one file); made private if it does not exist",
     )
     .addOption(
@@ -99,7 +99,11 @@ export const exportLeaf = (): Command =>
         "only mail filed in this folder; repeat it for more (default: the folders sync reads)",
       ),
     )
-    .option("--limit <n>", "write at most this many messages in this run, newest first", positiveCount("--limit"))
+    .option(
+      "--max-messages <n>",
+      "write at most this many messages in this run, newest first",
+      positiveCount("--max-messages"),
+    )
     .option(
       "--max-pages <pages>",
       "at most this many requests to the mail server in this run; as many as fit the deadline if not given",
@@ -121,11 +125,11 @@ export const exportLeaf = (): Command =>
       if (!address) throw new CliError("configuration_error", `profile ${context.profile} has no address`)
       if (args.resume && args.replace)
         throw new CliError("validation_error", "--resume and --replace cannot be used together", { param: "replace" })
-      const destination = resolve(args.output)
+      const destination = resolve(args.outputDir)
       if (refusedPlace(destination, IDENTITY, context.env))
         throw new CliError(
           "validation_error",
-          `will not export into ${args.output}: credential folders and the WireCat apps' folders are not written to`,
+          `will not export into ${args.outputDir}: credential folders and the WireCat apps' folders are not written to`,
           { param: "output" },
         )
       const account = address.toLowerCase()
@@ -177,7 +181,7 @@ export const exportLeaf = (): Command =>
             let more = false
             let waiting: Pending[] = []
             const room = () =>
-              args.limit === undefined ? Number.POSITIVE_INFINITY : args.limit - exported - waiting.length
+              args.maxMessages === undefined ? Number.POSITIVE_INFINITY : args.maxMessages - exported - waiting.length
 
             const flush = async (): Promise<boolean> => {
               while (waiting.length > 0) {
@@ -297,14 +301,14 @@ export const exportLeaf = (): Command =>
               args: {
                 query: query.join(" ") || undefined,
                 format: args.format,
-                output: args.output,
+                output_dir: args.outputDir,
                 resume: true,
                 ...(args.folder?.length ? { folder: args.folder } : {}),
-                ...(args.limit === undefined ? {} : { limit: args.limit }),
+                ...(args.maxMessages === undefined ? {} : { max_messages: args.maxMessages }),
               },
               why:
                 result.stopped === "limit"
-                  ? `the run wrote the ${args.limit} messages --limit allows; --resume writes the next ones`
+                  ? `the run wrote the ${args.maxMessages} messages --max-messages allows; --resume writes the next ones`
                   : "the export stopped before its end to answer in time; --resume goes on from where it stopped",
               safe_to_auto_execute: false,
             },

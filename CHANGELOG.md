@@ -17,6 +17,12 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   `run_id` for the run it made itself (it was `restore_run`; `null` for a preview) and `restored_run_id` for the run
   it undid (it was `run`). The `--run` option keeps its name: it is the shared vocabulary's flag for "the run it is
   about".
+- **`sync`, `messages import` and `messages export` cap a run with `--max-messages`, and `messages export` writes into
+  `--output-dir`.** `--limit` there capped the work of one run, not the rows of the answer; it is now the shared
+  vocabulary's work cap for messages. `--output` took a folder, and `--output` is the vocabulary's flag for one file.
+  The next step's `args` follow: `max_messages` and `output_dir`. The old flags are gone. `--limit` stays where it
+  counts what the answer shows: `account inspect`, `stats`, `drafts list`, `tags list` and the `messages` changes'
+  `--filter` selection.
 
 ### Fixed
 

@@ -71,5 +71,10 @@ Claims about our code cite the file. The imapflow notes were read in imapflow 2.
   answer it is the run this command made, as `meta.run_id` is; the run a restore undid is `restored_run_id`. The
   option stays `--run <id>`, cli-base's vocabulary flag "the run it is about" (WC-CMD-10), so a next step's
   `args: { run }`, which names options, stays too.
+- **A run's cap is `--max-messages`; the export's folder is `--output-dir`** (owner, 2026-11-05, NEED-2208 A, renamed
+  with no old flags kept). cli-base's vocabulary keeps `--limit` for "how many items" an answer shows and gives a
+  budget its own flag, so `sync`, `messages import` and `messages export` take `--max-messages` ("at most this many
+  messages in one run"). `--output` is "the file to write" and `--output-dir` "the folder to write into" (WC-CMD-10).
+  The `messages` changes keep `--limit` with `--filter`: it bounds which items the query selects, as a search's does.
 
 ## Open questions for the owner

@@ -46,7 +46,7 @@ private file and says so once on stderr. `--credential-storage file` chooses the
 name). An existing Himalaya setup then needs no new password.
 
 `sync` reads INBOX and the Sent folder; on Gmail it reads All Mail, since archived mail leaves INBOX. `--folder` or the
-profile's `folders` setting names other folders. It reads the newest mail first. `--limit` caps the new mail of one
+profile's `folders` setting names other folders. It reads the newest mail first. `--max-messages` caps the new mail of one
 run. `--rescan` lists the whole window again. It saves text and headers, and the text of each attachment it can read, not the files. It reads attachments up to
 10 MB each: the profile's `read_attachments` (`false` reads none) and `max_attachment_mb` change that, and
 `--no-attachments`, `--attachments` and `--max-attachment-mb <n>` change it for one run. A file left unread keeps its
@@ -179,9 +179,9 @@ The store keeps text, not the original message, so `messages export` reads the o
 It selects with the same query as `search messages` and writes a private folder (mode 700, files 600):
 
 ```sh
-mail personal messages export 'from:ann@example.com' --output ~/mail-backup     # one mbox file per folder
-mail personal messages export --folder INBOX --format maildir --output ~/Maildir # Maildir++, for mu and notmuch
-mail personal messages export 'date>30d' --limit 500 --output ~/mail-backup --resume
+mail personal messages export 'from:ann@example.com' --output-dir ~/mail-backup     # one mbox file per folder
+mail personal messages export --folder INBOX --format maildir --output-dir ~/Maildir # Maildir++, for mu and notmuch
+mail personal messages export 'date>30d' --max-messages 500 --output-dir ~/mail-backup --resume
 mail personal stats messages top --by list --limit 10                          # which lists send the most
 ```
 
@@ -200,7 +200,7 @@ mail personal stats messages show --by sender --limit 10                       #
 - **Never over what is there.** A folder with something in it is refused. `--resume` goes on with an export begun
   there (a journal file, `.mail-export.jsonl`, lists what is done and the length of each mbox file after it); `--replace`
   writes into any folder over files of the same name and deletes nothing.
-- **In parts.** A run stops at `--limit`, `--max-pages` or before its deadline and says `state: "partial"`; run it again
+- **In parts.** A run stops at `--max-messages`, `--max-pages` or before its deadline and says `state: "partial"`; run it again
   with `--resume`. Mail the store has no UID for (sync again) or the server no longer has is counted, not written.
 
 ## Look before you sync, and bring in an archive
@@ -227,7 +227,7 @@ mail gm messages import ~/Takeout/Mail/archive.mbox         # a Google Takeout f
 - **A Takeout archive.** `messages import` reads a Gmail mbox file that Google Takeout wrote into this Gmail
   profile's stored mail. Takeout keeps Gmail's own ids, so an email both the file and `sync` bring is stored once. It
   only adds: Spam and Trash are left out, the profile's rules skip what they skip, and mail missing from the file is
-  never marked deleted. An unchanged file read to the end is not read again; `--limit` and `--since-time` bound a run.
+  never marked deleted. An unchanged file read to the end is not read again; `--max-messages` and `--since-time` bound a run.
   A profile that is not Gmail is refused, because its ids would store every email twice.
 
 ## Organise the mailbox
