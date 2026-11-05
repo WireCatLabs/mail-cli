@@ -10,22 +10,6 @@ likely cause when the server refuses the login. The steps below were read from e
 named under every provider. Labels are quoted in the language of the provider's interface. A provider can change
 its screens; the help page is the source of truth.
 
-## Yandex
-
-1. Open <https://mail.yandex.ru/#setup/client> (or the gear, «Все настройки», «Почтовые программы»).
-2. Under «Разрешить доступ к почтовому ящику с помощью почтовых клиентов» turn on «С сервера imap.yandex.ru по протоколу IMAP».
-3. Make sure «Пароли приложений и OAuth токены» is on, then save.
-4. Open <https://id.yandex.ru/security>, tab «Безопасность», section «Доступ к вашим данным», «Пароли приложений».
-5. Under «Создать пароль приложения» choose the type «Почта», give the password a name and click «Далее».
-6. Copy the password at once: Yandex shows it only once.
-
-- A new app password starts working 2 to 3 hours after it is created (Yandex ID help).
-- On a Yandex 360 business domain an administrator setting might block app passwords. The help pages do not confirm this; ask the domain administrator if the login keeps failing.
-
-Read from: <https://yandex.ru/support/yandex-360/customers/mail/ru/mail-clients/others>, <https://yandex.ru/support/id/ru/authorization/app-passwords>
-
-Sending: `smtp.yandex.ru` port 465, TLS, with the same app password. Its help does not say it files SMTP mail in Sent, so `mail` appends the copy unless Sent has it already. Read from: <https://yandex.ru/support/mail/mail-clients/others.html>
-
 ## Gmail
 
 1. Personal Google Account: IMAP is always on, nothing to switch. Google Workspace: the administrator controls it, and the "Forwarding and POP/IMAP" tab in Gmail Settings, "See all settings", may be missing.
@@ -38,6 +22,27 @@ Sending: `smtp.yandex.ru` port 465, TLS, with the same app password. Its help do
 Read from: <https://support.google.com/mail/answer/7126229>, <https://support.google.com/accounts/answer/185833>
 
 Sending: `smtp.gmail.com` port 465, TLS, with the same app password. The provider files sent mail in Sent itself. Read from: <https://knowledge.workspace.google.com/admin/gmail/send-email-from-a-printer-scanner-or-app>, <https://support.google.com/mail/answer/78892>
+
+## Outlook
+
+1. Outlook.com: open Settings (the cog), "Mail", "Forwarding and IMAP", turn on "Let devices and apps use IMAP" and save.
+2. Then `mail` opens Microsoft's sign-in page in the browser: sign in and allow access. Outlook.com takes only OAuth for IMAP and SMTP, never an app password.
+
+Read from: <https://support.microsoft.com/en-us/office/pop-imap-and-smtp-settings-for-outlook-com-d088b986-291d-42b8-9564-9c414e2aa040>, <https://learn.microsoft.com/en-us/exchange/client-developer/legacy-protocols/how-to-authenticate-an-imap-pop-smtp-application-by-using-oauth>
+
+Sending: `smtp-mail.outlook.com` port 587, STARTTLS, with the same OAuth sign-in. Its help does not say it files SMTP mail in Sent, so `mail` appends the copy unless Sent has it already. Read from: <https://support.microsoft.com/en-us/office/pop-imap-and-smtp-settings-for-outlook-com-d088b986-291d-42b8-9564-9c414e2aa040>
+
+## Microsoft 365
+
+1. Nothing to prepare in the mailbox: `mail` opens Microsoft's sign-in page in the browser; sign in with the work or school account and allow access.
+
+- Your organisation may let only an admin allow a new app. If Microsoft says an admin must approve it, ask your admin to grant consent, or to register the organisation's own app and give you its id.
+- Sending needs "Authenticated SMTP" on for your mailbox; organisations with security defaults, and those created after January 2020, have it off until an admin turns it on. Reading works either way.
+- The IMAP server for Microsoft 365 is not named on an official page: outlook.office365.com is the one Outlook.com uses.
+
+Read from: <https://learn.microsoft.com/en-us/exchange/client-developer/legacy-protocols/how-to-authenticate-an-imap-pop-smtp-application-by-using-oauth>, <https://learn.microsoft.com/en-us/exchange/mail-flow-best-practices/how-to-set-up-a-multifunction-device-or-application-to-send-email-using-microsoft-365-or-office-365>, <https://learn.microsoft.com/en-us/exchange/clients-and-mobile-in-exchange-online/authenticated-client-smtp-submission>, <https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-user-consent>
+
+Sending: `smtp.office365.com` port 587, STARTTLS, with the same OAuth sign-in. Its help does not say it files SMTP mail in Sent, so `mail` appends the copy unless Sent has it already. Read from: <https://learn.microsoft.com/en-us/exchange/mail-flow-best-practices/how-to-set-up-a-multifunction-device-or-application-to-send-email-using-microsoft-365-or-office-365>
 
 ## iCloud
 
@@ -53,20 +58,6 @@ Read from: <https://support.apple.com/en-us/102654>, <https://support.apple.com/
 
 Sending: `smtp.mail.me.com` port 587, STARTTLS, with the same app password. Its help does not say it files SMTP mail in Sent, so `mail` appends the copy unless Sent has it already. Read from: <https://support.apple.com/en-us/102525>
 
-## Mail.ru
-
-1. Open <https://e.mail.ru/inbox>.
-2. Bottom left click «Настройки», then «Все настройки», «Безопасность», «Пароли для внешних приложений».
-3. Click «Создать», enter a name and click «Продолжить».
-4. Choose «Полный доступ к Почте» as the protocol type and click «Продолжить».
-5. Copy the password: Mail.ru does not keep it, so it cannot be viewed later.
-
-- Mail.ru's help page requires a phone number linked to the mailbox (check it under «Контакты и адреса»). It lists no separate IMAP switch, only the server data.
-
-Read from: <https://help.mail.ru/mail/login/mailer/>
-
-Sending: `smtp.mail.ru` port 465, TLS, with the same app password. Its help does not say it files SMTP mail in Sent, so `mail` appends the copy unless Sent has it already. Read from: <https://help.mail.ru/mail/login/mailer/>
-
 ## Fastmail
 
 1. In the Fastmail web interface go to Settings, "Privacy & Security".
@@ -81,26 +72,21 @@ Read from: <https://www.fastmail.help/hc/en-us/articles/360058752854-App-passwor
 
 Sending: `smtp.fastmail.com` port 465, TLS, with the same app password. Its help does not say it files SMTP mail in Sent, so `mail` appends the copy unless Sent has it already. Read from: <https://www.fastmail.help/hc/en-us/articles/1500000278342-Server-names-and-ports>
 
-## Microsoft 365
+## Yandex
 
-1. Nothing to prepare in the mailbox: `mail` opens Microsoft's sign-in page in the browser; sign in with the work or school account and allow access.
+1. Open <https://mail.yandex.ru/#setup/client> (or the gear, «Все настройки», «Почтовые программы»).
+2. Under «Разрешить доступ к почтовому ящику с помощью почтовых клиентов» turn on «С сервера imap.yandex.ru по протоколу IMAP».
+3. Make sure «Пароли приложений и OAuth токены» is on, then save.
+4. Open <https://id.yandex.ru/security>, tab «Безопасность», section «Доступ к вашим данным», «Пароли приложений».
+5. Under «Создать пароль приложения» choose the type «Почта», give the password a name and click «Далее».
+6. Copy the password at once: Yandex shows it only once.
 
-- Your organisation may let only an admin allow a new app. If Microsoft says an admin must approve it, ask your admin to grant consent, or to register the organisation's own app and give you its id.
-- Sending needs "Authenticated SMTP" on for your mailbox; organisations with security defaults, and those created after January 2020, have it off until an admin turns it on. Reading works either way.
-- The IMAP server for Microsoft 365 is not named on an official page: outlook.office365.com is the one Outlook.com uses.
+- A new app password starts working 2 to 3 hours after it is created (Yandex ID help).
+- On a Yandex 360 business domain an administrator setting might block app passwords. The help pages do not confirm this; ask the domain administrator if the login keeps failing.
 
-Read from: <https://learn.microsoft.com/en-us/exchange/client-developer/legacy-protocols/how-to-authenticate-an-imap-pop-smtp-application-by-using-oauth>, <https://learn.microsoft.com/en-us/exchange/mail-flow-best-practices/how-to-set-up-a-multifunction-device-or-application-to-send-email-using-microsoft-365-or-office-365>, <https://learn.microsoft.com/en-us/exchange/clients-and-mobile-in-exchange-online/authenticated-client-smtp-submission>, <https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-user-consent>
+Read from: <https://yandex.ru/support/yandex-360/customers/mail/ru/mail-clients/others>, <https://yandex.ru/support/id/ru/authorization/app-passwords>
 
-Sending: `smtp.office365.com` port 587, STARTTLS, with the same OAuth sign-in. Its help does not say it files SMTP mail in Sent, so `mail` appends the copy unless Sent has it already. Read from: <https://learn.microsoft.com/en-us/exchange/mail-flow-best-practices/how-to-set-up-a-multifunction-device-or-application-to-send-email-using-microsoft-365-or-office-365>
-
-## Outlook
-
-1. Outlook.com: open Settings (the cog), "Mail", "Forwarding and IMAP", turn on "Let devices and apps use IMAP" and save.
-2. Then `mail` opens Microsoft's sign-in page in the browser: sign in and allow access. Outlook.com takes only OAuth for IMAP and SMTP, never an app password.
-
-Read from: <https://support.microsoft.com/en-us/office/pop-imap-and-smtp-settings-for-outlook-com-d088b986-291d-42b8-9564-9c414e2aa040>, <https://learn.microsoft.com/en-us/exchange/client-developer/legacy-protocols/how-to-authenticate-an-imap-pop-smtp-application-by-using-oauth>
-
-Sending: `smtp-mail.outlook.com` port 587, STARTTLS, with the same OAuth sign-in. Its help does not say it files SMTP mail in Sent, so `mail` appends the copy unless Sent has it already. Read from: <https://support.microsoft.com/en-us/office/pop-imap-and-smtp-settings-for-outlook-com-d088b986-291d-42b8-9564-9c414e2aa040>
+Sending: `smtp.yandex.ru` port 465, TLS, with the same app password. Its help does not say it files SMTP mail in Sent, so `mail` appends the copy unless Sent has it already. Read from: <https://yandex.ru/support/mail/mail-clients/others.html>
 
 ## Any other provider
 

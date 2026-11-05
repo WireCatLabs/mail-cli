@@ -4,6 +4,12 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ## Unreleased
 
+### Changed
+
+- **The "Prepare the mailbox" page lists the international providers first**: Gmail, Outlook, Microsoft 365, iCloud,
+  Fastmail, then Yandex. Mail.ru is no longer on the English page; it stays a built-in provider and keeps its steps
+  in the Russian translation. No behaviour changes.
+
 ### Fixed
 
 - **`session end` help says what `--revoke` does to your account.** With Gmail over OAuth it asks Google to revoke
