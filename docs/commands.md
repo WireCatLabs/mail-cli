@@ -329,7 +329,7 @@ mail rules remove [options]
 | `--filter <query>` | from:<address, domain or word>, to:<address>, subject:<word> (or a bare word), older:<n>d, larger:<size> (5MB, 300KB), has:attachment, label:<name> (label:"Two words"), is:unread, is:bulk, score:<n> (at least); all must hold. |
 | `--kind <kind>` | a built-in kind of mail. One of: `social`, `newsletters`, `developer`, `shopping`, `alerts`. |
 
-**Returns:** drop the rule with exactly these conditions
+**Returns:** mail rule change — removed; every field: mail commands info rules remove
 
 **Example:** `mail ya rules remove --domain shop.example`, `mail ya rules remove --filter "older:365d larger:5MB"`
 
@@ -348,7 +348,7 @@ mail rules apply [options]
 | `--since-time <time>` | only mail from this time, ISO 8601 or 30d ago (default: all mail). |
 | `--dry-run` | only say what would change, even with --yes; the read-only lock lets this through. |
 
-**Returns:** cut stored mail an envelope rule matches to its envelope; dry run unless --yes
+**Returns:** mail rules apply — account, applied, listed, envelopes, bytes, skip_matched, protected_kept, tagged, and 1 more; every field: mail commands info rules apply
 
 **Example:** `mail ya rules apply`, `mail ya rules apply --since-time 2026-01-01 --yes`
 
@@ -382,7 +382,7 @@ mail rules import <file> [options]
 |---|---|
 | `--format <format>` | the file's format: mail (memo's export is the same file) or gmail. One of: `mail`, `memo`, `gmail`. Default: `mail`. |
 
-**Returns:** import saved rules, or preview Gmail filters
+**Returns:** mail rule import — match, action, decided_at, id, tags, reason, protected, source, and 4 more; every field: mail commands info rules import
 
 **Example:** `mail ya rules import rules.json`, `mail ya rules import Filters.json --format gmail`, `mail ya rules import Filters.json --format gmail --yes`
 

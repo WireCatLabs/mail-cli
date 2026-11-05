@@ -13,6 +13,10 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   `mail.export-destination-exists`, `download.exists`, `mail.unreadable`, `mail.deletions-skipped`,
   `mail.rules-unreadable` and `mail.export-unreadable`. A test keeps the list complete.
 - **The secret scan knows Google's OAuth access tokens, refresh tokens and client secrets.**
+- **`mail commands info` says what `rules remove`, `rules apply` and `rules import` answer with**, as every other
+  command does: `mail_rule_change`, `mail_rules_apply` and `mail_rule_import`. The answers are unchanged.
+- **`rules apply` closes its connection to the mail server before it answers**, and the tag commands hand the store
+  to the run, so a timeout or a signal closes it too.
 
 ## 0.16.0 — 05.11.2026
 

@@ -7,7 +7,7 @@ import { memoryKeyring } from "@wirecat/cli-base"
 import { describeProgram } from "@wirecat/cli-base/commands"
 import { mailAccountKey } from "@wirecat/cli-core/mail"
 import { toolsFromCommands } from "@wirecat/cli-core/mcp"
-import { sendsPathFor } from "@wirecat/cli-core/sends"
+import { DEFAULT_PACE, Pacer, pacePathFor, sendsPathFor } from "@wirecat/cli-core/sends"
 import { openStore } from "@wirecat/cli-core/store"
 import { afterEach, describe, expect, it } from "vitest"
 
@@ -149,6 +149,20 @@ const item = (text: string) => JSON.parse(text).item
 const errorOf = (text: string) => JSON.parse(text).error
 
 describe("messages send over SMTP", { timeout: 20_000 }, () => {
+  it("waits for the send pace on the clock it is given, not the real one", async () => {
+    const { mail, env, smtp } = await harness()
+    const now = Date.parse("2026-11-05T10:00:00Z")
+    await new Pacer(pacePathFor(IDENTITY, "ya", env), DEFAULT_PACE, () => now).holdFor(60_000)
+    const slept: number[] = []
+    const sendClock = { now: () => now, sleep: async (ms: number) => void slept.push(ms) }
+    const sent = await mail(["ya", "messages", "send", "--to", ADDRESS, "--subject", "Paced", "Hi", "--json"], {
+      sendClock,
+    })
+    expect(sent.code, sent.err).toBe(0)
+    expect(slept).toEqual([60_000])
+    expect(smtp.received).toHaveLength(1)
+  })
+
   it("sends to the owner without asking, files a copy in Sent with its Bcc, and stores it", async () => {
     const folders = yandex()
     const { mail, smtp, journal } = await harness({ folders })

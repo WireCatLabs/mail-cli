@@ -54,6 +54,27 @@ const mailRule = v.looseObject({
   decided_at: v.string(),
 })
 
+const mailRuleChange = v.looseObject({ removed: v.record(v.string(), v.unknown()) })
+
+const mailRulesApply = v.looseObject({
+  account: v.string(),
+  applied: v.boolean(),
+  listed: v.number(),
+  envelopes: v.number(),
+  bytes: v.number(),
+  skip_matched: v.number(),
+  protected_kept: v.number(),
+  tagged: v.number(),
+  rules: v.array(v.looseObject({})),
+})
+
+const gmailFiltersPreview = v.looseObject({
+  rules: v.array(mailRule),
+  skipped: v.array(v.looseObject({ filter: v.string(), why: v.string() })),
+  tag_mapping: v.array(v.looseObject({ tag: v.string(), as: v.string(), why: v.string() })),
+  added: v.number(),
+})
+
 const MAIL_RULES_QUERY: QueryRegistry = {
   entity: "mail_rule",
   backend: "sql",
@@ -242,16 +263,20 @@ const addCommand = () =>
     })
 
 const removeCommand = () =>
-  matchOptions(
-    grantsAuthority(
-      annotate(new Command("remove"), {
-        effects: LOCAL_WRITE,
-        examples: [
-          `${IDENTITY.command} ya rules remove --domain shop.example`,
-          `${IDENTITY.command} ya rules remove --filter "older:365d larger:5MB"`,
-        ],
-      }),
+  answerEntity(
+    matchOptions(
+      grantsAuthority(
+        annotate(new Command("remove"), {
+          effects: LOCAL_WRITE,
+          examples: [
+            `${IDENTITY.command} ya rules remove --domain shop.example`,
+            `${IDENTITY.command} ya rules remove --filter "older:365d larger:5MB"`,
+          ],
+        }),
+      ),
     ),
+    "mail_rule_change",
+    mailRuleChange,
   )
     .description("drop the rule with exactly these conditions")
     .action(async function (this: Command, options: MatchOptions) {
@@ -275,13 +300,17 @@ const removeCommand = () =>
     })
 
 const applyCommand = () =>
-  annotate(new Command("apply"), {
-    effects: LOCAL_WRITE,
-    examples: [
-      `${IDENTITY.command} ya rules apply`,
-      `${IDENTITY.command} ya rules apply --since-time 2026-01-01 --yes`,
-    ],
-  })
+  answerEntity(
+    annotate(new Command("apply"), {
+      effects: LOCAL_WRITE,
+      examples: [
+        `${IDENTITY.command} ya rules apply`,
+        `${IDENTITY.command} ya rules apply --since-time 2026-01-01 --yes`,
+      ],
+    }),
+    "mail_rules_apply",
+    mailRulesApply,
+  )
     .description("cut stored mail an envelope rule matches to its envelope; dry run unless --yes")
     .option("--since-time <time>", "only mail from this time, ISO 8601 or 30d ago (default: all mail)")
     .option("--dry-run", "only say what would change, even with --yes; the read-only lock lets this through")
@@ -301,8 +330,9 @@ const applyCommand = () =>
       // --yes is the shared program's; it is read from the globals, as cli-core's own confirmed writes read it.
       const apply = this.optsWithGlobals<{ yes?: boolean }>().yes === true && options.dryRun !== true
       const { backend } = await openMail(context)
+      let result: Awaited<ReturnType<typeof applyRules>>
       try {
-        const result = await withRules(this, async (store) =>
+        result = await withRules(this, async (store) =>
           applyRules({
             store,
             source: backend,
@@ -312,25 +342,25 @@ const applyCommand = () =>
             apply,
           }),
         )
-        const next: NextStep[] =
-          result.applied || result.envelopes + result.tagged === 0
-            ? []
-            : [
-                {
-                  kind: "command",
-                  step: "mail.rules-apply",
-                  command: "rules apply",
-                  args: { yes: true, ...(options.sinceTime === undefined ? {} : { since_time: options.sinceTime }) },
-                  why: "this was a dry run; --yes cuts them",
-                  safe_to_auto_execute: false,
-                },
-              ]
-        renderAnswer(this, outputFor(this), itemOf(snakeKeys(result), { next, meta: window.meta }), () =>
-          applyText(result),
-        )
       } finally {
         await backend.close()
       }
+      const next: NextStep[] =
+        result.applied || result.envelopes + result.tagged === 0
+          ? []
+          : [
+              {
+                kind: "command",
+                step: "mail.rules-apply",
+                command: "rules apply",
+                args: { yes: true, ...(options.sinceTime === undefined ? {} : { since_time: options.sinceTime }) },
+                why: "this was a dry run; --yes cuts them",
+                safe_to_auto_execute: false,
+              },
+            ]
+      renderAnswer(this, outputFor(this), itemOf(snakeKeys(result), { next, meta: window.meta }), () =>
+        applyText(result),
+      )
     })
 
 const exportCommand = () =>
@@ -353,15 +383,19 @@ const exportCommand = () =>
     })
 
 const importCommand = () =>
-  grantsAuthority(
-    annotate(new Command("import"), {
-      effects: LOCAL_WRITE,
-      examples: [
-        `${IDENTITY.command} ya rules import rules.json`,
-        `${IDENTITY.command} ya rules import Filters.json --format gmail`,
-        `${IDENTITY.command} ya rules import Filters.json --format gmail --yes`,
-      ],
-    }),
+  answerEntity(
+    grantsAuthority(
+      annotate(new Command("import"), {
+        effects: LOCAL_WRITE,
+        examples: [
+          `${IDENTITY.command} ya rules import rules.json`,
+          `${IDENTITY.command} ya rules import Filters.json --format gmail`,
+          `${IDENTITY.command} ya rules import Filters.json --format gmail --yes`,
+        ],
+      }),
+    ),
+    "mail_rule_import",
+    v.union([mailRule, gmailFiltersPreview]),
   )
     .summary("import saved rules, or preview Gmail filters")
     .description("import saved rules, or preview Gmail filters with --format gmail; same match replaces")

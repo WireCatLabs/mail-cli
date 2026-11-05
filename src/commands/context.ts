@@ -14,6 +14,7 @@ import {
   type RunBounds,
 } from "../mail/backend.js"
 import { imapBackend } from "../mail/imap/index.js"
+import type { SendClock } from "../mail/send.js"
 import { googleClient, microsoftClient, type OAuthKind, oauthCredential, oauthKeeper } from "../oauth.js"
 import { providerFor } from "../providers.js"
 import { type LookupHimalaya, type PasswordSource, passwordStore } from "../secret.js"
@@ -30,6 +31,8 @@ export interface MailEnvironment extends BaseEnvironment {
   /** The domain registries (RDAP) the sender score asks, replaced in tests. */
   rdap?: typeof fetch
   openBrowser?: (url: string) => Promise<void>
+  /** The clock a send waits on for its pace, replaced in tests. */
+  sendClock?: SendClock
 }
 
 export const contextOf = (command: Command) => {

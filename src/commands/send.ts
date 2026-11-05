@@ -92,7 +92,7 @@ export const ownerOf = (opened: Opened, command: Command): Set<string> => {
 }
 
 const sendingOf = (opened: Opened, command: Command): Sending => {
-  const { settings } = contextOf(command)
+  const { settings, environment } = contextOf(command)
   const address = opened.mailbox.key.account
   const provider = providerFor(address, settings.mailbox.host)
   return {
@@ -110,6 +110,7 @@ const sendingOf = (opened: Opened, command: Command): Sending => {
     },
     warn: (message) => outputFor(command).renderer.warn(message),
     agentWithoutOthers: environmentOf(command).agent !== undefined && !othersSetInConfig(command),
+    ...(environment.sendClock ? { clock: environment.sendClock } : {}),
   }
 }
 
