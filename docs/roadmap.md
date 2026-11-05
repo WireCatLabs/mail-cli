@@ -12,6 +12,20 @@ sends, replies and forwards over SMTP behind a recipient check and an hourly lim
 attachments. It exports stored mail to mbox or Maildir, and a timer (`schedule`) can run any command. The owner's
 mail rules and the envelope cleanup moved here from memo.
 
+`review` shows what is new since the last look, what you owe an answer (`--unanswered`) and what waits for one
+(`--waiting`), and `--holder` gives each agent its own processing mark that `messages acknowledge` moves.
+`stats messages show` counts stored mail received and sent per day, week or sender, and `stats messages top` lists
+the senders, lists or domains with the most mail. `account inspect` groups a mailbox by sender and list before you
+sync it, with a `skip` suggestion and a spam score. `messages import` adds a Google Takeout mbox file to a Gmail
+profile. `sync` reads attachments up to a size you set (`read_attachments`, `max_attachment_mb`) and scores the
+senders of the stored mail, so search ranks suspicious senders lower. `config migrate` and `config repair` keep the
+settings file complete and valid.
+
+A `schedule agent` runs on Sonnet by default, starts without your MCP servers, skills and settings, and starts no
+run for the rest of the day once its runs cost 5 US dollars. `--model` and `--max-cost-per-day` change that for one
+schedule, and the `schedule_model_claude`, `schedule_model_codex`, `schedule_lean_start` and
+`schedule_max_cost_per_day` settings change it for every new one.
+
 It finds the server of a new address by itself: a built-in table, the MX record, Thunderbird's ISPDB and the
 domain's autoconfig file. It signs in with an app password kept in the OS keyring, which works for Yandex, Gmail,
 iCloud, Mail.ru, Fastmail and other providers that offer app passwords. Outlook.com and Microsoft 365 sign in with
