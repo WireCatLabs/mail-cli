@@ -284,3 +284,22 @@ it.runIf(process.platform !== "win32")("runs the argv of a generated unit with n
   )
   expect(last.exitCode).toBe(0)
 })
+
+it("reads the agent schedule settings from the config file", async () => {
+  try {
+    const shown = await ran(["personal", "config", "show", "--json"])
+    expect(shown.out).toContain("schedule_max_cost_per_day")
+    expect(shown.out).toContain("schedule_lean_start")
+    expect(shown.out).not.toContain("schedule_mail_wait")
+    const set = await ran(["personal", "config", "set", "schedule_model_claude", "opus", "--defaults"])
+    expect(set.code, set.err + set.out).toBe(0)
+    expect((await ran(["personal", "config", "set", "schedule_max_cost_per_day", "2", "--defaults"])).code).toBe(0)
+    expect(configuration.resolveSettings({}, { env: process.env, needsProfile: false }).schedule).toMatchObject({
+      models: { claude: "opus" },
+      maxCostPerDay: 2,
+    })
+  } finally {
+    await ran(["personal", "config", "unset", "schedule_model_claude", "--defaults"])
+    await ran(["personal", "config", "unset", "schedule_max_cost_per_day", "--defaults"])
+  }
+})

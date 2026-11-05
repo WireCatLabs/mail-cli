@@ -2,6 +2,17 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Changed — may break callers
+
+- **mail runs on cli-core 0.569.0: an agent schedule runs on Sonnet, starts lean and stops for the day at a cost
+  cap.** `mail <profile> schedule agent` takes `--model <model>` and `--max-cost-per-day <usd>`. Without them a claude
+  schedule runs on `sonnet` and a codex one on codex's own default, a new claude schedule starts without your MCP
+  servers, skills, settings and CLAUDE.md, and no run starts for the rest of the day once the day's runs cost 5 US
+  dollars. `schedule_model_claude`, `schedule_model_codex`, `schedule_lean_start` and `schedule_max_cost_per_day` in
+  the config file's `defaults` change that for every new schedule; `mail config show` lists them.
+
 ## 0.15.0 — 05.11.2026
 
 ### Changed — may break callers

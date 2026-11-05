@@ -1436,7 +1436,7 @@ mail config set <setting> <value> [options]
 
 | Argument | | What it is |
 |---|---|---|
-| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, runs_size_limit_mb, permissions, sends_per_hour, requests_per_minute, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, smtp_host, smtp_port, smtp_security, auth, google_client_id, microsoft_client_id, folders, read_attachments, max_attachment_mb, update_check, skill_hint, search_stemmers.cyrillic, search_stemmers.latin. |
+| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, runs_size_limit_mb, permissions, sends_per_hour, requests_per_minute, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, smtp_host, smtp_port, smtp_security, auth, google_client_id, microsoft_client_id, folders, read_attachments, max_attachment_mb, update_check, skill_hint, schedule_max_cost_per_day, schedule_model_claude, schedule_model_codex, schedule_lean_start, search_stemmers.cyrillic, search_stemmers.latin. |
 | `value` | required | a number, true or false; for a group tg:work,max:Alice,email:me@x. |
 
 | Option | What it does |
@@ -1459,7 +1459,7 @@ mail config unset <setting> [options]
 
 | Argument | | What it is |
 |---|---|---|
-| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, runs_size_limit_mb, permissions, sends_per_hour, requests_per_minute, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, smtp_host, smtp_port, smtp_security, auth, google_client_id, microsoft_client_id, folders, read_attachments, max_attachment_mb, update_check, skill_hint, search_stemmers.cyrillic, search_stemmers.latin. |
+| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, runs_size_limit_mb, permissions, sends_per_hour, requests_per_minute, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, smtp_host, smtp_port, smtp_security, auth, google_client_id, microsoft_client_id, folders, read_attachments, max_attachment_mb, update_check, skill_hint, schedule_max_cost_per_day, schedule_model_claude, schedule_model_codex, schedule_lean_start, search_stemmers.cyrillic, search_stemmers.latin. |
 
 | Option | What it does |
 |---|---|
@@ -1609,14 +1609,16 @@ mail schedule agent <name> <harness> <prompt> [options]
 
 | Option | What it does |
 |---|---|
+| `--model <model>` | the model it runs on: an alias such as sonnet, or a model id; "" for the harness's default (default sonnet for claude, codex's own for codex, or the config file's). |
 | `--max-cost <usd>` | claude only: stop a run that costs more than this, in US dollars. |
+| `--max-cost-per-day <usd>` | claude only: start no run for the rest of the day once its runs cost this much, in US dollars; 0 for no cap (default 5, or the config file's). |
 | `--every <duration>` | repeat: 30m, 2h, 1d. |
 | `--at <HH:MM>` | every day at this local time. |
 | `--at-time <time>` | one run: 30m, 2d from now, or an ISO time; the schedule removes itself after it. |
 
 **Returns:** start an agent (claude or codex) with a prompt on a timer; it runs with…
 
-**Example:** `mail personal schedule agent review claude "review what came in overnight and draft replies" --at 08:30`, `mail personal schedule agent triage codex "list what needs an answer today" --every 2h --max-cost 1`
+**Example:** `mail personal schedule agent review claude "review what came in overnight and draft replies" --at 08:30`, `mail personal schedule agent triage codex "list what needs an answer today" --every 2h --max-cost 1`, `mail personal schedule agent weekly claude "review the week's open threads" --at 09:00 --model opus`
 
 ### `mail schedule list`
 

@@ -1,4 +1,11 @@
-import { commandPermissions, type Settings, settingsFor } from "@wirecat/cli-core/cli"
+import {
+  commandPermissions,
+  SCHEDULE_SETTINGS,
+  type ScheduleLimits,
+  type Settings,
+  scheduleLimitsOf,
+  settingsFor,
+} from "@wirecat/cli-core/cli"
 import * as v from "valibot"
 import { IDENTITY } from "./identity.js"
 
@@ -62,7 +69,10 @@ export interface Mailbox {
   attachments: { read: boolean; maxMb: number }
 }
 
-export const configuration = settingsFor<{ mailbox: Mailbox }>(IDENTITY, {
+/** mail mounts `schedule agent` without `--on-new-mail`, so only the settings every agent schedule reads. */
+const AGENT_SCHEDULE_SETTINGS = SCHEDULE_SETTINGS.filter(({ key }) => !key.startsWith("schedule_mail_"))
+
+export const configuration = settingsFor<{ mailbox: Mailbox; schedule: ScheduleLimits }>(IDENTITY, {
   // An ordinary change goes ahead, as tg's and drive's do; a deletion or a change of many asks (WC-PERM-22, NEED-2067 A).
   // Mail to anyone but the owner asks, and the owner may allow it (NEED-1898); WC-PERM-22 would make it deny.
   permissions: commandPermissions({
@@ -76,6 +86,13 @@ export const configuration = settingsFor<{ mailbox: Mailbox }>(IDENTITY, {
     },
   }),
   profile: PROFILE_ENTRIES,
+  defaults: {
+    schedule_max_cost_per_day: v.optional(v.pipe(v.number(), v.minValue(0))),
+    schedule_model_claude: v.optional(v.string()),
+    schedule_model_codex: v.optional(v.string()),
+    schedule_lean_start: v.optional(v.boolean()),
+  },
+  settings: AGENT_SCHEDULE_SETTINGS,
   resolve: ({ fromLayers }) => {
     const pick = <T>(key: string) => fromLayers<T | undefined>(key, undefined)
     const address = pick<string>("address")
@@ -93,6 +110,7 @@ export const configuration = settingsFor<{ mailbox: Mailbox }>(IDENTITY, {
     const readAttachments = pick<boolean>("read_attachments")
     const maxAttachmentMb = pick<number>("max_attachment_mb")
     const defined = <T>(key: string, value: T | undefined) => (value === undefined ? {} : { [key]: value })
+    const schedule = AGENT_SCHEDULE_SETTINGS.map(({ key }) => [key, pick<unknown>(key)] as const)
     return {
       values: {
         mailbox: {
@@ -119,6 +137,7 @@ export const configuration = settingsFor<{ mailbox: Mailbox }>(IDENTITY, {
             maxMb: maxAttachmentMb.value ?? DEFAULT_MAX_ATTACHMENT_MB,
           },
         },
+        schedule: scheduleLimitsOf(Object.fromEntries(schedule.map(([key, one]) => [key, one.value]))),
       },
       sources: {
         address: address.from,
@@ -135,9 +154,10 @@ export const configuration = settingsFor<{ mailbox: Mailbox }>(IDENTITY, {
         microsoft_client_id: microsoftClientId.from,
         read_attachments: readAttachments.from,
         max_attachment_mb: maxAttachmentMb.from,
+        ...Object.fromEntries(schedule.map(([key, one]) => [key, one.from])),
       },
     }
   },
 })
 
-export type MailSettings = Settings & { mailbox: Mailbox }
+export type MailSettings = Settings & { mailbox: Mailbox; schedule: ScheduleLimits }
