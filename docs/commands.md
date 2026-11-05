@@ -258,6 +258,9 @@ mail sync [options]
 | `--limit <n>` | save at most this many new emails in this run, newest first. |
 | `--max-pages <pages>` | at most this many requests to the mail server in this run; as many as fit the deadline if not given. |
 | `--folder <folder>` | a folder to read; repeat it for more (default: the profile's folders, else INBOX and Sent; All Mail on Gmail). Default: ``. |
+| `--attachments` | read attachments into the search index this run, whatever the profile's read_attachments. |
+| `--no-attachments` | read no attachment this run; each is stored with its name and size, without text. |
+| `--max-attachment-mb <mb>` | the largest attachment to read this run, in MB (default: the profile's max_attachment_mb, else 10). |
 | `--rescan` | list the whole window again; also moves stored replies into their thread where the server has no thread ids. |
 
 **Returns:** mail sync — address, since, timezone, folders, state, requests, listed, saved, and 14 more; every field: mail commands info sync
@@ -424,7 +427,7 @@ mail search messages <query> [options]
 
 **Returns:** message hit — ref, timestamp, sender_name, sender_is_me, chat_title, excerpt, matched_in, score, and 9 more; every field: mail commands info search messages
 
-**Next usually:** `mail messages show <message>`, `mail attachments list <message>`, `mail messages forward <message> [text]`
+**Next usually:** `mail attachments list <message>`, `mail messages show <message>`, `mail messages forward <message> [text]`
 
 **Example:** `mail personal search messages invoice`, `mail personal search messages 'from:ann@example.com has:attachment date>30d'`, `mail personal search messages 'list:github.com is:unread' --newest`
 
@@ -444,12 +447,12 @@ mail review [query] [options]
 |---|---|
 | `--unanswered [duration]` | only threads whose newest email came to you, in To or Cc, with no answer for this long — 4h, 1d; 24h if not given. |
 | `--waiting [duration]` | only threads where you wrote last and nobody answered for this long — 3d; 7d if not given. |
-| `--holder <name>` | read for this holder — an agent or a pipeline — what is stored past its processing mark, by store order; bulk, envelopes, drafts, suspicious senders and partial mail left out; `messages acknowledge` moves the mark. |
+| `--holder <name>` | read for this holder — an agent or a pipeline — what is stored past its processing mark, by store order; bulk, envelopes, drafts, suspicious senders and partial mail left out; each text without quoted earlier mail or the signature; `messages acknowledge` moves the mark. |
 | `--new` | what changed since the last `review --new` of this mailbox, a point per thread — for scheduled runs. |
 
-**Returns:** message summary — ref, chat_id, timestamp, sender_name, sender_is_me, outgoing, text, attachments, and 3 more; every field: mail commands info review
+**Returns:** message summary — ref, chat_id, timestamp, sender_name, sender_is_me, outgoing, text, attachments, and 4 more; every field: mail commands info review
 
-**Next usually:** `mail messages show <message>`, `mail attachments list <message>`, `mail messages forward <message> [text]`
+**Next usually:** `mail attachments list <message>`, `mail messages show <message>`, `mail messages forward <message> [text]`
 
 **Example:** `mail personal review "date>2h"`, `mail personal review --new`, `mail personal review --unanswered 1d`
 
@@ -460,6 +463,8 @@ read the emails sync stored
 ### `mail messages show`
 
 one stored email: its people, folders, whole text and the first 4000 characters of each attachment's text; --full gives all of it and the HTML body. The store keeps text, not the original message source
+
+**Changes something on this computer only.**
 
 ```sh
 mail messages show <message> [options]
@@ -1409,7 +1414,7 @@ mail config set <setting> <value> [options]
 
 | Argument | | What it is |
 |---|---|---|
-| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, runs_size_limit_mb, permissions, sends_per_hour, requests_per_minute, speech_model, picture_search, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, smtp_host, smtp_port, smtp_security, auth, microsoft_client_id, folders, update_check, skill_hint, search_stemmers.cyrillic, search_stemmers.latin. |
+| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, runs_size_limit_mb, permissions, sends_per_hour, requests_per_minute, speech_model, picture_search, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, smtp_host, smtp_port, smtp_security, auth, microsoft_client_id, folders, read_attachments, max_attachment_mb, update_check, skill_hint, search_stemmers.cyrillic, search_stemmers.latin. |
 | `value` | required | a number, true or false; for a group tg:work,max:Alice,email:me@x. |
 
 | Option | What it does |
@@ -1432,7 +1437,7 @@ mail config unset <setting> [options]
 
 | Argument | | What it is |
 |---|---|---|
-| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, runs_size_limit_mb, permissions, sends_per_hour, requests_per_minute, speech_model, picture_search, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, smtp_host, smtp_port, smtp_security, auth, microsoft_client_id, folders, update_check, skill_hint, search_stemmers.cyrillic, search_stemmers.latin. |
+| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, runs_size_limit_mb, permissions, sends_per_hour, requests_per_minute, speech_model, picture_search, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, smtp_host, smtp_port, smtp_security, auth, microsoft_client_id, folders, read_attachments, max_attachment_mb, update_check, skill_hint, search_stemmers.cyrillic, search_stemmers.latin. |
 
 | Option | What it does |
 |---|---|

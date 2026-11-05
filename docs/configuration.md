@@ -16,6 +16,11 @@ server `messages send` submits to; set them only for a provider the [built-in li
 a setting: it lives in the keyring, or in `MAIL_PASSWORD` for a run that has no keyring. Nor is an OAuth sign-in: its
 tokens live in the keyring too.
 
+`read_attachments` (default `true`) and `max_attachment_mb` (default 10) decide whether `sync` reads the text of
+attachments into the search index and the largest file it reads. No file is kept. `sync --no-attachments`,
+`--attachments` and `--max-attachment-mb` override them for one run; `messages show` reads one email's attachments
+whatever they say.
+
 `microsoft_client_id` is the Microsoft app that Outlook.com and Microsoft 365 sign in with, when you use your own instead
 of WireCat's. Set it once for every profile with `mail config set --defaults microsoft_client_id <id>`; how to get an
 id is in [register a Microsoft app](oauth-microsoft.md). A profile already signed in keeps refreshing with the app it

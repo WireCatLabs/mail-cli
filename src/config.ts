@@ -34,7 +34,12 @@ const PROFILE_ENTRIES = {
   auth: v.optional(v.picklist(["app-password", "oauth"])),
   microsoft_client_id: v.optional(v.pipe(v.string(), v.trim(), v.minLength(1))),
   folders: v.optional(v.array(v.string())),
+  read_attachments: v.optional(v.boolean()),
+  max_attachment_mb: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 }
+
+/** On, up to 10 MB a file, as cli-core's `DEFAULT_ATTACHMENT_POLICY`. */
+export const DEFAULT_MAX_ATTACHMENT_MB = 10
 
 export interface Mailbox {
   address?: string
@@ -49,6 +54,8 @@ export interface Mailbox {
   /** The owner's own Microsoft app, in place of WireCat's, for every OAuth sign-in after it is set. */
   microsoftClientId?: string
   folders?: string[]
+  /** Whether sync reads attachments into the search index, and the largest file it reads; no file is kept. */
+  attachments: { read: boolean; maxMb: number }
 }
 
 export const configuration = settingsFor<{ mailbox: Mailbox }>(IDENTITY, {
@@ -78,6 +85,8 @@ export const configuration = settingsFor<{ mailbox: Mailbox }>(IDENTITY, {
     const smtpSecurity = pick<"tls" | "starttls">("smtp_security")
     const auth = pick<Mailbox["auth"]>("auth")
     const microsoftClientId = pick<string>("microsoft_client_id")
+    const readAttachments = pick<boolean>("read_attachments")
+    const maxAttachmentMb = pick<number>("max_attachment_mb")
     const defined = <T>(key: string, value: T | undefined) => (value === undefined ? {} : { [key]: value })
     return {
       values: {
@@ -99,6 +108,10 @@ export const configuration = settingsFor<{ mailbox: Mailbox }>(IDENTITY, {
               }),
           auth: auth.value ?? "app-password",
           ...defined("microsoftClientId", microsoftClientId.value),
+          attachments: {
+            read: readAttachments.value ?? true,
+            maxMb: maxAttachmentMb.value ?? DEFAULT_MAX_ATTACHMENT_MB,
+          },
         },
       },
       sources: {
@@ -113,6 +126,8 @@ export const configuration = settingsFor<{ mailbox: Mailbox }>(IDENTITY, {
         smtp_security: smtpSecurity.from,
         auth: auth.from,
         microsoft_client_id: microsoftClientId.from,
+        read_attachments: readAttachments.from,
+        max_attachment_mb: maxAttachmentMb.from,
       },
     }
   },

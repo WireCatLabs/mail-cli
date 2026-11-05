@@ -887,7 +887,7 @@ describe("search, show and threads", () => {
     `Content-Type: multipart/mixed; boundary="b1"\r\n\r\n--b1\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n` +
     `Оплатите счёт до пятницы.\r\n--b1\r\nContent-Type: text/plain; charset=utf-8; name="bill.txt"\r\n` +
     `Content-Disposition: attachment; filename="bill.txt"\r\n\r\nИтого 85,93 € к оплате\r\n--b1--\r\n`
-  const synced = async () => {
+  const synced = async (syncArgs: string[] = [], settings: string[][] = []) => {
     const h = await harness({
       fake: {
         folders: [
@@ -919,8 +919,19 @@ describe("search, show and threads", () => {
       },
     })
     await profileSet(h.mail)
+    for (const setting of settings) expect((await h.mail(["ya", "config", "set", ...setting, "--json"])).code).toBe(0)
     expect((await h.mail(["ya", "session", "start", "--json"], typed(PASSWORD))).code).toBe(0)
-    expect((await h.mail(["ya", "sync", "--since-time", "2026-10-01", "--folder", "INBOX", "--json"])).code).toBe(0)
+    const syncAnswer = await h.mail([
+      "ya",
+      "sync",
+      "--since-time",
+      "2026-10-01",
+      "--folder",
+      "INBOX",
+      ...syncArgs,
+      "--json",
+    ])
+    expect(syncAnswer.code, syncAnswer.out + syncAnswer.err).toBe(0)
     const store = await openStore({ path: storePath(h.env), env: h.env, command: "mail" })
     try {
       const other = await store.accounts.saveAccount(
@@ -969,6 +980,32 @@ describe("search, show and threads", () => {
       ...["--exact", "--plain-order", "--timezone", "Europe/Madrid"],
     )
     expect(older.items).toMatchObject([{ chat_title: "Счёт за октябрь", excerpt: expect.stringContaining("Оплатите") }])
+  })
+
+  it("reads no attachment with --no-attachments, and messages show reads the email again for it", async () => {
+    const { json, mail } = await synced(["--no-attachments"])
+    const [ref] = refs(await json("search", "messages", "has:attachment"))
+    const offline = await mail(["ya", "messages", "show", ref as string, "--offline", "--json"])
+    expect(JSON.parse(offline.out).item.attachments).toMatchObject([{ name: "bill.txt", extraction: "not-read" }])
+    expect(JSON.parse(offline.out).meta.issues).toMatchObject([{ reason: "mail.attachments-unread" }])
+    const shown = await json("messages", "show", ref as string)
+    expect(shown.item.attachments).toMatchObject([{ name: "bill.txt", text: expect.stringContaining("85,93") }])
+  })
+
+  it("reads attachments with --attachments when the profile turns them off", async () => {
+    const { json, mail } = await synced(["--attachments"], [["read_attachments", "false"]])
+    const [ref] = refs(await json("search", "messages", "has:attachment"))
+    expect((await mail(["ya", "messages", "show", ref as string, "--offline", "--json"])).out).toContain("85,93")
+  })
+
+  it("leaves an attachment over the profile's max_attachment_mb unread, and --max-attachment-mb overrides it", async () => {
+    const { json, mail } = await synced(["--max-attachment-mb", "1"])
+    expect((await mail(["ya", "config", "set", "read_attachments", "false", "--json"])).code).toBe(0)
+    expect((await mail(["ya", "config", "set", "max_attachment_mb", "2", "--json"])).code).toBe(0)
+    const shown = await mail(["ya", "config", "show", "--json"])
+    expect(shown.out).toContain("max_attachment_mb")
+    const [ref] = refs(await json("search", "messages", "has:attachment"))
+    expect((await mail(["ya", "messages", "show", ref as string, "--offline", "--json"])).out).toContain("85,93")
   })
 
   it("shows an email with its attachment's text, and its thread oldest first", async () => {

@@ -7,7 +7,7 @@ ran it · ⛔ not tested offline, with the reason and where it is checked instea
 Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 [TESTING.md](TESTING.md) for how, and for the states and failures that cut across commands.
 
-**266 ✅ · 26 ⛔ · 0 ❌** — 78 commands, 214 options.
+**269 ✅ · 26 ⛔ · 0 ❌** — 78 commands, 217 options.
 
 | Command | Option | | Note |
 |---|---|---|---|
@@ -47,6 +47,9 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `sync` | `--limit` | ✅ |  |
 | `sync` | `--max-pages` | ✅ |  |
 | `sync` | `--folder` | ✅ |  |
+| `sync` | `--attachments` | ✅ |  |
+| `sync` | `--no-attachments` | ✅ |  |
+| `sync` | `--max-attachment-mb` | ✅ |  |
 | `sync` | `--rescan` | ✅ |  |
 | `rules list` |  | ✅ |  |
 | `rules add` |  | ✅ |  |
