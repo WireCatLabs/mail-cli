@@ -25,7 +25,7 @@ import { type Written, writeBatch } from "../export/write.js"
 import { IDENTITY } from "../identity.js"
 import { DEFAULT_SYNC, providerFor } from "../providers.js"
 import { openMailStore } from "../store.js"
-import { contextOf, openMail, refuseOffline, repeatable } from "./context.js"
+import { closing, contextOf, openMail, refuseOffline, repeatable } from "./context.js"
 import { foldersFor } from "./sync.js"
 
 const PAGE = 100
@@ -136,8 +136,8 @@ export const exportLeaf = (): Command =>
       })
       const budget = runBudgetOf(this, args.maxPages)
       const { backend } = await openMail(context, { canRetry: () => budget.take() === null })
-      try {
-        const result = await baseContext(this, configuration.resolveSettings).run(async () => {
+      const result = await closing(backend, () =>
+        baseContext(this, configuration.resolveSettings).run(async () => {
           const { mailbox } = context.settings
           const defaults = providerFor(address, mailbox.host)?.sync ?? DEFAULT_SYNC
           const folders = await foldersFor(args.folder, mailbox.folders, defaults, () => backend.folderList())
@@ -282,76 +282,74 @@ export const exportLeaf = (): Command =>
           } finally {
             await store.close()
           }
-        })
-        const partial = result.more
-        const next: NextStep[] = partial
+        }),
+      )
+      const partial = result.more
+      const next: NextStep[] = partial
+        ? [
+            {
+              kind: "command",
+              step: "mail.messages.export",
+              command: "messages export",
+              args: {
+                query: query.join(" ") || undefined,
+                format: args.format,
+                output: args.output,
+                resume: true,
+                ...(args.folder?.length ? { folder: args.folder } : {}),
+                ...(args.limit === undefined ? {} : { limit: args.limit }),
+              },
+              why:
+                result.stopped === "limit"
+                  ? `the run wrote the ${args.limit} messages --limit allows; --resume writes the next ones`
+                  : "the export stopped before its end to answer in time; --resume goes on from where it stopped",
+              safe_to_auto_execute: false,
+            },
+          ]
+        : []
+      const hint = partial
+        ? result.stopped === "limit"
+          ? "more messages match; run it again with --resume to write the next ones"
+          : "run it again with --resume to go on"
+        : result.unreadable > 0
+          ? `${result.unreadable} messages could not be read; --resume tries them again`
+          : undefined
+      const issues = [
+        ...(result.unreadable > 0
+          ? [{ code: "outcome_unknown" as const, reason: "mail.export-unreadable", source: "export" }]
+          : []),
+        ...(result.stopped && result.stopped !== "limit"
           ? [
               {
-                kind: "command",
-                step: "mail.messages.export",
-                command: "messages export",
-                args: {
-                  query: query.join(" ") || undefined,
-                  format: args.format,
-                  output: args.output,
-                  resume: true,
-                  ...(args.folder?.length ? { folder: args.folder } : {}),
-                  ...(args.limit === undefined ? {} : { limit: args.limit }),
-                },
-                why:
-                  result.stopped === "limit"
-                    ? `the run wrote the ${args.limit} messages --limit allows; --resume writes the next ones`
-                    : "the export stopped before its end to answer in time; --resume goes on from where it stopped",
-                safe_to_auto_execute: false,
+                code: ({ requests: "rate_limited", deadline: "timeout", cancelled: "cancelled" } as const)[
+                  result.stopped
+                ],
+                reason: `budget.${result.stopped}`,
+                source: "export",
               },
             ]
-          : []
-        const hint = partial
-          ? result.stopped === "limit"
-            ? "more messages match; run it again with --resume to write the next ones"
-            : "run it again with --resume to go on"
-          : result.unreadable > 0
-            ? `${result.unreadable} messages could not be read; --resume tries them again`
-            : undefined
-        const issues = [
-          ...(result.unreadable > 0
-            ? [{ code: "outcome_unknown" as const, reason: "mail.export-unreadable", source: "export" }]
-            : []),
-          ...(result.stopped && result.stopped !== "limit"
-            ? [
-                {
-                  code: ({ requests: "rate_limited", deadline: "timeout", cancelled: "cancelled" } as const)[
-                    result.stopped
-                  ],
-                  reason: `budget.${result.stopped}`,
-                  source: "export",
-                },
-              ]
-            : []),
-        ]
-        renderAnswer(
-          this,
-          outputFor(this),
-          itemOf(
-            {
-              address: account,
-              format: args.format,
-              destination,
-              folders: result.folders,
-              state: partial ? "partial" : "complete",
-              ...(result.stopped ? { stopped: result.stopped } : {}),
-              matched: result.matched,
-              exported: result.exported,
-              already_exported: result.already,
-              not_on_server: result.absent,
-              unreadable: result.unreadable,
-              complete: !partial && result.unreadable === 0,
-              ...(hint ? { hint } : {}),
-            },
-            { next, meta: { complete: !partial && issues.length === 0, ...(issues.length ? { issues } : {}) } },
-          ),
-        )
-      } finally {
-        await backend.close()
-      }
+          : []),
+      ]
+      renderAnswer(
+        this,
+        outputFor(this),
+        itemOf(
+          {
+            address: account,
+            format: args.format,
+            destination,
+            folders: result.folders,
+            state: partial ? "partial" : "complete",
+            ...(result.stopped ? { stopped: result.stopped } : {}),
+            matched: result.matched,
+            exported: result.exported,
+            already_exported: result.already,
+            not_on_server: result.absent,
+            unreadable: result.unreadable,
+            complete: !partial && result.unreadable === 0,
+            ...(hint ? { hint } : {}),
+          },
+          { next, meta: { complete: !partial && issues.length === 0, ...(issues.length ? { issues } : {}) } },
+        ),
+      )
     })

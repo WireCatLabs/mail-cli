@@ -179,15 +179,17 @@ const showBeforeAsking = (command: Command, draft: Draft, key: string, owner: Re
   if (asks) outputFor(command).streams.diagnostic(summaryText(draft))
 }
 
-const answer = (command: Command, draft: Draft, outcome: Record<string, unknown>) =>
-  renderAnswer(
-    command,
-    outputFor(command),
-    itemOf({ ...outcome, message_id: draft.messageId, ...summaryOf(draft) }),
-    () =>
-      outcome.sent
-        ? `sent to ${everyone(draft).length} ${everyone(draft).length === 1 ? "recipient" : "recipients"}: ${draft.subject}\n`
-        : `${String(outcome.hint ?? "not sent")}\n`,
+const answer = (command: Command, opened: Opened, draft: Draft, outcome: Record<string, unknown>) =>
+  opened.answer(() =>
+    renderAnswer(
+      command,
+      outputFor(command),
+      itemOf({ ...outcome, message_id: draft.messageId, ...summaryOf(draft) }),
+      () =>
+        outcome.sent
+          ? `sent to ${everyone(draft).length} ${everyone(draft).length === 1 ? "recipient" : "recipients"}: ${draft.subject}\n`
+          : `${String(outcome.hint ?? "not sent")}\n`,
+    ),
   )
 
 /** Checks, previews or sends, and answers; the outcome of a send that left, for what the caller does after. */
@@ -198,7 +200,7 @@ export const go = async (command: Command, opened: Opened, outgoing: Outgoing, d
   if (forgotAttachment(draft.text, draft.files.length > 0 || draft.message !== undefined))
     outputFor(command).renderer.warn("the text speaks of an attachment, and nothing is attached (--file)")
   if (dryRun) {
-    answer(command, draft, {
+    answer(command, opened, draft, {
       sent: false,
       operation_id: outgoing.operationId,
       hint: "a preview: nothing was sent; the same command without --dry-run sends it",
@@ -208,7 +210,7 @@ export const go = async (command: Command, opened: Opened, outgoing: Outgoing, d
   const sending = sendingOf(opened, command)
   showBeforeAsking(command, draft, outgoing.key, sending.owner)
   const sent = await sendOut(sending, outgoing)
-  answer(command, draft, {
+  answer(command, opened, draft, {
     sent: !sent.alreadySent,
     already_sent: sent.alreadySent,
     operation_id: sent.operationId,

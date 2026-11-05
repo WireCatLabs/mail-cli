@@ -127,17 +127,21 @@ export interface Opened {
   env: NodeJS.ProcessEnv
   line: string
   path: string
+  /** Holds the command's answer until the store and the mailbox are closed; a failed close drops it (WC-LIFE-4). */
+  answer: (show: () => void) => void
 }
 
-/** Opens the store and the mailbox for one write command, and closes both after `work`. */
+/** Opens the store and the mailbox for one write command, and closes both after `work`, then answers. */
 export const organising = async <T>(command: Command, work: (opened: Opened) => Promise<T>): Promise<T> => {
   const context = contextOf(command)
   refuseOffline(context.flags)
   const address = context.settings.mailbox.address
   if (!address) throw new CliError("configuration_error", `profile ${context.profile} has no address`)
   const { backend } = await openMail(context)
+  let shown: (() => void) | undefined
+  let result: T
   try {
-    return await baseContext(command, configuration.resolveSettings).run(async () => {
+    result = await baseContext(command, configuration.resolveSettings).run(async () => {
       const writes = backend.writes
       if (!writes) throw new CliError("provider_unavailable", "this mailbox cannot be changed from here")
       const store = await openMailStore(context.env)
@@ -182,6 +186,9 @@ export const organising = async <T>(command: Command, work: (opened: Opened) => 
           env: context.env,
           path,
           line,
+          answer: (show) => {
+            shown = show
+          },
           log: (_action, extra = {}) =>
             new ChangeLog(context.env, {
               type: "run",
@@ -199,6 +206,8 @@ export const organising = async <T>(command: Command, work: (opened: Opened) => 
   } finally {
     await backend.close()
   }
+  shown?.()
+  return result
 }
 
 /** A bulk change is checked as `messages.bulk` too, before anything is sent, so an owner can stop agents doing many. */
@@ -255,32 +264,34 @@ const answerChange = (
           },
         ]
       : []
-  renderAnswer(
-    command,
-    outputFor(command),
-    itemOf(
-      {
-        action: plan.action,
-        applied: outcome !== null,
-        run: outcome?.run ?? null,
-        selected: selected.ids.length,
-        located: count,
-        changed: outcome?.changed.length ?? 0,
-        missing: located.missing.length,
-        already_deleted: located.deleted.length,
-        in_trash: located.inTrash.length,
-        more: selected.more,
-        folders,
-        ...(plan.to ? { to: plan.to } : {}),
-        ...(Object.keys(kept).length ? { kept } : {}),
-        ...extra,
-        ...(outcome
-          ? { hint: restoreHint(opened, outcome.run) }
-          : count > 0
-            ? { hint: `a preview: nothing changed; add --yes to change ${count}` }
-            : {}),
-      },
-      { next },
+  opened.answer(() =>
+    renderAnswer(
+      command,
+      outputFor(command),
+      itemOf(
+        {
+          action: plan.action,
+          applied: outcome !== null,
+          run: outcome?.run ?? null,
+          selected: selected.ids.length,
+          located: count,
+          changed: outcome?.changed.length ?? 0,
+          missing: located.missing.length,
+          already_deleted: located.deleted.length,
+          in_trash: located.inTrash.length,
+          more: selected.more,
+          folders,
+          ...(plan.to ? { to: plan.to } : {}),
+          ...(Object.keys(kept).length ? { kept } : {}),
+          ...extra,
+          ...(outcome
+            ? { hint: restoreHint(opened, outcome.run) }
+            : count > 0
+              ? { hint: `a preview: nothing changed; add --yes to change ${count}` }
+              : {}),
+        },
+        { next },
+      ),
     ),
   )
 }
@@ -670,23 +681,25 @@ Envelopes come back to search at once; mail with text is saved again by the next
                   },
                 ]
               : []
-          renderAnswer(
-            this,
-            outputFor(this),
-            itemOf(
-              {
-                run: plan.run,
-                applied: apply,
-                restore_run: log?.run.id ?? null,
-                command: plan.command,
-                logged: plan.logged,
-                restorable: plan.restorable,
-                missing: plan.missing,
-                restored: plan.restored,
-                expired: plan.expired,
-                restorable_until: plan.restorable_until,
-              },
-              { next },
+          opened.answer(() =>
+            renderAnswer(
+              this,
+              outputFor(this),
+              itemOf(
+                {
+                  run: plan.run,
+                  applied: apply,
+                  restore_run: log?.run.id ?? null,
+                  command: plan.command,
+                  logged: plan.logged,
+                  restorable: plan.restorable,
+                  missing: plan.missing,
+                  restored: plan.restored,
+                  expired: plan.expired,
+                  restorable_until: plan.restorable_until,
+                },
+                { next },
+              ),
             ),
           )
         } finally {

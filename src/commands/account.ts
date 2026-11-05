@@ -27,7 +27,7 @@ import { IDENTITY } from "../identity.js"
 import { knownAges, lookUpAges, rdapDeps } from "../mail/domain-age.js"
 import { DEFAULT_SYNC, providerFor } from "../providers.js"
 import { PASSWORD_SOURCES } from "../secret.js"
-import { contextOf, openMail, refuseOffline, repeatable } from "./context.js"
+import { closing, contextOf, openMail, refuseOffline, repeatable } from "./context.js"
 import { foldersFor, sinceOf } from "./sync.js"
 
 const mailAccountCheck = v.strictObject({
@@ -57,23 +57,21 @@ const checkCommand = () =>
       const context = contextOf(this)
       refuseOffline(context.flags)
       const { backend, endpoint, passwordFrom } = await openMail(context)
-      try {
-        const checked = await baseContext(this, configuration.resolveSettings).run(() => backend.check())
-        renderAnswer(
-          this,
-          outputFor(this),
-          itemOf({
-            profile: context.profile,
-            host: endpoint.host,
-            port: endpoint.port,
-            security: endpoint.security,
-            password_from: passwordFrom,
-            ...checked,
-          }),
-        )
-      } finally {
-        await backend.close()
-      }
+      const checked = await closing(backend, () =>
+        baseContext(this, configuration.resolveSettings).run(() => backend.check()),
+      )
+      renderAnswer(
+        this,
+        outputFor(this),
+        itemOf({
+          profile: context.profile,
+          host: endpoint.host,
+          port: endpoint.port,
+          security: endpoint.security,
+          password_from: passwordFrom,
+          ...checked,
+        }),
+      )
     })
 
 const mailAccountInspect = v.strictObject({
@@ -206,64 +204,62 @@ const inspectCommand = () =>
       const since = zone === undefined ? new Date(0) : sinceOf(args.sinceTime, zone, Date.now())
       const started = Date.now()
       const { backend } = await openMail(context)
-      try {
-        const { folders, items } = await baseContext(this, configuration.resolveSettings).run(async () => {
+      const { folders, items } = await closing(backend, () =>
+        baseContext(this, configuration.resolveSettings).run(async () => {
           const defaults = providerFor(address, host)?.sync ?? DEFAULT_SYNC
           const folders = await foldersFor(args.folder, configured, defaults, () => backend.folderList())
           const listed = new Map<string, Listed>()
           for (const folder of folders)
             for (const item of await backend.list(since, folder, { headers: true })) listed.set(item.messageId, item)
           return { folders, items: [...listed.values()] }
-        })
-        let probe = probeMail(items, args.limit, knownAges(context.env))
-        let lookups: { looked: number; failed: number } | undefined
-        if (args.domainAge) {
-          lookups = await lookUpAges(
-            context.env,
-            domainsToAge(probe.items, FREE_MAIL),
-            rdapDeps(context.environment.rdap),
-          )
-          probe = probeMail(items, args.limit, knownAges(context.env))
-        }
-        const seconds = Math.round((Date.now() - started) / 100) / 10
-        renderAnswer(
-          this,
-          outputFor(this),
-          itemOf(
-            {
-              address,
-              folders,
-              emails: probe.emails,
-              bytes: probe.bytes,
-              sent: probe.sent,
-              without_headers: probe.withoutHeaders,
-              groups: probe.groups,
-              items: probe.items.map((group) => ({
-                from: group.from,
-                list_id: group.listId,
-                emails: group.emails,
-                bytes: group.bytes,
-                unread: group.unread,
-                bulk: group.bulk,
-                first_year: group.firstYear,
-                last_year: group.lastYear,
-                replied: group.replied,
-                suggest: group.suggest,
-                score: group.score,
-                signals: group.signals,
-                untrusted: ["from", "list_id"],
-              })),
-              presets: probe.presets,
-              ...(lookups === undefined ? {} : { domain_lookups: lookups }),
-              seconds,
-            },
-            zone === undefined ? {} : { meta: { timezone: zone, window: { since: since.toISOString() } } },
-          ),
-          () => probeText(probe, seconds, zone),
+        }),
+      )
+      let probe = probeMail(items, args.limit, knownAges(context.env))
+      let lookups: { looked: number; failed: number } | undefined
+      if (args.domainAge) {
+        lookups = await lookUpAges(
+          context.env,
+          domainsToAge(probe.items, FREE_MAIL),
+          rdapDeps(context.environment.rdap),
         )
-      } finally {
-        await backend.close()
+        probe = probeMail(items, args.limit, knownAges(context.env))
       }
+      const seconds = Math.round((Date.now() - started) / 100) / 10
+      renderAnswer(
+        this,
+        outputFor(this),
+        itemOf(
+          {
+            address,
+            folders,
+            emails: probe.emails,
+            bytes: probe.bytes,
+            sent: probe.sent,
+            without_headers: probe.withoutHeaders,
+            groups: probe.groups,
+            items: probe.items.map((group) => ({
+              from: group.from,
+              list_id: group.listId,
+              emails: group.emails,
+              bytes: group.bytes,
+              unread: group.unread,
+              bulk: group.bulk,
+              first_year: group.firstYear,
+              last_year: group.lastYear,
+              replied: group.replied,
+              suggest: group.suggest,
+              score: group.score,
+              signals: group.signals,
+              untrusted: ["from", "list_id"],
+            })),
+            presets: probe.presets,
+            ...(lookups === undefined ? {} : { domain_lookups: lookups }),
+            seconds,
+          },
+          zone === undefined ? {} : { meta: { timezone: zone, window: { since: since.toISOString() } } },
+        ),
+        () => probeText(probe, seconds, zone),
+      )
     })
 
 export const accountCommand = (): Command =>

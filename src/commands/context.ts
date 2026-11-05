@@ -163,3 +163,12 @@ export const collect = (value: string, previous: string[] = []): string[] => [..
 /** The empty list as its default is what tells the MCP tool to take a list for the option, not one string. */
 export const repeatable = (flags: string, description: string): Option =>
   new Option(flags, description).argParser(collect).default([], "none")
+
+/** Runs `work`, then closes what it used, so a command answers only after the close (WC-LIFE-4). */
+export const closing = async <T>(opened: { close(): Promise<void> }, work: () => Promise<T>): Promise<T> => {
+  try {
+    return await work()
+  } finally {
+    await opened.close()
+  }
+}

@@ -10,6 +10,13 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   `meta.timezone` and the window in UTC (`meta.window.since`), as `sync` does; `messages import` also gives
   `timezone` beside `since`, and `account inspect` adds a line to its table.
 
+### Fixed
+
+- **Commands that talk to the mail server answer only after they closed the connection and the store.** `account
+  check`, `account inspect`, `folders`, `sync`, `messages export`, the `messages` changes, `drafts` and the sends
+  printed their answer first; a failing close now ends in an error instead of after a success. JSON answers are
+  unchanged.
+
 ## 0.16.3 — 05.11.2026
 
 ### Fixed
