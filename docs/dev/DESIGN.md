@@ -82,5 +82,13 @@ Claims about our code cite the file. The imapflow notes were read in imapflow 2.
   rows and agents keep UTC (WC-TIME-2); `next` is never rewritten, since its args run. The answers cli-core draws
   (`search messages`, `conversations`, `messages show`, `review`, `runs list`) still print UTC: that is fixed in
   cli-core.
+- **Exceptions to the WireCat standard.** Neither rule has a lint check, so `lint/overrides.json` cannot hold them;
+  they are kept here.
+  - **WC-OUT-4: `rules export` prints the bare rules file, with no `{ item, meta }` envelope** (owner, 2026-11-05,
+    NEED-2205 A). The rules file is an exchange format: `rules import` and memo read it as written, and an envelope
+    would make every saved export a file neither of them takes.
+  - **WC-CMD-7: `account inspect` stays under `account`, not under `stats`** (owner, 2026-11-05, NEED-2210 B). It
+    checks an account, reading the server without importing, as the bullet on "Everything mail-specific" above says;
+    it is not a statistic over stored mail, which is what `stats messages` counts.
 
 ## Open questions for the owner
