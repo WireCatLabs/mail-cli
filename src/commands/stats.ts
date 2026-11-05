@@ -3,12 +3,14 @@ import { annotate } from "@wirecat/cli-base/commands"
 import {
   answerEntity,
   baseContext,
+  itemOf,
   LOCAL_READ,
   listOf,
   outputFor,
   positiveCount,
   renderAnswer,
 } from "@wirecat/cli-core/cli"
+import { MAIL_STATS_BY, type MailStatsBy, mailStats, mailStatsItem } from "@wirecat/cli-core/mail"
 import { Command, Option } from "commander"
 import * as v from "valibot"
 import { configuration } from "../config.js"
@@ -106,10 +108,72 @@ const topLeaf = (): Command =>
       )
     })
 
+const showLeaf = (): Command =>
+  annotate(new Command("show"), {
+    effects: LOCAL_READ,
+    output: { entity: "mail_counts" },
+    examples: [
+      `${IDENTITY.command} ya stats messages show --by day --timezone Europe/Madrid -- 'date>=30d'`,
+      `${IDENTITY.command} ya stats messages show --by sender --limit 10`,
+    ],
+  })
+    .summary("count stored mail received and sent by day, week or sender")
+    .description(
+      "how much of this profile's stored mail matches the query, received and sent, per calendar day, week (from " +
+        "Monday) or sender; by sender counts received mail only. Counts only, from the store; records no search",
+    )
+    .argument("[query...]", "the same query as `search messages`; every stored email if left out")
+    .addOption(new Option("--by <group>", "what to count by").choices([...MAIL_STATS_BY]).default("day"))
+    .option("--timezone <zone>", "the IANA timezone where days and weeks start")
+    .option(
+      "--limit <n>",
+      "how many rows: the latest days or weeks, or the busiest senders",
+      positiveCount("--limit"),
+      30,
+    )
+    .action(async function (
+      this: Command,
+      words: string[],
+      args: { by: MailStatsBy; timezone?: string; limit: number },
+    ) {
+      const context = contextOf(this)
+      const address = context.settings.mailbox.address
+      if (!address) throw new CliError("configuration_error", `profile ${context.profile} has no address`)
+      const mailbox = { provider: "email", account: address.toLowerCase() }
+      const stats = await baseContext(this, configuration.resolveSettings).run(async () => {
+        const store = await openMailStore(context.env)
+        context.environment.trackCloseable?.(store)
+        try {
+          return await mailStats(store, mailbox, {
+            by: args.by,
+            text: words.join(" "),
+            accounts: [mailbox],
+            limit: args.limit,
+            ...(args.timezone === undefined ? {} : { timezone: args.timezone }),
+          })
+        } finally {
+          await store.close()
+        }
+      })
+      renderAnswer(this, outputFor(this), itemOf(mailStatsItem(stats), { meta: { timezone: stats.timezone } }), () =>
+        [
+          ...stats.rows.map(
+            ({ key, name, received, sent }) =>
+              `${name ? `${name} <${key}>` : key}  ${received} received${args.by === "sender" ? "" : `  ${sent} sent`}\n`,
+          ),
+          `${stats.received} received, ${stats.sent} sent${stats.hasMore ? `; more rows than --limit ${args.limit}` : ""}\n`,
+        ].join(""),
+      )
+    })
+
 export const statsCommand = (): Command =>
   new Command("stats")
     .summary("statistics about stored mail")
     .description("counts over the mail sync stored")
     .addCommand(
-      new Command("messages").summary("stored emails").description("counts of stored emails").addCommand(topLeaf()),
+      new Command("messages")
+        .summary("stored emails")
+        .description("counts of stored emails")
+        .addCommand(showLeaf())
+        .addCommand(topLeaf()),
     )

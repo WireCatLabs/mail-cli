@@ -38,6 +38,7 @@
   "conversations show": "read",
   "attachments list": "read",
   "attachments download": "write",
+  "stats messages show": "read",
   "stats messages top": "read",
   "drafts list": "read",
   "drafts create": "write",

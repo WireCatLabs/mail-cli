@@ -934,6 +934,28 @@ counts over the mail sync stored
 
 counts of stored emails
 
+#### `mail stats messages show`
+
+how much of this profile's stored mail matches the query, received and sent, per calendar day, week (from Monday) or sender; by sender counts received mail only. Counts only, from the store; records no search
+
+```sh
+mail stats messages show [query] [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `query` | optional | the same query as `search messages`; every stored email if left out. |
+
+| Option | What it does |
+|---|---|
+| `--by <group>` | what to count by. One of: `day`, `week`, `sender`. Default: `day`. |
+| `--timezone <zone>` | the IANA timezone where days and weeks start. |
+| `--limit <n>` | how many rows: the latest days or weeks, or the busiest senders. Default: `30`. |
+
+**Returns:** mail counts — by, received, sent, rows; every field: mail commands info stats messages show
+
+**Example:** `mail ya stats messages show --by day --timezone Europe/Madrid -- 'date>=30d'`, `mail ya stats messages show --by sender --limit 10`
+
 #### `mail stats messages top`
 
 group this profile's stored mail by sender, mailing list (List-Id) or sender domain, the biggest group first; unread and size help decide what to unsubscribe from or clean up
