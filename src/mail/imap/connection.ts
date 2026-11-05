@@ -103,7 +103,8 @@ export interface Connections {
   close(): Promise<void>
 }
 
-const refusedLogin = (error: unknown) => (error as { authenticationFailed?: boolean }).authenticationFailed === true
+const refusedLogin = (error: unknown) =>
+  typeof error === "object" && error !== null && "authenticationFailed" in error && error.authenticationFailed === true
 
 // A token just received at sign-in has no sign-in to refresh, so "after a refresh" would be false there.
 const oauthRefused = (credential: MailCredential, error: unknown) =>
@@ -269,16 +270,13 @@ export const imapConnections = (
   }
 
   /** Only a failure after the command went out is an unknown outcome; one while connecting changed nothing. */
-  const sentOnce = async <T>(attempt: (sent: <W extends Work<T>>(work: W) => W) => Promise<T>): Promise<T> => {
+  const sentOnce = async <T>(attempt: (sent: (work: Work<T>) => Work<T>) => Promise<T>): Promise<T> => {
     let went = false
     try {
-      return await attempt(
-        (work) =>
-          ((open: ImapFlow, validity: string) => {
-            went = true
-            return work(open, validity)
-          }) as typeof work,
-      )
+      return await attempt((work) => (open, validity) => {
+        went = true
+        return work(open, validity)
+      })
     } catch (raw) {
       throw went ? writeError(raw) : mapImapError(raw)
     }
@@ -295,13 +293,12 @@ export const imapConnections = (
     onError?: (error: unknown, batch: I) => E,
   ): Promise<(O | E)[]> => {
     const results: (O | E)[] = new Array(batches.length)
-    let next = 0
+    // One queue for every worker: each takes the next batch nobody has taken.
+    const queue = batches.entries()
     let failure: unknown
     const worker = async (slot: number) => {
-      for (;;) {
-        const index = next++
-        if (index >= batches.length || failure !== undefined) return
-        const batch = batches[index] as I
+      for (const [index, batch] of queue) {
+        if (failure !== undefined) return
         try {
           results[index] = await inFolder(folder, (open) => work(open, batch), expected, slot)
         } catch (error) {

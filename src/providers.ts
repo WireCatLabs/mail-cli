@@ -287,7 +287,7 @@ export type ProviderKey = keyof typeof TABLE
 /** One entry per built-in provider: how it is found, its servers, how it signs in and how to prepare it. */
 export const PROVIDERS: Record<ProviderKey, Provider> = TABLE
 
-export const PROVIDER_KEYS = Object.keys(PROVIDERS) as ProviderKey[]
+export const PROVIDER_KEYS = Object.keys(PROVIDERS) as ProviderKey[] // Object.keys is typed string[]
 
 export const providerByDomain = (domain: string): ProviderKey | undefined =>
   PROVIDER_KEYS.find((key) => PROVIDERS[key].domains.includes(domain))

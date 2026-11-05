@@ -226,14 +226,26 @@ export interface SignInRecord {
   scopes: string[]
 }
 
+const SIGN_IN = v.looseObject({
+  provider: v.picklist(["microsoft", "google"]),
+  client: v.picklist(["wirecat", "own"]),
+  source: v.optional(v.picklist(["flag", "env", "config", "constants"])),
+  signed_in_at: v.string(),
+  scopes: v.array(v.string()),
+}) satisfies v.GenericSchema<unknown, SignInRecord>
+
 const recordsPath = (env: NodeJS.ProcessEnv) => join(paths(env).state, "sign-ins.json")
 
 export const signInRecords = (env: NodeJS.ProcessEnv): Record<string, SignInRecord> => {
   try {
     const value: unknown = JSON.parse(readFileSync(recordsPath(env), "utf8"))
-    return typeof value === "object" && value !== null && !Array.isArray(value)
-      ? (value as Record<string, SignInRecord>)
-      : {}
+    if (typeof value !== "object" || value === null || Array.isArray(value)) return {}
+    return Object.fromEntries(
+      Object.entries(value).flatMap(([profile, record]) => {
+        const read = v.safeParse(SIGN_IN, record)
+        return read.success ? [[profile, read.output]] : []
+      }),
+    )
   } catch {
     return {}
   }

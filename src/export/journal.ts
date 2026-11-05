@@ -1,38 +1,49 @@
 import { appendFile, mkdir, open, readdir, readFile, rm, truncate } from "node:fs/promises"
 import { join } from "node:path"
 import { CliError } from "@wirecat/cli-base"
+import * as v from "valibot"
 import type { ExportFormat } from "./format.js"
 
 export const JOURNAL = ".mail-export.jsonl"
 
-interface Header {
-  v: 1
-  format: ExportFormat
-  account: string
-}
+const HEADER = v.object({
+  v: v.literal(1),
+  format: v.picklist(["mbox", "maildir"]),
+  account: v.string(),
+}) satisfies v.GenericSchema<unknown, { format: ExportFormat }>
 
 /** One finished batch: the messages now safely in the destination, and for mbox how long the folder's file is. */
-interface Batch {
-  folder: string
-  validity: string
-  uids: number[]
-  size?: number
+const BATCH = v.object({
+  folder: v.string(),
+  validity: v.string(),
+  uids: v.array(v.number()),
+  size: v.optional(v.number()),
+})
+
+type Header = v.InferOutput<typeof HEADER>
+type Batch = v.InferOutput<typeof BATCH>
+
+const parsed = <T>(schema: v.GenericSchema<unknown, T>, line: string): T | undefined => {
+  try {
+    const result = v.safeParse(schema, JSON.parse(line))
+    return result.success ? result.output : undefined
+  } catch {
+    return undefined
+  }
 }
 
 export const doneKey = (folder: string, validity: string, uid: number): string => `${folder}\0${validity}\0${uid}`
 
 const parse = (text: string): { header: Header; batches: Batch[] } | undefined => {
-  const lines = text.split("\n").filter(Boolean)
-  if (lines.length === 0) return undefined
-  const header = JSON.parse(lines[0] as string) as Header
+  const [first, ...rest] = text.split("\n").filter(Boolean)
+  const header = first === undefined ? undefined : parsed(HEADER, first)
+  if (header === undefined) return undefined
   const batches: Batch[] = []
-  for (const line of lines.slice(1)) {
-    try {
-      batches.push(JSON.parse(line) as Batch)
-    } catch {
-      // A line cut short by a crash is a batch that never finished; its messages are written again.
-      break
-    }
+  for (const line of rest) {
+    const batch = parsed(BATCH, line)
+    // A line cut short by a crash is a batch that never finished; its messages are written again.
+    if (batch === undefined) break
+    batches.push(batch)
   }
   return { header, batches }
 }

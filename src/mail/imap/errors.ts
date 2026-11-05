@@ -4,10 +4,21 @@ import { CliError } from "@wirecat/cli-base"
 export const causeOf = (code: string | undefined) =>
   code && /^[A-Za-z0-9_.-]{1,40}$/.test(code) ? { cause_code: code } : {}
 
+/** The fields imapflow adds to the Errors it throws; it does not type them. */
+interface ImapErrorFields {
+  code?: string
+  authenticationFailed?: boolean
+  responseStatus?: string
+  responseText?: string
+  serverResponseCode?: string
+  throttleReset?: number
+  response?: { attributes?: { section?: { value?: unknown }[] }[] }
+}
+
 // imapflow strips `[CODE]` from responseText and sets serverResponseCode on some commands only; the code is
 // always in the parsed response.
 export const responseCodeOf = (error: unknown): string => {
-  const e = error as { serverResponseCode?: string; response?: { attributes?: { section?: { value?: unknown }[] }[] } }
+  const e = (error ?? {}) as ImapErrorFields // imapflow does not type the fields it adds to its errors
   return e.serverResponseCode ?? String(e.response?.attributes?.[0]?.section?.[0]?.value ?? "").toUpperCase()
 }
 
@@ -15,15 +26,7 @@ export const responseCodeOf = (error: unknown): string => {
 export const mapImapError = (error: unknown): CliError => {
   if (error instanceof CliError) return error
   // imapflow throws plain Errors with extra fields it does not type, and tests hand in bare objects.
-  const e = error as {
-    code?: string
-    authenticationFailed?: boolean
-    responseStatus?: string
-    responseText?: string
-    serverResponseCode?: string
-    throttleReset?: number
-    response?: { attributes?: { section?: { value?: unknown }[] }[] }
-  }
+  const e = (error ?? {}) as ImapErrorFields // imapflow does not type the fields it adds to its errors
   const responseCode = responseCodeOf(error)
   if (e.authenticationFailed)
     return new CliError(

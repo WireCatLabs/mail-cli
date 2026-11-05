@@ -21,8 +21,8 @@ export const isAddress = (value: string) => ADDRESS.test(value)
 const bytesOf = (value: string): number => {
   const match = /^(\d+(?:\.\d+)?)(b|kb|mb|gb)?$/i.exec(value)
   if (match === null) throw bad(`larger:${value} is not a size like 5MB, 300KB or 2048`)
-  const unit = { b: 1, kb: 1024, mb: 1024 ** 2, gb: 1024 ** 3 }[(match[2] ?? "b").toLowerCase() as "b"]
-  return Math.round(Number(match[1]) * unit)
+  const units: Record<string, number> = { b: 1, kb: 1024, mb: 1024 ** 2, gb: 1024 ** 3 }
+  return Math.round(Number(match[1]) * (units[(match[2] ?? "b").toLowerCase()] ?? 1))
 }
 
 /** The conditions of a rule's --filter query. */
@@ -95,8 +95,7 @@ export const actionsOf = (value: string): { action: MailAction; protect: boolean
   const tags = parts.filter((part) => part.startsWith("tag:")).map((part) => part.slice(4).trim())
   const actions = parts.filter((part) => !part.startsWith("tag:"))
   if (tags.some((tag) => tag === "")) throw new CliError("validation_error", "tag: needs a name, e.g. tag:promo")
-  if (actions.length !== 1 || !(ACTIONS as readonly string[]).includes(actions[0] as string))
-    throw new CliError("validation_error", `choose ${ACTIONS.join(", ")}, plus any tag:<name>`)
-  const action = actions[0] as (typeof ACTIONS)[number]
+  const action = actions.length === 1 ? ACTIONS.find((one) => one === actions[0]) : undefined
+  if (action === undefined) throw new CliError("validation_error", `choose ${ACTIONS.join(", ")}, plus any tag:<name>`)
   return { action: action === "protect" ? "keep" : action, protect: action === "protect", tags }
 }

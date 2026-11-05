@@ -67,18 +67,33 @@ const RUN_ID = /^[\w.:-]+$/
 const runsDir = (env: NodeJS.ProcessEnv, account: string) =>
   join(resolvePaths({ appName: "mail-cli", prefix: "MAIL", env }).state, "changes", account.toLowerCase())
 
-const readLines = (path: string): Line[] =>
+const LINE_TYPES: readonly unknown[] = ["run", "step", "done", "restore", "end"]
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value)
+
+/** Only this tool writes these files; a line is trusted to have its type's fields once its type is one of ours. */
+const isLine = (value: Record<string, unknown>): value is Line & Record<string, unknown> =>
+  LINE_TYPES.includes(value.type)
+
+const strings = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((one): one is string => typeof one === "string") : []
+
+const readRecords = (path: string): Record<string, unknown>[] =>
   readFileSync(path, "utf8")
     .split("\n")
     .filter(Boolean)
     .flatMap((text) => {
       try {
-        return [JSON.parse(text) as Line]
+        const parsed: unknown = JSON.parse(text)
+        return isRecord(parsed) ? [parsed] : []
       } catch {
         // A torn last line from a run that died; the lines before it still say what happened.
         return []
       }
     })
+
+const readLines = (path: string): Line[] => readRecords(path).filter(isLine)
 
 /** One command's record of what it changed, appended as it goes; the file is the owner's only. */
 export class ChangeLog {
@@ -133,9 +148,7 @@ const gmailLabel = (label: string) => (SYSTEM_LABELS.has(label) ? `\\${label}` :
 /** What came back from a memo run: memo wrote `restored`, a restore made here writes `ids`. */
 const memoRestored = (lines: Record<string, unknown>[]) =>
   new Set(
-    lines
-      .filter(({ type }) => type === "restore")
-      .flatMap((line) => [...((line.restored as string[]) ?? []), ...((line.ids as string[]) ?? [])]),
+    lines.filter(({ type }) => type === "restore").flatMap((line) => [...strings(line.restored), ...strings(line.ids)]),
   )
 
 /**
@@ -148,7 +161,7 @@ const memoRun = (env: NodeJS.ProcessEnv, account: string, id: string): { path: s
   for (const name of readdirSync(root)) {
     const path = join(root, name, `${id}.jsonl`)
     if (!existsSync(path)) continue
-    const lines = readLines(path) as unknown as Record<string, unknown>[]
+    const lines = readRecords(path)
     const head = lines.find(({ type }) => type === "run")
     if (String(head?.account ?? "").toLowerCase() !== account.toLowerCase()) continue
     const started = String(head?.started_at ?? "")
@@ -162,7 +175,7 @@ const memoRun = (env: NodeJS.ProcessEnv, account: string, id: string): { path: s
       items: emails.map((line) => ({
         id: String(line.message_id),
         uid: 0,
-        labels: ((line.labels as string[] | undefined) ?? []).map(gmailLabel),
+        labels: strings(line.labels).map(gmailLabel),
       })),
     }
     return {
@@ -204,7 +217,10 @@ export const readRun = (env: NodeJS.ProcessEnv, account: string, id: string): { 
       run,
       steps: lines
         .filter((line): line is StepLine => line.type === "step")
-        .map((step) => ({ step, ...(done.has(step.step) ? { done: done.get(step.step) as DoneLine } : {}) })),
+        .map((step) => {
+          const finished = done.get(step.step)
+          return { step, ...(finished ? { done: finished } : {}) }
+        }),
       restored: new Set(lines.filter((line): line is RestoreLine => line.type === "restore").flatMap(({ ids }) => ids)),
     },
   }
@@ -257,12 +273,12 @@ const memoSummaries = (env: NodeJS.ProcessEnv): RunSummary[] => {
     readdirSync(join(root, name))
       .filter((file) => file.endsWith(".jsonl"))
       .flatMap((file) => {
-        const lines = readLines(join(root, name, file)) as unknown as Record<string, unknown>[]
+        const lines = readRecords(join(root, name, file))
         const head = lines.find(({ type }) => type === "run")
         if (!head) return []
         const started = String(head.started_at ?? "")
         const restored = memoRestored(lines)
-        const moved = lines.filter(({ type }) => type === "batch").flatMap((line) => (line.moved as string[]) ?? [])
+        const moved = lines.filter(({ type }) => type === "batch").flatMap((line) => strings(line.moved))
         return [
           {
             id: file.replace(/\.jsonl$/, ""),

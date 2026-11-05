@@ -72,7 +72,7 @@ export const readDraft = async (raw: Uint8Array, uid: number): Promise<ReadDraft
       id: (parsed.messageId ?? "").replace(/^<|>$/g, ""),
       uid,
       subject: parsed.subject ?? "",
-      from: parsed.from ? (shown([parsed.from])[0] as string) : null,
+      from: parsed.from ? (shown([parsed.from])[0] ?? null) : null,
       to: shown(parsed.to),
       cc: shown(parsed.cc),
       bcc: shown(parsed.bcc),
@@ -105,7 +105,7 @@ export const listDrafts = async (backend: Reads, folder: string, limit: number) 
     .sort((a, b) => b - a)
     .slice(0, limit)
   const raws = newest.length ? await rawOf(backend, folder, newest) : []
-  const drafts = await Promise.all(raws.map((raw, at) => readDraft(raw, newest[at] as number)))
+  const drafts = await Promise.all(newest.flatMap((uid, at) => (raws[at] ? [readDraft(raws[at], uid)] : [])))
   return { items: drafts.map(({ draft }) => draft), more: uids.length > limit }
 }
 
@@ -120,7 +120,8 @@ export const findDraft = async (backend: Pick<MailBackend, "writes" | "fetchRaw"
       reason: "mail.draft-unknown",
     })
   const [raw] = await rawOf(backend, folder, [uid])
-  return { uid, validity, read: await readDraft(raw as Uint8Array, uid) }
+  if (!raw) throw new CliError("not_found", `email ${uid} was not returned`, { reason: "mail.not-returned" })
+  return { uid, validity, read: await readDraft(raw, uid) }
 }
 
 export interface Changes {
@@ -135,7 +136,7 @@ export interface Changes {
 export const nextVersion = ({ draft, references, parts }: ReadDraft, given: Changes, owner: string): Outgoing => {
   const people = (list: string[], field: string) => (list.length ? peopleOf(list, field) : [])
   return {
-    from: peopleOf([draft.from ?? owner], "from")[0] as Person,
+    from: peopleOf([draft.from ?? owner], "from")[0] ?? { address: owner },
     to: given.to ?? people(draft.to, "to"),
     cc: given.cc ?? people(draft.cc, "cc"),
     bcc: given.bcc ?? people(draft.bcc, "bcc"),
