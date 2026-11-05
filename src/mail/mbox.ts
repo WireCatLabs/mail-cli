@@ -187,7 +187,8 @@ const scan = async (path: string, chunkSize: number): Promise<Entry[]> => {
 
   let carry: Buffer = Buffer.alloc(0)
   for await (const chunk of createReadStream(path, { highWaterMark: chunkSize })) {
-    const buf = carry.length ? Buffer.concat([carry, chunk as Buffer]) : (chunk as Buffer)
+    const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+    const buf = carry.length ? Buffer.concat([carry, bytes]) : bytes
     const keep = take(buf, false)
     base += keep
     pos -= keep
@@ -235,15 +236,16 @@ export const mboxSource = (path: string, { chunkSize = 1024 * 1024 }: { chunkSiz
     },
 
     fetchRaw: async (quick) => {
-      const items = quick as Listed[]
       const entries = await indexed()
       const handle = await open(path)
       try {
         const read: (Uint8Array | Error)[] = []
-        for (const item of items) {
-          const entry = entries.get(item.messageId)
+        for (const item of quick) {
+          // This source lists with Gmail's ids, so what comes back to it carries them.
+          const id = "messageId" in item && typeof item.messageId === "string" ? item.messageId : item.uid
+          const entry = entries.get(id)
           if (entry === undefined) {
-            read.push(new CliError("not_found", `email ${item.messageId} is not in the mbox file`))
+            read.push(new CliError("not_found", `email ${id} is not in the mbox file`))
             continue
           }
           const bytes = Buffer.alloc(entry.end - entry.body)

@@ -74,14 +74,14 @@ const refused = (error: SmtpError): CliError => {
 const settle = <T>(
   connection: SMTPConnection,
   start: (done: (error: SmtpError | null, value?: T) => void) => void,
-): Promise<T> =>
-  new Promise<T>((resolve, reject) => {
+): Promise<T | undefined> =>
+  new Promise<T | undefined>((resolve, reject) => {
     const failed = (error: SmtpError) => reject(error)
     connection.once("error", failed)
     start((error, value) => {
       connection.off("error", failed)
       if (error) reject(error)
-      else resolve(value as T)
+      else resolve(value)
     })
   })
 
@@ -152,7 +152,7 @@ export const smtpSubmit = (
       const info = await settle<SMTPConnection.SentMessageInfo>(connection, (finish) =>
         connection.send({ from, to: [...recipients] }, Buffer.from(raw), finish),
       )
-      return { accepted: info.accepted, rejected: info.rejected }
+      return { accepted: info?.accepted ?? [], rejected: info?.rejected ?? [] }
     } catch (raw) {
       const error = smtpErrorOf(raw)
       // The envelope is answered before the body goes; a message refused with a code was not taken either.

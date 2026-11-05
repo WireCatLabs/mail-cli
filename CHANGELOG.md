@@ -26,6 +26,9 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   had `<ref>` or `<id>`; the provider list is on the "Prepare the mailbox" page only, and the overview links the
   search guide instead of repeating it. The usage guide no longer speaks of mail 0.1, and the Microsoft app page no
   longer describes how the maintainers release a client id. No behaviour changes.
+- **Files `mail` reads back are checked field by field instead of trusted.** A rules file whose condition has the
+  wrong type is refused with the rule's number; a damaged export journal header, sign-in record, RDAP answer or
+  domain-age cache is treated as missing instead of breaking the command.
 
 ## 0.16.3 — 05.11.2026
 

@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
 import type { MailCredential, MailEndpoint, RunBounds } from "./mail/backend.js"
 import { imapBackend } from "./mail/imap/index.js"
+import { rulesFileOf } from "./mail/rules/file.js"
 import { importFilters } from "./mail/rules/filters.js"
 import { actionsOf, filterMatch } from "./mail/rules/query.js"
 import { run } from "./program.js"
@@ -303,5 +304,19 @@ describe("--filter, --do and Gmail filters", () => {
       "it uses list:, which this import does not map",
       "it excludes words, which mail rules cannot do",
     ])
+  })
+
+  it("reads a saved rules file only when each condition has its type", () => {
+    const file = (match: unknown) => JSON.stringify({ rules: [{ match, action: "skip" }] })
+    expect(rulesFileOf(file({ domain: "shop.example" }), "rules.json", "rules export")).toMatchObject([
+      { match: { domain: "shop.example" }, action: "skip" },
+    ])
+    expect(() => rulesFileOf(file({ older_than_days: "old" }), "rules.json", "rules export")).toThrow(
+      /rule 1 has a condition of the wrong type/,
+    )
+    expect(() => rulesFileOf(file({ colour: "red" }), "rules.json", "rules export")).toThrow(
+      /conditions mail does not know: colour/,
+    )
+    expect(() => rulesFileOf(JSON.stringify(["no"]), "rules.json", "rules export")).toThrow(/no rules list/)
   })
 })

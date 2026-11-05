@@ -3,6 +3,7 @@ import { join } from "node:path"
 import { resolvePaths, writeSecurely } from "@wirecat/cli-base"
 import { providerRequest } from "@wirecat/cli-core/cli"
 import type { DomainAge } from "@wirecat/cli-core/mail"
+import * as v from "valibot"
 import { IDENTITY } from "../identity.js"
 
 /** IANA's list of which registry answers RDAP for which top-level domain (RFC 9224). */
@@ -12,10 +13,30 @@ const REQUEST_GAP_MS = 1000
 const TIMEOUT_MS = 10_000
 const USER_AGENT = `mail-cli/${IDENTITY.version} (+https://github.com/WireCatLabs/mail-cli)`
 
-interface AgeCache {
-  bootstrap?: { fetchedAt: string; services: [string[], string[]][] }
-  domains: Record<string, DomainAge>
-}
+const SERVICES = v.array(v.tuple([v.array(v.string()), v.array(v.string())]))
+
+const AGE_CACHE = v.object({
+  bootstrap: v.optional(v.object({ fetchedAt: v.string(), services: SERVICES })),
+  domains: v.optional(
+    v.record(
+      v.string(),
+      v.object({ created: v.optional(v.string()), unsupported: v.optional(v.boolean()), checkedAt: v.string() }),
+    ),
+    {},
+  ),
+}) satisfies v.GenericSchema<unknown, { domains: Record<string, DomainAge> }>
+
+type AgeCache = v.InferOutput<typeof AGE_CACHE>
+
+const REGISTRY_ANSWER = v.object({
+  events: v.optional(
+    v.array(v.object({ eventAction: v.optional(v.unknown()), eventDate: v.optional(v.unknown()) })),
+    [],
+  ),
+})
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value)
 
 const fileOf = (env: NodeJS.ProcessEnv) =>
   join(resolvePaths({ appName: IDENTITY.appName, prefix: IDENTITY.envPrefix, env }).state, "domain-ages.json")
@@ -23,7 +44,8 @@ const fileOf = (env: NodeJS.ProcessEnv) =>
 // A registration date never changes, so the cache is kept on this computer for good and asked again never.
 const loadCache = (env: NodeJS.ProcessEnv): AgeCache => {
   try {
-    return { domains: {}, ...(JSON.parse(readFileSync(fileOf(env), "utf8")) as Partial<AgeCache>) }
+    const parsed = v.safeParse(AGE_CACHE, JSON.parse(readFileSync(fileOf(env), "utf8")))
+    return parsed.success ? parsed.output : { domains: {} }
   } catch {
     return { domains: {} }
   }
@@ -71,7 +93,8 @@ export const rdapErrorName = async (response: Response): Promise<string | undefi
       if (size > ERROR_BODY_BYTES) return undefined
       chunks.push(value)
     }
-    const { errorCode } = JSON.parse(Buffer.concat(chunks).toString("utf8")) as { errorCode?: unknown }
+    const parsed: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"))
+    const errorCode = isRecord(parsed) ? parsed.errorCode : undefined
     return Number.isInteger(errorCode) ? `rdap.${errorCode}` : undefined
   } catch {
     return undefined
@@ -110,10 +133,13 @@ const getJson = async (
   return { status: response.status, body: response.ok ? await response.json() : undefined }
 }
 
-const registrationOf = (body: unknown): string | undefined =>
-  ((body as { events?: { eventAction?: string; eventDate?: string }[] })?.events ?? []).find(
-    (event) => event.eventAction === "registration",
-  )?.eventDate
+const registrationOf = (body: unknown): string | undefined => {
+  const parsed = v.safeParse(REGISTRY_ANSWER, body)
+  const date = parsed.success
+    ? parsed.output.events.find((event) => event.eventAction === "registration")?.eventDate
+    : undefined
+  return typeof date === "string" ? date : undefined
+}
 
 export interface LookupResult {
   looked: number
@@ -140,9 +166,9 @@ export const lookUpAges = async (
   const fetchedAt = cache.bootstrap?.fetchedAt
   if (fetchedAt === undefined || deps.now().getTime() - Date.parse(fetchedAt) > BOOTSTRAP_MAX_AGE_MS) {
     const { body } = await getJson(deps, BOOTSTRAP_URL, "rdap.bootstrap")
-    const services = (body as { services?: [string[], string[]][] })?.services
-    if (!Array.isArray(services)) throw new Error("IANA's RDAP list did not answer")
-    cache.bootstrap = { fetchedAt: deps.now().toISOString(), services }
+    const services = v.safeParse(v.object({ services: SERVICES }), body)
+    if (!services.success) throw new Error("IANA's RDAP list did not answer")
+    cache.bootstrap = { fetchedAt: deps.now().toISOString(), services: services.output.services }
   }
   const servers = new Map<string, string>()
   for (const [tlds, urls] of cache.bootstrap?.services ?? []) {

@@ -273,10 +273,30 @@ const statesOf = async (mailbox: Mailbox, { folder, validity, items }: Located) 
   )
 
 const groupBy = <T>(items: T[], keyOf: (item: T) => string) => {
-  const groups = new Map<string, T[]>()
-  for (const item of items) groups.set(keyOf(item), [...(groups.get(keyOf(item)) ?? []), item])
+  const groups = new Map<string, [T, ...T[]]>()
+  for (const item of items) {
+    const group = groups.get(keyOf(item))
+    if (group) group.push(item)
+    else groups.set(keyOf(item), [item])
+  }
   return groups
 }
+
+/** The values of `keys` that `map` holds, in order; a key it lacks is left out. */
+const valuesOf = <K, V>(map: ReadonlyMap<K, V>, keys: readonly K[]): V[] =>
+  keys.flatMap((key) => {
+    const value = map.get(key)
+    return value === undefined ? [] : [value]
+  })
+
+/** A server's answer keyed by UID, keyed by message id instead; a UID with no id is left out. */
+const byId = <V>(uids: ReadonlyMap<number, V>, idOf: ReadonlyMap<number, string>): Map<string, V> =>
+  new Map(
+    [...uids].flatMap(([uid, value]) => {
+      const id = idOf.get(uid)
+      return id === undefined ? [] : [[id, value] as const]
+    }),
+  )
 
 const flagChanges = (change: { add: string[]; remove: string[] }) => ({
   ...(change.add.includes("\\Seen") ? { read: true } : change.remove.includes("\\Seen") ? { read: false } : {}),
@@ -315,7 +335,7 @@ export const changeFlags = async (
         : []
     })
     for (const group of groupBy(items, ({ add, remove }) => JSON.stringify([add, remove])).values()) {
-      const { add, remove } = group[0] as (typeof items)[number]
+      const [{ add, remove }] = group
       const line = {
         op: "flag" as const,
         folder: place.folder,
@@ -392,7 +412,7 @@ const moveFolder = async (changer: Changer, place: Located, to: string, op: "mov
     { op, folder: place.folder, validity: place.validity, to, items },
     () => (op === "move" ? mailbox.writes.move : mailbox.writes.copy)(place.folder, place.validity, uids, to),
     (done) => ({
-      uids: new Map([...done.uids].flatMap(([from, uid]) => (idOf.has(from) ? [[idOf.get(from) as string, uid]] : []))),
+      uids: byId(done.uids, idOf),
       ...(done.validity ? { validity: done.validity } : {}),
     }),
   )
@@ -410,7 +430,7 @@ const moveFolder = async (changer: Changer, place: Located, to: string, op: "mov
       mailbox.accountId,
       to,
       moved.validity,
-      new Map([...moved.uids].flatMap(([from, uid]) => (idOf.has(from) ? [[idOf.get(from) as string, [uid]]] : []))),
+      new Map([...byId(moved.uids, idOf)].map(([id, uid]) => [id, [uid]])),
     )
   return ids
 }
@@ -475,9 +495,7 @@ export const trashMessages = async (
           trash,
         ),
       (done) => ({
-        uids: new Map(
-          [...done.uids].flatMap(([from, uid]) => (idOf.has(from) ? [[idOf.get(from) as string, uid]] : [])),
-        ),
+        uids: byId(done.uids, idOf),
         ...(done.validity ? { validity: done.validity } : {}),
       }),
     )
@@ -528,12 +546,10 @@ const whereNow = async (
   const same = given.validity === undefined || given.validity === look.validity
   for (const item of items) {
     const uid = look.uids.get(item.id) ?? (item.mid ? look.uids.get(item.mid) : undefined)
+    const left = same ? given.uids?.[item.id] : undefined
     if (uid !== undefined) found.set(item.id, uid)
-    else if (same && given.uids?.[item.id] !== undefined) {
-      const left = given.uids[item.id] as number
-      const present = await mailbox.writes.state(folder, look.validity, [left])
-      if (present.has(left)) found.set(item.id, left)
-    }
+    else if (left !== undefined && (await mailbox.writes.state(folder, look.validity, [left])).has(left))
+      found.set(item.id, left)
   }
   return { validity: look.validity, found }
 }
@@ -608,9 +624,12 @@ export const restoreRun = async (
         plan.missing += items.length - here.length
         if (!apply) continue
         for (const group of groupBy(here, (item) => JSON.stringify(inverse(step.change, item))).values()) {
-          const back = inverse(step.change, group[0] as ChangedItem)
+          const back = inverse(step.change, group[0])
           if (back.add.length === 0 && back.remove.length === 0) continue
-          const uids = group.map(({ id }) => found.get(id) as number)
+          const uids = valuesOf(
+            found,
+            group.map(({ id }) => id),
+          )
           const ids = group.map(({ id }) => id)
           await changer.step(
             {
@@ -618,7 +637,7 @@ export const restoreRun = async (
               folder,
               validity,
               change: back,
-              items: group.map((item) => ({ ...item, uid: found.get(item.id) as number })),
+              items: group.flatMap((item) => valuesOf(found, [item.id]).map((uid) => ({ ...item, uid }))),
             },
             () => (step.op === "flag" ? mailbox.writes.flag : mailbox.writes.label)(folder, validity, uids, back),
           )
@@ -644,7 +663,10 @@ export const restoreRun = async (
       plan.missing += items.length - here.length
       if (!apply || here.length === 0) continue
       if (step.op === "copy") {
-        const uids = here.map(({ id }) => found.get(id) as number)
+        const uids = valuesOf(
+          found,
+          here.map(({ id }) => id),
+        )
         await changer.step({ op: "copy", folder: to, validity, items: here }, () =>
           mailbox.writes.expunge(to, validity, uids),
         )
@@ -662,7 +684,10 @@ export const restoreRun = async (
         ? groupBy(here, (item) => ((item.labels ?? []).includes("\\Inbox") ? "INBOX" : folder))
         : new Map([[folder, here]])
       for (const [back, group] of groups) {
-        const uids = group.map(({ id }) => found.get(id) as number)
+        const uids = valuesOf(
+          found,
+          group.map(({ id }) => id),
+        )
         await changer.step({ op: "move", folder: to, validity, to: back, items: group }, () =>
           mailbox.writes.move(to, validity, uids, back),
         )
@@ -684,13 +709,16 @@ export const restoreRun = async (
           for (const group of groupBy(labelled, (item) =>
             JSON.stringify((item.labels ?? []).filter((l) => l !== "\\Inbox").sort()),
           ).values()) {
-            const labels = ((group[0] as ChangedItem).labels ?? []).filter((label) => label !== "\\Inbox")
+            const labels = (group[0].labels ?? []).filter((label) => label !== "\\Inbox")
             const placed = group.filter(({ id }) => inAll.has(id))
             if (placed.length === 0) continue
             await mailbox.writes.label(
               all,
               allValidity,
-              placed.map(({ id }) => inAll.get(id) as number),
+              valuesOf(
+                inAll,
+                placed.map(({ id }) => id),
+              ),
               { add: labels.filter((label) => !SYSTEM.has(label) || label === "\\Starred" || label === "\\Important") },
             )
           }

@@ -6,7 +6,6 @@ import {
   factsOf,
   type MailAccount,
   type MailRule,
-  type MailRuleMatch,
   ruleTagger,
   sameMatch,
   settleRuleTags,
@@ -94,7 +93,6 @@ export const applyRules = async ({
       .filter(({ deleted, mailboxes }) => !deleted && !mailboxes.some(({ kind }) => kind === ENVELOPE))
       .map(({ externalId }) => externalId),
   )
-  const effectOf = (match: MailRuleMatch) => effects.find(({ rule }) => sameMatch(rule.match, match)) as RuleEffect
   const all = new Set((await store.mail.emailRefs({ accountId: stored.id })).map(({ externalId }) => externalId))
   const factsFor = factsOf([...listed.values()], rules)
   const tagger = ruleTagger(store, key)
@@ -120,9 +118,11 @@ export const applyRules = async ({
       textBytes(email.bodyText) +
       textBytes(email.bodyHtml) +
       email.attachments.reduce((sum, { text }) => sum + textBytes(text), 0)
-    const effect = effectOf(rule.match)
-    effect.emails++
-    effect.bytes += bytes
+    const effect = effects.find((one) => sameMatch(one.rule.match, rule.match))
+    if (effect) {
+      effect.emails++
+      effect.bytes += bytes
+    }
     result.envelopes++
     result.bytes += bytes
     if (!apply) continue

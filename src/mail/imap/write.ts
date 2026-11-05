@@ -29,7 +29,8 @@ export const imapWrites = (pool: Connections): MailWrites => {
         const found = async (queries: SearchObject[], keyOf: (message: FetchMessageObject) => string | undefined) => {
           for (let at = 0; at < queries.length; at += SEARCH_IDS) {
             const part = queries.slice(at, at + SEARCH_IDS)
-            const hits = await searchUids(open, part.length === 1 ? (part[0] as SearchObject) : { or: part }, folder)
+            const [only, ...more] = part
+            const hits = await searchUids(open, only && more.length === 0 ? only : { or: part }, folder)
             if (hits.length === 0) continue
             for (const message of await open.fetchAll(
               hits,

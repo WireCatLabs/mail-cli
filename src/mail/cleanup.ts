@@ -72,7 +72,8 @@ export const backupOf = (env: NodeJS.ProcessEnv, now: number): Cleanup["backup"]
   const marker = join(dirname(storePath(env)), "backups", "last.json")
   let at: string | null = null
   try {
-    const value = (JSON.parse(readFileSync(marker, "utf8")) as { at?: unknown }).at
+    const parsed: unknown = JSON.parse(readFileSync(marker, "utf8"))
+    const value = typeof parsed === "object" && parsed !== null && "at" in parsed ? parsed.at : undefined
     if (typeof value === "string" && !Number.isNaN(Date.parse(value))) at = value
   } catch {}
   return { at, fresh: at !== null && now - Date.parse(at) < BACKUP_DAYS * DAY, marker }
@@ -139,7 +140,9 @@ export const cleanupOf = async (
       kept[reason] = (kept[reason] ?? 0) + 1
       continue
     }
-    const name = describeMatch((rule as MailRule).match)
+    // keptBecause answers "no_rule" first, so a rule is always here.
+    if (rule === undefined) continue
+    const name = describeMatch(rule.match)
     const total = totals.get(name) ?? { rule: name, candidates: 0, bytes: 0 }
     total.candidates++
     total.bytes += item.size ?? 0

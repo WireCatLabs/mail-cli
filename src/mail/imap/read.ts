@@ -134,10 +134,11 @@ export const imapReads = (pool: Connections, tuning: ImapTuning = {}): Reads => 
       const parts = await listing(batches)
       const messages: Listed[] = []
       for (const [index, part] of parts.entries()) {
+        const batch = batches[index] ?? []
         if (!(part instanceof Error)) for (const message of part) messages.push(message)
         // Yandex refuses even the headers of a message it can never read, and with it the whole FETCH.
-        else if ((batches[index] as string[]).length > 1)
-          for (const single of await listing((batches[index] as string[]).map((uid) => [uid])))
+        else if (batch.length > 1)
+          for (const single of await listing(batch.map((uid) => [uid])))
             if (!(single instanceof Error)) for (const message of single) messages.push(message)
       }
       return messages
@@ -211,8 +212,8 @@ export const imapReads = (pool: Connections, tuning: ImapTuning = {}): Reads => 
             answer = new Map()
             for (const [at, item] of batch.entries()) {
               const single = singles[at]
-              if (single instanceof Map && single.has(item.uid))
-                answer.set(item.uid, single.get(item.uid) as Uint8Array)
+              const raw = single instanceof Map ? single.get(item.uid) : undefined
+              if (raw !== undefined) answer.set(item.uid, raw)
               else if (single instanceof Error) read.set(item, single)
             }
           }
@@ -228,7 +229,11 @@ export const imapReads = (pool: Connections, tuning: ImapTuning = {}): Reads => 
           }
         }
       }
-      return items.map((item) => read.get(item) as Uint8Array | Error)
+      return items.map(
+        (item) =>
+          read.get(item) ??
+          new CliError("not_found", `email ${item.uid} was not returned`, { reason: "mail.not-returned" }),
+      )
     },
   }
 }

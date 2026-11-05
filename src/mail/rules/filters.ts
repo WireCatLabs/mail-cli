@@ -9,6 +9,14 @@ export interface FiltersProposal {
 
 type Raw = Record<string, unknown>
 
+const isRaw = (value: unknown): value is Raw => value !== null && typeof value === "object" && !Array.isArray(value)
+
+/** The object under `key`, else the filter itself, as the flat export writes it. */
+const partOf = (raw: Raw, key: string): Raw => {
+  const part = raw[key]
+  return isRaw(part) ? part : raw
+}
+
 const text = (value: unknown): string | undefined =>
   typeof value === "string" && value.trim() !== "" ? value.trim() : undefined
 
@@ -89,7 +97,7 @@ const matchesOf = (criteria: Raw): MailRuleMatch[] | string => {
   if (query.unknown.length) return `it uses ${query.unknown.join(", ")}, which this import does not map`
   const badTo = query.to.find((value) => !isAddress(value))
   if (badTo !== undefined) return "it names a recipient that is not one address"
-  const subject = [...query.words, ...(text(criteria.subject) ? [text(criteria.subject) as string] : [])].join(" ")
+  const subject = [...query.words, text(criteria.subject) ?? ""].filter(Boolean).join(" ")
   const shared: MailRuleMatch = {
     ...(subject === "" ? {} : { subject }),
     ...(query.attachment || yes(criteria.hasAttachment) ? { has_attachments: true } : {}),
@@ -107,8 +115,8 @@ const matchesOf = (criteria: Raw): MailRuleMatch[] | string => {
  * whole email, so such a rule says so in its reason.
  */
 const rulesOf = (raw: Raw, decidedAt: string): MailRule[] | string => {
-  const criteria = (raw.criteria as Raw | undefined) ?? raw
-  const action = (raw.action as Raw | undefined) ?? raw
+  const criteria = partOf(raw, "criteria")
+  const action = partOf(raw, "action")
   const matches = matchesOf(criteria)
   if (typeof matches === "string") return matches
   // The API writes system labels as INBOX, Takeout as Inbox.
@@ -124,7 +132,7 @@ const rulesOf = (raw: Raw, decidedAt: string): MailRule[] | string => {
     yes(action.shouldTrash)
   const tags = [
     ...addedAsWritten.filter((id) => !SYSTEM.has(id.toUpperCase())),
-    ...(text(action.label) === undefined ? [] : [text(action.label) as string]),
+    ...[text(action.label) ?? ""].filter(Boolean),
   ]
   if (!hides && tags.length === 0) return "it does nothing a mail rule can mirror"
   return matches.map((match) => ({
@@ -140,7 +148,7 @@ const rulesOf = (raw: Raw, decidedAt: string): MailRule[] | string => {
 }
 
 const nameOf = (raw: Raw, index: number) => {
-  const criteria = (raw.criteria as Raw | undefined) ?? raw
+  const criteria = partOf(raw, "criteria")
   return text(criteria.query) ?? text(criteria.from) ?? text(criteria.subject) ?? text(raw.id) ?? `filter ${index + 1}`
 }
 
@@ -152,14 +160,14 @@ export const importFilters = (json: string, path: string, now = new Date()): Fil
   } catch {
     throw new CliError("validation_error", `${path}: not JSON`, { reason: "mail.filters-file-invalid" })
   }
-  const filters = Array.isArray(parsed) ? parsed : ((parsed as Raw | null)?.filters ?? (parsed as Raw | null)?.filter)
+  const filters = Array.isArray(parsed) ? parsed : isRaw(parsed) ? (parsed.filters ?? parsed.filter) : undefined
   if (!Array.isArray(filters))
     throw new CliError("validation_error", `${path}: no list of filters`, { reason: "mail.filters-file-invalid" })
   const proposal: FiltersProposal = { rules: [], skipped: [] }
   for (const [index, raw] of filters.entries()) {
-    if (raw === null || typeof raw !== "object") continue
-    const outcome = rulesOf(raw as Raw, now.toISOString())
-    if (typeof outcome === "string") proposal.skipped.push({ filter: nameOf(raw as Raw, index), why: outcome })
+    if (!isRaw(raw)) continue
+    const outcome = rulesOf(raw, now.toISOString())
+    if (typeof outcome === "string") proposal.skipped.push({ filter: nameOf(raw, index), why: outcome })
     else for (const rule of outcome) proposal.rules.push(rule)
   }
   return proposal
