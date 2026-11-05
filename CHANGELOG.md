@@ -16,6 +16,10 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Added
 
+- **`stats messages show` counts the profile's stored mail per day, week or sender**, received and sent, over the
+  same query as `search messages`: `{ by, received, sent, rows: [{ key, name, received, sent }] }`, a day or week key
+  `YYYY-MM-DD` in `--timezone` (a week by its Monday), a sender keyed by address with `sent` 0. Counts only, no search
+  recorded. For WireCat Desktop's mail per day (cli-core's `mailStats`, 0.564.0).
 - **`account inspect` groups the mailbox's mail by sender and list before you sync it**: emails, MB, unread and bulk
   shares, years, whether you replied, a `skip` suggestion and a spam or scam score, plus the rule kinds the mail would
   match. Headers only, nothing stored. `--domain-age` asks each sender domain's registry (RDAP) when it was

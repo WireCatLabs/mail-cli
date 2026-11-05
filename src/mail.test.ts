@@ -992,6 +992,16 @@ describe("search, show and threads", () => {
     expect(shown.item.attachments).toMatchObject([{ name: "bill.txt", text: expect.stringContaining("85,93") }])
   })
 
+  it("counts the profile's stored mail per day and per sender, and leaves other mailboxes out", async () => {
+    const { json } = await synced()
+    const days = await json("stats", "messages", "show", "--by", "day", "--timezone", "Europe/Madrid")
+    expect(days.item).toMatchObject({ by: "day", received: 3, sent: 0 })
+    expect(days.item.rows.reduce((sum: number, row: { received: number }) => sum + row.received, 0)).toBe(3)
+    expect(days.item.rows.every((row: { key: string }) => /^\d{4}-\d{2}-\d{2}$/.test(row.key))).toBe(true)
+    const senders = await json("stats", "messages", "show", "--by", "sender", "--limit", "5", "--", "has:attachment")
+    expect(senders.item).toMatchObject({ by: "sender", received: 1, rows: [{ received: 1, sent: 0 }] })
+  })
+
   it("reads attachments with --attachments when the profile turns them off", async () => {
     const { json, mail } = await synced(["--attachments"], [["read_attachments", "false"]])
     const [ref] = refs(await json("search", "messages", "has:attachment"))

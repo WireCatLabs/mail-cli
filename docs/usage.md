@@ -183,6 +183,15 @@ mail ya messages export 'date>30d' --limit 500 --output ~/mail-backup --resume
 mail ya stats messages top --by list --limit 10                          # which lists send the most
 ```
 
+`stats messages show` counts the stored mail a query matches, received and sent, per calendar day, week (keyed by its
+Monday) or sender, in `--timezone`. Counts only, and it records no search:
+
+```sh
+mail ya stats messages show --by day --timezone Europe/Madrid -- 'date>=30d'
+# {"item":{"by":"day","received":14,"sent":3,"rows":[{"key":"2026-11-01","name":null,"received":4,"sent":1}]}}
+mail ya stats messages show --by sender --limit 10                       # by sender counts received mail only
+```
+
 - **What is written.** Each message as the server holds it, byte for byte, in every folder it is filed in (Gmail files
   a message under All Mail and INBOX both: pass `--folder` to export one). mbox files are mboxrd: a body line that
   starts with the word From gets a `>` before it. Maildir file names carry the read (`S`) and starred (`F`) state.
