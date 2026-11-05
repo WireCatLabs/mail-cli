@@ -23,6 +23,8 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   The next step's `args` follow: `max_messages` and `output_dir`. The old flags are gone. `--limit` stays where it
   counts what the answer shows: `account inspect`, `stats`, `drafts list`, `tags list` and the `messages` changes'
   `--filter` selection.
+- **The package no longer ships `dist/index.js`.** It re-exported `run`, `createProgram`, `definition` and `IDENTITY`,
+  but `package.json` never named it, and no WireCat tool imported it. `mail` is a command, not a library.
 
 ### Fixed
 
