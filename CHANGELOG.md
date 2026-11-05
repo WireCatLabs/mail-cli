@@ -24,10 +24,14 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 - **`doctor`'s `oauth` rows say which app each profile uses as `oauth_client: { client, source }`**, in place of
   `client`: `source` is `flag`, `env`, `config` or `constants` (WireCat's). A profile's row reports the app it
   signed in with when its sign-in recorded one. `session start` answers `source` beside `client`.
-- **mail runs on cli-base 0.77.1 and cli-core 0.566.0.**
+- **mail runs on cli-base 0.77.1 and cli-core 0.567.0.**
 
 ### Added
 
+- **`MAIL_READ_ONLY` lets `rules add` through, narrowed**, so memo's scheduled mail triage can add a rule: only by
+  `--sender`, `--domain` or `--list-id`, only where no rule with those conditions exists, recorded with
+  `source: agent`. `--filter`, `--kind`, a replaced rule, `rules remove|import|apply` and every change on the mail
+  server stay refused. Needs cli-core 0.567.0, which this release takes.
 - **`stats messages show` counts the profile's stored mail per day, week or sender**, received and sent, over the
   same query as `search messages`: `{ by, received, sent, rows: [{ key, name, received, sent }] }`, a day or week key
   `YYYY-MM-DD` in `--timezone` (a week by its Monday), a sender keyed by address with `sent` 0. Counts only, no search
