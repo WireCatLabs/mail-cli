@@ -6,6 +6,11 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Added
 
+- **Every write answers with its own `operation_id`, and the change log keeps it.** The `messages` changes, `messages
+  delete` and `messages restore` list `writes`: one entry per write to the server, with its `operation_id`, what it did
+  (`op`), the folder, `to` for a move and how many messages. A restore's write also names the write it undoes
+  (`undoes`). `folders create|rename|delete` and `drafts create|update|delete` give the `operation_id` of their write.
+  The same ids are in the send journal.
 - **`account inspect` and `messages import` say which time zone they read `--since-time` in.** The answer gives
   `meta.timezone` and the window in UTC (`meta.window.since`), as `sync` does; `messages import` also gives
   `timezone` beside `since`, and `account inspect` adds a line to its table.

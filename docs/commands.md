@@ -195,7 +195,7 @@ mail folders create <folder>
 |---|---|---|
 | `folder` | required | the folder's path; the server's separator (usually / or .) makes a subfolder. |
 
-**Returns:** mail folder change — action, folder, to, messages, applied, hint; every field: mail commands info folders create
+**Returns:** mail folder change — action, folder, to, messages, applied, operation_id, hint; every field: mail commands info folders create
 
 **Example:** `mail personal folders create Receipts`, `mail personal folders create Work/2026`
 
@@ -214,7 +214,7 @@ mail folders rename <folder> <name>
 | `folder` | required | the folder, by path or name. |
 | `name` | required | its new path. |
 
-**Returns:** mail folder change — action, folder, to, messages, applied, hint; every field: mail commands info folders rename
+**Returns:** mail folder change — action, folder, to, messages, applied, operation_id, hint; every field: mail commands info folders rename
 
 **Example:** `mail personal folders rename Receipts Invoices`
 
@@ -238,7 +238,7 @@ mail folders delete <folder> [options]
 | `--dry-run` | only preview, even with --yes. |
 | `--allow-dangerous` | delete a folder that still holds mail: that mail is gone for good, no restore. |
 
-**Returns:** mail folder change — action, folder, to, messages, applied, hint; every field: mail commands info folders delete
+**Returns:** mail folder change — action, folder, to, messages, applied, operation_id, hint; every field: mail commands info folders delete
 
 **Example:** `mail personal folders delete Old --yes`
 
@@ -574,7 +574,7 @@ mail messages mark-read [message] [options]
 | `--yes` | make the change; a deletion or a change of many is only a preview without it. |
 | `--dry-run` | only preview what would change, even with --yes. |
 
-**Returns:** mail change — action, applied, run_id, selected, located, changed, missing, already_deleted, and 6 more; every field: mail commands info messages mark-read
+**Returns:** mail change — action, applied, run_id, selected, located, changed, missing, already_deleted, and 7 more; every field: mail commands info messages mark-read
 
 **Example:** `mail personal messages mark-read msg:email/me%40example.com/t1/m1`, `mail personal messages mark-read --filter 'from:shop@example.com is:unread' --yes`
 
@@ -599,7 +599,7 @@ mail messages mark-unread [message] [options]
 | `--yes` | make the change; a deletion or a change of many is only a preview without it. |
 | `--dry-run` | only preview what would change, even with --yes. |
 
-**Returns:** mail change — action, applied, run_id, selected, located, changed, missing, already_deleted, and 6 more; every field: mail commands info messages mark-unread
+**Returns:** mail change — action, applied, run_id, selected, located, changed, missing, already_deleted, and 7 more; every field: mail commands info messages mark-unread
 
 **Example:** `mail personal messages mark-unread msg:email/me%40example.com/t1/m1`, `mail personal messages mark-unread --filter 'from:shop@example.com is:unread' --yes`
 
@@ -624,7 +624,7 @@ mail messages star [message] [options]
 | `--yes` | make the change; a deletion or a change of many is only a preview without it. |
 | `--dry-run` | only preview what would change, even with --yes. |
 
-**Returns:** mail change — action, applied, run_id, selected, located, changed, missing, already_deleted, and 6 more; every field: mail commands info messages star
+**Returns:** mail change — action, applied, run_id, selected, located, changed, missing, already_deleted, and 7 more; every field: mail commands info messages star
 
 **Example:** `mail personal messages star msg:email/me%40example.com/t1/m1`, `mail personal messages star --filter 'from:shop@example.com is:unread' --yes`
 
@@ -649,7 +649,7 @@ mail messages unstar [message] [options]
 | `--yes` | make the change; a deletion or a change of many is only a preview without it. |
 | `--dry-run` | only preview what would change, even with --yes. |
 
-**Returns:** mail change — action, applied, run_id, selected, located, changed, missing, already_deleted, and 6 more; every field: mail commands info messages unstar
+**Returns:** mail change — action, applied, run_id, selected, located, changed, missing, already_deleted, and 7 more; every field: mail commands info messages unstar
 
 **Example:** `mail personal messages unstar msg:email/me%40example.com/t1/m1`, `mail personal messages unstar --filter 'from:shop@example.com is:unread' --yes`
 
@@ -677,7 +677,7 @@ mail messages update [message] [options]
 | `--unflag <flag>` | a flag or keyword to take away; repeat it for more. Default: ``. |
 | `--replace` | --flag is the whole set: every other flag and keyword is taken away. |
 
-**Returns:** mail change — action, applied, run_id, selected, located, changed, missing, already_deleted, and 6 more; every field: mail commands info messages update
+**Returns:** mail change — action, applied, run_id, selected, located, changed, missing, already_deleted, and 7 more; every field: mail commands info messages update
 
 **Example:** `mail personal messages update msg:email/me%40example.com/t1/m1 --flag answered --unflag '$Junk'`, `mail personal messages update msg:email/me%40example.com/t1/m1 --flag read --flag flagged --replace`
 
@@ -703,7 +703,7 @@ mail messages move [message] [options]
 | `--dry-run` | only preview what would change, even with --yes. |
 | `--folder <folder>` | the folder: its path, its name, or a role (archive, junk, inbox). |
 
-**Returns:** mail change — action, applied, run_id, selected, located, changed, missing, already_deleted, and 6 more; every field: mail commands info messages move
+**Returns:** mail change — action, applied, run_id, selected, located, changed, missing, already_deleted, and 7 more; every field: mail commands info messages move
 
 **Example:** `mail personal messages move msg:email/me%40example.com/t1/m1 --folder Archive`, `mail personal messages move --filter 'list:github.com date<2026-01-01' --folder Lists --yes`
 
@@ -729,7 +729,7 @@ mail messages copy [message] [options]
 | `--dry-run` | only preview what would change, even with --yes. |
 | `--folder <folder>` | the folder: its path, its name, or a role (archive, junk, inbox). |
 
-**Returns:** mail change — action, applied, run_id, selected, located, changed, missing, already_deleted, and 6 more; every field: mail commands info messages copy
+**Returns:** mail change — action, applied, run_id, selected, located, changed, missing, already_deleted, and 7 more; every field: mail commands info messages copy
 
 **Example:** `mail personal messages copy msg:email/me%40example.com/t1/m1 --folder Archive`, `mail personal messages copy --filter 'list:github.com date<2026-01-01' --folder Lists --yes`
 
@@ -756,7 +756,7 @@ mail messages delete [message] [options]
 | `--rules` | the envelope mail the owner's rules let go, each decided again (`memo mail delete` did this before). |
 | `--since-time <time>` | with --rules, only mail received from this time; older mail stays. |
 
-**Returns:** mail change — action, applied, run_id, selected, located, changed, missing, already_deleted, and 6 more; every field: mail commands info messages delete
+**Returns:** mail change — action, applied, run_id, selected, located, changed, missing, already_deleted, and 7 more; every field: mail commands info messages delete
 
 **Example:** `mail personal messages delete msg:email/me%40example.com/t1/m1 --yes`, `mail personal messages delete --filter 'from:shop@example.com date<2025-01-01'`, `mail personal messages delete --rules --yes`
 
@@ -776,7 +776,7 @@ mail messages restore [options]
 | `--yes` | make the change; without it, only say what would come back. |
 | `--dry-run` | only preview, even with --yes. |
 
-**Returns:** mail restore — run_id, restored_run_id, applied, command, logged, restorable, missing, restored, and 2 more; every field: mail commands info messages restore
+**Returns:** mail restore — run_id, restored_run_id, applied, command, logged, restorable, missing, restored, and 3 more; every field: mail commands info messages restore
 
 **Example:** `mail personal messages restore --run 20261101T101500Z-messages-delete-1a2b3c`, `mail personal messages restore --run 20261101T101500Z-messages-delete-1a2b3c --yes`
 
@@ -1017,7 +1017,7 @@ mail drafts create [text] [options]
 | `--reply-to <message>` | answer this stored message: its sender, its subject with Re:, in its thread. |
 | `--reply-all` | with --reply-to, also everyone it went to, but you. |
 
-**Returns:** mail draft change — action, applied, id, folder, uid, replaced_uid, old_version_in, subject, and 3 more; every field: mail commands info drafts create
+**Returns:** mail draft change — action, applied, id, folder, uid, replaced_uid, old_version_in, subject, and 4 more; every field: mail commands info drafts create
 
 **Example:** `mail personal drafts create --to anna@example.com --subject 'Monday' 'Shall we meet at ten?'`, `mail personal drafts create --reply-to msg:email/me%40example.com/t1/m1 --reply-all 'Thanks, agreed.'`
 
@@ -1044,7 +1044,7 @@ mail drafts update <draft> [text] [options]
 | `--subject <text>` | the subject line. |
 | `--dry-run` | build the draft and show it; store nothing. |
 
-**Returns:** mail draft change — action, applied, id, folder, uid, replaced_uid, old_version_in, subject, and 3 more; every field: mail commands info drafts update
+**Returns:** mail draft change — action, applied, id, folder, uid, replaced_uid, old_version_in, subject, and 4 more; every field: mail commands info drafts update
 
 **Example:** `mail personal drafts update 5b0e1c2a@example.com 'New text, the rest kept'`, `mail personal drafts update 5b0e1c2a@example.com --to anna@example.com --to boris@example.com`
 
@@ -1067,7 +1067,7 @@ mail drafts delete <draft> [options]
 | `--allow-dangerous` | delete it for good, no restore; without it, only a preview. |
 | `--dry-run` | only preview, even with --allow-dangerous. |
 
-**Returns:** mail draft change — action, applied, id, folder, uid, replaced_uid, old_version_in, subject, and 3 more; every field: mail commands info drafts delete
+**Returns:** mail draft change — action, applied, id, folder, uid, replaced_uid, old_version_in, subject, and 4 more; every field: mail commands info drafts delete
 
 **Example:** `mail personal drafts delete 5b0e1c2a@example.com --allow-dangerous`
 

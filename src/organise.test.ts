@@ -323,6 +323,46 @@ describe("what a write refuses before it sends anything", () => {
 })
 
 describe("messages move, copy and delete on an IMAP server", () => {
+  it("gives every write its own operation_id, journals it, and names the write each restore step undoes", async () => {
+    const folders = yandex()
+    const { mail, refOf, env } = await harness({ folders })
+    const invoice = await refOf("invoice")
+    const lunch = await refOf("lunch")
+    expect((await mail(["ya", "messages", "move", invoice, "--folder", "archive", "--json"])).code).toBe(0)
+
+    const deleted = item((await mail(["ya", "messages", "delete", invoice, lunch, "--yes", "--json"])).out)
+    expect(deleted.writes).toHaveLength(2)
+    expect(deleted.writes.map(({ folder }: { folder: string }) => folder).sort()).toEqual(["Archive", "INBOX"])
+    const ids = deleted.writes.map(({ operation_id }: { operation_id: string }) => operation_id)
+    expect(new Set(ids).size).toBe(2)
+    const state = env.MAIL_STATE_DIR as string
+    const written = () =>
+      readdirSync(state, { recursive: true })
+        .map((name) => join(state, String(name)))
+        .filter((path) => statSync(path).isFile())
+        .map((path) => readFileSync(path, "utf8"))
+        .join("\n")
+    for (const id of ids) expect(written().split(id).length - 1, id).toBeGreaterThanOrEqual(2)
+
+    const restored = item((await mail(["ya", "messages", "restore", "--run", deleted.run_id, "--yes", "--json"])).out)
+    expect(restored.writes).toHaveLength(2)
+    expect(restored.writes.map(({ undoes }: { undoes: string }) => undoes).sort()).toEqual([...ids].sort())
+    expect(restored.writes.every(({ operation_id }: { operation_id: string }) => !ids.includes(operation_id))).toBe(
+      true,
+    )
+  })
+
+  it("answers a folder change and a draft with the operation_id of their write", async () => {
+    const { mail } = await harness({
+      folders: [...yandex(), { name: "Drafts", attributes: ["\\Drafts"], messages: [] }],
+    })
+    const created = item((await mail(["ya", "folders", "create", "Receipts", "--json"])).out)
+    expect(created.operation_id).toMatch(/\S/)
+    const draft = await mail(["ya", "drafts", "create", "--to", ADDRESS, "--subject", "Note", "Remember", "--json"])
+    expect(item(draft.out).operation_id).toMatch(/\S/)
+    expect(item(draft.out).operation_id).not.toBe(created.operation_id)
+  })
+
   it("moves an email, keeps the store's folder and UID in step, and moves it back on restore", async () => {
     const folders = yandex()
     const { mail, json, refOf, stored } = await harness({ folders })
