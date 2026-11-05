@@ -4,9 +4,9 @@ Settings live in one file, `config.json`, in the folder `mail doctor` shows. Eac
 and `defaults` apply to every profile. This page lists how to see and change them.
 
 ```sh
-mail ya config show
-mail ya config set limit 50
-mail ya config unset limit
+mail personal config show
+mail personal config set limit 50
+mail personal config unset limit
 ```
 
 A profile made by `session start` also holds the mailbox: `address`, `login` (when it is not the address), `imap_host`,
@@ -56,9 +56,9 @@ nobody can answer the question, mails only you until you set `messages.send.othe
 `allow`); an `mcp serve --permission` cannot open it. Each recipient counts toward `sends_per_hour` (30 by default).
 
 ```sh
-mail ya config set permissions.messages readonly      # no flag, move, deletion or send on this profile
-mail ya config set permissions.messages.bulk deny     # one message at a time only
-mail ya config set permissions.messages.send.others allow   # send to others without the question, agents too
+mail personal config set permissions.messages readonly      # no flag, move, deletion or send on this profile
+mail personal config set permissions.messages.bulk deny     # one message at a time only
+mail personal config set permissions.messages.send.others allow   # send to others without the question, agents too
 ```
 
 Every attempt to change the mailbox or send goes into the profile's send journal with its key, the count and the

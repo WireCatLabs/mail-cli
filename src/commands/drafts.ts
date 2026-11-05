@@ -151,7 +151,10 @@ const listCommand = () =>
   answerEntity(
     annotate(new Command("list"), {
       effects: REMOTE_READ,
-      examples: [`${IDENTITY.command} ya drafts list`, `${IDENTITY.command} ya drafts list --limit 5 --json`],
+      examples: [
+        `${IDENTITY.command} personal drafts list`,
+        `${IDENTITY.command} personal drafts list --limit 5 --json`,
+      ],
     }),
     "mail_draft",
     mailDraft,
@@ -181,8 +184,8 @@ const createCommand = () =>
       annotate(new Command("create"), {
         effects: REMOTE_WRITE,
         examples: [
-          `${IDENTITY.command} ya drafts create --to anna@example.com --subject 'Monday' 'Shall we meet at ten?'`,
-          `${IDENTITY.command} ya drafts create --reply-to ${REF} --reply-all 'Thanks, agreed.'`,
+          `${IDENTITY.command} personal drafts create --to anna@example.com --subject 'Monday' 'Shall we meet at ten?'`,
+          `${IDENTITY.command} personal drafts create --reply-to ${REF} --reply-all 'Thanks, agreed.'`,
         ],
       }),
     ),
@@ -266,8 +269,8 @@ const updateCommand = () =>
       annotate(new Command("update"), {
         effects: REMOTE_WRITE,
         examples: [
-          `${IDENTITY.command} ya drafts update ${ID} 'New text, the rest kept'`,
-          `${IDENTITY.command} ya drafts update ${ID} --to anna@example.com --to boris@example.com`,
+          `${IDENTITY.command} personal drafts update ${ID} 'New text, the rest kept'`,
+          `${IDENTITY.command} personal drafts update ${ID} --to anna@example.com --to boris@example.com`,
         ],
       }),
     ),
@@ -311,7 +314,7 @@ const deleteCommand = () =>
   answerEntity(
     annotate(new Command("delete"), {
       effects: REMOTE_WRITE,
-      examples: [`${IDENTITY.command} ya drafts delete ${ID} --allow-dangerous`],
+      examples: [`${IDENTITY.command} personal drafts delete ${ID} --allow-dangerous`],
     }),
     "mail_draft_change",
     draftChange,

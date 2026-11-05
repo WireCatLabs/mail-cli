@@ -99,7 +99,7 @@ const change = (operation: "add" | "remove") =>
   answerEntity(
     annotate(new Command(operation), {
       effects: LOCAL_WRITE,
-      examples: [`${IDENTITY.command} ya tags ${operation} invoices --message ${REF}`],
+      examples: [`${IDENTITY.command} personal tags ${operation} invoices --message ${REF}`],
     }),
     "mail_tag_change",
     tagChange,
@@ -141,7 +141,7 @@ const listCommand = () =>
     answerEntity(
       annotate(new Command("list"), {
         effects: LOCAL_READ,
-        examples: [`${IDENTITY.command} ya tags list`, `${IDENTITY.command} ya tags list tag:invoices`],
+        examples: [`${IDENTITY.command} personal tags list`, `${IDENTITY.command} personal tags list tag:invoices`],
       }),
       "mail_tag",
       mailTag,

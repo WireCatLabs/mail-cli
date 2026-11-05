@@ -41,7 +41,7 @@ export const statusCommand = (): Command =>
   answerEntity(
     annotate(new Command("status"), {
       effects: LOCAL_READ,
-      examples: [`${IDENTITY.command} ya status`, `${IDENTITY.command} ya status --json`],
+      examples: [`${IDENTITY.command} personal status`, `${IDENTITY.command} personal status --json`],
     }),
     "mail_sync_status",
     mailSyncStatus,

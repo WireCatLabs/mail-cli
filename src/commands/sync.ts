@@ -140,9 +140,9 @@ export const syncCommand = (): Command =>
       cooperative: true,
       partial: true,
       examples: [
-        `${IDENTITY.command} ya sync`,
-        `${IDENTITY.command} ya sync --since-time 2026-10-01 --limit 200`,
-        `${IDENTITY.command} ya sync --folder INBOX`,
+        `${IDENTITY.command} personal sync`,
+        `${IDENTITY.command} personal sync --since-time 2026-10-01 --limit 200`,
+        `${IDENTITY.command} personal sync --folder INBOX`,
       ],
     }),
     "mail_sync",

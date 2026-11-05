@@ -361,8 +361,8 @@ const flagCommand = (
       annotate(new Command(name), {
         effects: REMOTE_WRITE,
         examples: [
-          `${IDENTITY.command} ya messages ${name} ${example}`,
-          `${IDENTITY.command} ya messages ${name} --filter 'from:shop@example.com is:unread' --yes`,
+          `${IDENTITY.command} personal messages ${name} ${example}`,
+          `${IDENTITY.command} personal messages ${name} --filter 'from:shop@example.com is:unread' --yes`,
         ],
       }),
     ),
@@ -387,8 +387,8 @@ const updateCommand = (): Command =>
       annotate(new Command("update"), {
         effects: REMOTE_WRITE,
         examples: [
-          `${IDENTITY.command} ya messages update ${REF} --flag answered --unflag '$Junk'`,
-          `${IDENTITY.command} ya messages update ${REF} --flag read --flag flagged --replace`,
+          `${IDENTITY.command} personal messages update ${REF} --flag answered --unflag '$Junk'`,
+          `${IDENTITY.command} personal messages update ${REF} --flag read --flag flagged --replace`,
         ],
       }),
     ),
@@ -426,8 +426,8 @@ const moveCommand = (op: "move" | "copy"): Command =>
       annotate(new Command(op), {
         effects: REMOTE_WRITE,
         examples: [
-          `${IDENTITY.command} ya messages ${op} ${REF} --folder Archive`,
-          `${IDENTITY.command} ya messages ${op} --filter 'list:github.com date<2026-01-01' --folder Lists --yes`,
+          `${IDENTITY.command} personal messages ${op} ${REF} --folder Archive`,
+          `${IDENTITY.command} personal messages ${op} --filter 'list:github.com date<2026-01-01' --folder Lists --yes`,
         ],
       }),
     ),
@@ -486,9 +486,9 @@ const deleteCommand = (): Command =>
       annotate(new Command("delete"), {
         effects: REMOTE_WRITE,
         examples: [
-          `${IDENTITY.command} ya messages delete ${REF} --yes`,
-          `${IDENTITY.command} ya messages delete --filter 'from:shop@example.com date<2025-01-01'`,
-          `${IDENTITY.command} ya messages delete --rules --yes`,
+          `${IDENTITY.command} personal messages delete ${REF} --yes`,
+          `${IDENTITY.command} personal messages delete --filter 'from:shop@example.com date<2025-01-01'`,
+          `${IDENTITY.command} personal messages delete --rules --yes`,
         ],
       }),
       CLEANUP_LIMIT,
@@ -610,8 +610,8 @@ const restoreCommand = (): Command =>
     annotate(new Command("restore"), {
       effects: REMOTE_WRITE,
       examples: [
-        `${IDENTITY.command} ya messages restore --run 20261101T101500Z-messages-delete-1a2b3c`,
-        `${IDENTITY.command} ya messages restore --run 20261101T101500Z-messages-delete-1a2b3c --yes`,
+        `${IDENTITY.command} personal messages restore --run 20261101T101500Z-messages-delete-1a2b3c`,
+        `${IDENTITY.command} personal messages restore --run 20261101T101500Z-messages-delete-1a2b3c --yes`,
       ],
     }),
     "mail_restore",

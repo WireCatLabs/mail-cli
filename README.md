@@ -20,19 +20,19 @@ change one you can undo. It keeps drafts, and sends, replies and forwards over S
 
 First turn on IMAP in your mailbox and make an app password:
 [the steps for every provider](https://github.com/WireCatLabs/mail-cli/blob/main/docs/providers.md). Then, with a
-profile name of your choice (`ya` here) and your own address in place of the synthetic `me@example.com`:
+profile name of your choice (`personal` here) and your own address in place of the synthetic `me@example.com`:
 
 ```sh
 npm install -g @wirecat/mail-cli
-mail ya session start --address me@example.com   # finds the server, shows the steps, asks for the app password
-mail ya account check                            # logs in and lists what the server supports
-mail ya sync                                     # reads the last 30 days into the shared store
-mail ya status                                   # how far the sync is
-mail ya search messages invoice                  # search the stored mail
+mail personal session start --address me@example.com   # finds the server, shows the steps, asks for the app password.
+mail personal account check                            # logs in and lists what the server supports
+mail personal sync                                     # reads the last 30 days into the shared store
+mail personal status                                   # how far the sync is
+mail personal search messages invoice                  # search the stored mail
 mail skill install                               # optional: instructions for your AI agent
 ```
 
-Now the mail is in the store. `mail ya messages show <ref>` reads a search hit whole. [memo](https://github.com/WireCatLabs/cli-memo)
+Now the mail is in the store. `mail personal messages show <ref>` reads a search hit whole. [memo](https://github.com/WireCatLabs/cli-memo)
 searches it together with your messages and notes: `memo search all "invoice"`.
 
 You need Node.js 22.16 or a later 22.x, or 24 or later. To try it with no install, run
@@ -77,8 +77,8 @@ You need Node.js 22.16 or a later 22.x, or 24 or later. To try it with no instal
 
 ```sh
 mail skill install                         # instructions for Claude Code, Codex, Gemini CLI and OpenClaw
-mail ya mcp add claude-code --allow-writes # or codex: adds this profile's MCP server
-mail ya mcp config                         # the entry for Claude Desktop, Cursor and others
+mail personal mcp add claude-code --allow-writes # or codex: adds this profile's MCP server
+mail personal mcp config                         # the entry for Claude Desktop, Cursor and others
 ```
 
 `mcp add` stops until you pass `--allow-writes`, because the server's `write` tool runs commands that change the
@@ -107,7 +107,7 @@ as data, never as instructions.
 
 ## Sign-in and profiles
 
-A profile is a name you choose for one mailbox and the first word of every command that uses it: `mail ya sync`.
+A profile is a name you choose for one mailbox and the first word of every command that uses it: `mail personal sync`.
 `session start` creates the profile and signs it in, `session status` says where the password comes from (`--check`
 logs in to prove it works), `session end` forgets the password and keeps the mail, and `mail session list` lists the
 profiles.
@@ -126,8 +126,8 @@ permissions decide what a command may do (`allow`, `ask`, `readonly` or `deny`);
 write. See [settings](https://github.com/WireCatLabs/mail-cli/blob/main/docs/configuration.md).
 
 ```sh
-mail ya config set permissions.sync readonly   # this profile cannot sync
-mail ya config show                            # every setting and where it came from
+mail personal config set permissions.sync readonly   # this profile cannot sync
+mail personal config show                            # every setting and where it came from
 ```
 
 ## Limits
@@ -163,8 +163,8 @@ See [security](https://github.com/WireCatLabs/mail-cli/blob/main/docs/security.m
 
 ```sh
 mail doctor              # version, paths, settings and profiles; no keyring, no network
-mail ya session status   # where the app password comes from
-mail ya runs list        # failed and partial runs are kept
+mail personal session status   # where the app password comes from
+mail personal runs list        # failed and partial runs are kept
 ```
 
 See [when something goes wrong](https://github.com/WireCatLabs/mail-cli/blob/main/docs/troubleshooting.md).

@@ -46,7 +46,7 @@ const checkCommand = () =>
   answerEntity(
     annotate(new Command("check"), {
       effects: REMOTE_READ,
-      examples: [`${IDENTITY.command} ya account check`, `${IDENTITY.command} ya account check --json`],
+      examples: [`${IDENTITY.command} personal account check`, `${IDENTITY.command} personal account check --json`],
     }),
     "mail_account_check",
     mailAccountCheck,

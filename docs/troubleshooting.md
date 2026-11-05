@@ -7,7 +7,7 @@ support request.
 | --- | --- |
 | Not sure what is set up | Run `mail doctor`. It reads no keyring and uses no network. |
 | `mail` is not found | Open a new terminal, and check that npm's global folder is on `PATH`. |
-| "name a profile" | Put the profile first, as in `mail ya folders list`, or set `MAIL_PROFILE`. |
+| "name a profile" | Put the profile first, as in `mail personal folders list`, or set `MAIL_PROFILE`. |
 | The settings file does not read | `doctor` lists every problem in the file under `config.issues`. Run the `config unset` each one gives, or fix the file by hand. |
 | `doctor` lists `files.problems` | Other users of the computer can read `config.json` or enter its folder. Run each `chmod` that `doctor` prints after "to make it private:". `doctor` never changes a file mode itself. |
 | `doctor` lists `changes.unfinished` or `changes.expiring` | A change run stopped part way, or mail a run moved to Gmail's Trash is days from being emptied. Run the `messages restore --run <id> --yes` that `doctor` prints, with the profile of that mailbox, or run the first command again to finish it. |
