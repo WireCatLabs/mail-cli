@@ -10,6 +10,14 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   `meta.timezone` and the window in UTC (`meta.window.since`), as `sync` does; `messages import` also gives
   `timezone` beside `since`, and `account inspect` adds a line to its table.
 
+### Changed — may break callers
+
+- **The run a `messages` change made is `run_id` in its answer, as in the other WireCat tools.**
+  `messages mark-read|mark-unread|star|unstar|update|move|copy|delete` answered it as `run`. `messages restore` answers
+  `run_id` for the run it made itself (it was `restore_run`; `null` for a preview) and `restored_run_id` for the run
+  it undid (it was `run`). The `--run` option keeps its name: it is the shared vocabulary's flag for "the run it is
+  about".
+
 ### Fixed
 
 - **The iCloud steps say in plain words how to sign in with the short login.** They no longer quote a command line

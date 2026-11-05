@@ -50,7 +50,7 @@ const BULK_KEY = "messages.bulk"
 const mailChange = v.looseObject({
   action: v.string(),
   applied: v.boolean(),
-  run: v.nullable(v.string()),
+  run_id: v.nullable(v.string()),
   selected: v.number(),
   located: v.number(),
   changed: v.number(),
@@ -65,9 +65,9 @@ const mailChange = v.looseObject({
 })
 
 const mailRestore = v.looseObject({
-  run: v.string(),
+  run_id: v.nullable(v.string()),
+  restored_run_id: v.string(),
   applied: v.boolean(),
-  restore_run: v.nullable(v.string()),
   command: v.string(),
   logged: v.number(),
   restorable: v.number(),
@@ -299,7 +299,7 @@ const answerChange = (
         {
           action: plan.action,
           applied: outcome !== null,
-          run: outcome?.run ?? null,
+          run_id: outcome?.run ?? null,
           selected: selected.ids.length,
           located: count,
           changed: outcome?.changed.length ?? 0,
@@ -714,9 +714,9 @@ Envelopes come back to search at once; mail with text is saved again by the next
               outputFor(this),
               itemOf(
                 {
-                  run: plan.run,
+                  run_id: log?.run.id ?? null,
+                  restored_run_id: plan.run,
                   applied: apply,
-                  restore_run: log?.run.id ?? null,
                   command: plan.command,
                   logged: plan.logged,
                   restorable: plan.restorable,
