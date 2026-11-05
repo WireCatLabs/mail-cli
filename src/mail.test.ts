@@ -887,7 +887,7 @@ describe("search, show and threads", () => {
     `Content-Type: multipart/mixed; boundary="b1"\r\n\r\n--b1\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n` +
     `Оплатите счёт до пятницы.\r\n--b1\r\nContent-Type: text/plain; charset=utf-8; name="bill.txt"\r\n` +
     `Content-Disposition: attachment; filename="bill.txt"\r\n\r\nИтого 85,93 € к оплате\r\n--b1--\r\n`
-  const synced = async (syncArgs: string[] = []) => {
+  const synced = async (syncArgs: string[] = [], settings: string[][] = []) => {
     const h = await harness({
       fake: {
         folders: [
@@ -919,6 +919,7 @@ describe("search, show and threads", () => {
       },
     })
     await profileSet(h.mail)
+    for (const setting of settings) expect((await h.mail(["ya", "config", "set", ...setting, "--json"])).code).toBe(0)
     expect((await h.mail(["ya", "session", "start", "--json"], typed(PASSWORD))).code).toBe(0)
     const syncAnswer = await h.mail([
       "ya",
@@ -989,6 +990,12 @@ describe("search, show and threads", () => {
     expect(JSON.parse(offline.out).meta.issues).toMatchObject([{ reason: "mail.attachments-unread" }])
     const shown = await json("messages", "show", ref as string)
     expect(shown.item.attachments).toMatchObject([{ name: "bill.txt", text: expect.stringContaining("85,93") }])
+  })
+
+  it("reads attachments with --attachments when the profile turns them off", async () => {
+    const { json, mail } = await synced(["--attachments"], [["read_attachments", "false"]])
+    const [ref] = refs(await json("search", "messages", "has:attachment"))
+    expect((await mail(["ya", "messages", "show", ref as string, "--offline", "--json"])).out).toContain("85,93")
   })
 
   it("leaves an attachment over the profile's max_attachment_mb unread, and --max-attachment-mb overrides it", async () => {
