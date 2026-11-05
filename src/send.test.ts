@@ -9,7 +9,7 @@ import { mailAccountKey } from "@wirecat/cli-core/mail"
 import { toolsFromCommands } from "@wirecat/cli-core/mcp"
 import { DEFAULT_PACE, Pacer, pacePathFor, sendsPathFor } from "@wirecat/cli-core/sends"
 import { openStore } from "@wirecat/cli-core/store"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 // Each case signs in, syncs and sends over two local servers: seconds on a loaded machine.
 import type { MailEnvironment } from "./commands/context.js"
@@ -67,9 +67,28 @@ const yandex = (): FakeFolder[] => [
   { name: "Trash", attributes: ["\\Trash"], uidValidity: 13, messages: [] },
 ]
 
+const store = vi.hoisted(() => ({ closeFails: false }))
+vi.mock("./store.js", async (original) => {
+  const real = await original<typeof import("./store.js")>()
+  return {
+    ...real,
+    openMailStore: async (...given: Parameters<typeof real.openMailStore>) => {
+      const opened = await real.openMailStore(...given)
+      if (!store.closeFails) return opened
+      const close = opened.close.bind(opened)
+      opened.close = async () => {
+        await close()
+        throw new Error("disk I/O error")
+      }
+      return opened
+    },
+  }
+})
+
 let imap: FakeImap | undefined
 let smtp: FakeSmtp | undefined
 afterEach(async () => {
+  store.closeFails = false
   await imap?.close()
   await smtp?.close()
   imap = undefined
@@ -516,6 +535,26 @@ describe("messages send over SMTP", { timeout: 20_000 }, () => {
     expect(retried.code, retried.err).toBe(0)
     expect(item(retried.out)).toMatchObject({ sent: false, already_sent: true, operation_id: operationId })
     expect(smtp.received).toHaveLength(0)
+  })
+})
+
+describe("a store that fails to close after the message left", { timeout: 20_000 }, () => {
+  it("names the operation, so a retry finds the message in Sent instead of sending it twice", async () => {
+    const { mail, smtp } = await harness()
+    const argv = ["ya", "messages", "send", "--to", ADDRESS, "--subject", "Once", "only once", "--json"]
+    store.closeFails = true
+    const failed = await mail(argv)
+    store.closeFails = false
+    const error = errorOf(failed.err)
+    expect(error.code).toBe("outcome_unknown")
+    expect(error.message).toContain("probably sent")
+    const operationId = error.details?.operation_id ?? error.operation_id
+    expect(typeof operationId).toBe("string")
+    expect(smtp.received).toHaveLength(1)
+    const retried = await mail([...argv, "--operation-id", operationId])
+    expect(retried.code, retried.err).toBe(0)
+    expect(item(retried.out)).toMatchObject({ sent: false, already_sent: true, operation_id: operationId })
+    expect(smtp.received).toHaveLength(1)
   })
 })
 

@@ -62,5 +62,9 @@ Claims about our code cite the file. The imapflow notes were read in imapflow 2.
   beside `messages export`, whose mbox it mirrors. The domain-age cache is mail's own (`domain-ages.json` in its state
   folder); memo's old cache is not read, so a domain is asked once more. The probe, the score and `scoreSenders` stay
   in cli-core.
+- **A send whose store then fails to close is `outcome_unknown` with its `operation_id`** (owner, 2026-11-05,
+  NEED-2219 A). Since the close comes before the answer (WC-LIFE-4), the message has left by then; the error says it
+  was probably sent, and `--operation-id` looks in Sent before it sends (`closedAfterSending`,
+  `src/commands/messages.ts`). When the command itself failed, its own error is kept and a failed close is dropped.
 
 ## Open questions for the owner

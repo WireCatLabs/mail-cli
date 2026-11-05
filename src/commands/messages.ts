@@ -130,10 +130,20 @@ export interface Opened {
   path: string
   /** Holds the command's answer until the store and the mailbox are closed; a failed close drops it (WC-LIFE-4). */
   answer: (show: () => void) => void
+  /** Records that a message left, so a close that fails after it still names the operation a retry checks. */
+  sent: (operationId: string) => void
 }
 
 const stringsOf = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((one): one is string => typeof one === "string") : []
+
+const closedAfterSending = (operationId: string, error: unknown) =>
+  new CliError(
+    "outcome_unknown",
+    `the message was probably sent, but the store did not close (${error instanceof Error ? error.message : String(error)}); ` +
+      `repeat the command with --operation-id ${operationId}: it looks in Sent first and does not send it twice`,
+    { operation_id: operationId, retryable: false },
+  )
 
 /** Opens the store and the mailbox for one write command, and closes both after `work`, then answers. */
 export const organising = async <T>(command: Command, work: (opened: Opened) => Promise<T>): Promise<T> => {
@@ -143,6 +153,7 @@ export const organising = async <T>(command: Command, work: (opened: Opened) => 
   if (!address) throw new CliError("configuration_error", `profile ${context.profile} has no address`)
   const { backend } = await openMail(context)
   let shown: (() => void) | undefined
+  let sent: string | undefined
   let result: T
   try {
     result = await worded(context.profile, () =>
@@ -151,6 +162,7 @@ export const organising = async <T>(command: Command, work: (opened: Opened) => 
         if (!writes) throw new CliError("provider_unavailable", "this mailbox cannot be changed from here")
         const store = await openMailStore(context.env)
         context.environment.trackCloseable?.(store)
+        let worked = false
         try {
           const key = { provider: "email", account: address.toLowerCase() }
           const stored = await store.accounts.storedAccount(key).catch(() => null)
@@ -183,7 +195,7 @@ export const organising = async <T>(command: Command, work: (opened: Opened) => 
             askingOnce(askedByMailFlags(command, terminalAsker(command))),
           )
           const { path, line } = commandLine(command, context.profile)
-          return await work({
+          const done = await work({
             mailbox,
             backend,
             guard,
@@ -193,6 +205,9 @@ export const organising = async <T>(command: Command, work: (opened: Opened) => 
             line,
             answer: (show) => {
               shown = show
+            },
+            sent: (operationId) => {
+              sent = operationId
             },
             log: (_action, extra = {}) =>
               new ChangeLog(context.env, {
@@ -204,8 +219,14 @@ export const organising = async <T>(command: Command, work: (opened: Opened) => 
                 ...(extra.restorableUntil ? { restorable_until: extra.restorableUntil } : {}),
               }),
           })
+          worked = true
+          return done
         } finally {
-          await store.close()
+          await store.close().catch((error: unknown) => {
+            // The command's own error wins: it may already name the operation a retry needs.
+            if (!worked) return
+            throw sent === undefined ? error : closedAfterSending(sent, error)
+          })
         }
       }),
     )
