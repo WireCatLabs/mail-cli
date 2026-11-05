@@ -2,6 +2,14 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Added
+
+- **`account inspect` and `messages import` say which time zone they read `--since-time` in.** The answer gives
+  `meta.timezone` and the window in UTC (`meta.window.since`), as `sync` does; `messages import` also gives
+  `timezone` beside `since`, and `account inspect` adds a line to its table.
+
 ## 0.16.3 — 05.11.2026
 
 ### Fixed

@@ -13,7 +13,14 @@
   "extends": ["./config/wirecat/biome.base.json"],
   "overrides": [
     {
-      "includes": ["src/**", "!src/testing/mcp.ts", "!src/mail/imap/**", "!**/*.test.ts"],
+      "includes": [
+        "src/**",
+        "!src/testing/mcp.ts",
+        "!src/mail/imap/**",
+        "!src/mail/smtp.ts",
+        "!src/mail/compose.ts",
+        "!**/*.test.ts"
+      ],
       "linter": {
         "rules": {
           "style": {
@@ -28,6 +35,10 @@
                   {
                     "group": ["imapflow", "imapflow/**"],
                     "message": "only the IMAP adapter in src/mail/imap/ imports imapflow; everything above it speaks the MailBackend port in src/mail/backend.ts (WC-ARCH-3)"
+                  },
+                  {
+                    "group": ["nodemailer", "nodemailer/**"],
+                    "message": "only the SMTP and message-building adapters, src/mail/smtp.ts and src/mail/compose.ts, import nodemailer (WC-ARCH-3)"
                   }
                 ]
               }
@@ -37,7 +48,46 @@
       }
     },
     {
-      "includes": ["src/mail/**", "src/export/**", "!src/mail/imap/**", "!**/*.test.ts"],
+      "includes": [
+        "src/mail/**",
+        "src/export/**",
+        "!src/mail/imap/**",
+        "!src/mail/smtp.ts",
+        "!src/mail/compose.ts",
+        "!**/*.test.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@modelcontextprotocol/**"],
+                    "message": "cli-core serves MCP; commands and services do not know the protocol"
+                  },
+                  {
+                    "group": ["imapflow", "imapflow/**"],
+                    "message": "only the IMAP adapter in src/mail/imap/ imports imapflow; everything above it speaks the MailBackend port in src/mail/backend.ts (WC-ARCH-3)"
+                  },
+                  {
+                    "group": ["../commands/**", "../../commands/**", "../../../commands/**"],
+                    "message": "src/mail and src/export sit below the commands and never import them (WC-ARCH-1)"
+                  },
+                  {
+                    "group": ["nodemailer", "nodemailer/**"],
+                    "message": "only the SMTP and message-building adapters, src/mail/smtp.ts and src/mail/compose.ts, import nodemailer (WC-ARCH-3)"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/mail/smtp.ts", "src/mail/compose.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -80,6 +130,10 @@
                   {
                     "group": ["../commands/**", "../../commands/**", "../../../commands/**"],
                     "message": "src/mail and src/export sit below the commands and never import them (WC-ARCH-1)"
+                  },
+                  {
+                    "group": ["nodemailer", "nodemailer/**"],
+                    "message": "only the SMTP and message-building adapters, src/mail/smtp.ts and src/mail/compose.ts, import nodemailer (WC-ARCH-3)"
                   }
                 ]
               }
@@ -100,6 +154,10 @@
                   {
                     "group": ["imapflow", "imapflow/**"],
                     "message": "only the IMAP adapter in src/mail/imap/ imports imapflow; everything above it speaks the MailBackend port in src/mail/backend.ts (WC-ARCH-3)"
+                  },
+                  {
+                    "group": ["nodemailer", "nodemailer/**"],
+                    "message": "only the SMTP and message-building adapters, src/mail/smtp.ts and src/mail/compose.ts, import nodemailer (WC-ARCH-3)"
                   }
                 ]
               }

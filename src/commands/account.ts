@@ -109,7 +109,7 @@ const mailAccountInspect = v.strictObject({
 const megabytes = (bytes: number) => (bytes / 1024 / 1024).toFixed(1)
 const percent = (value: number | null) => (value === null ? "?" : `${Math.round(value * 100)}%`)
 
-const probeText = (probe: Probe, seconds: number): string => {
+const probeText = (probe: Probe, seconds: number, zone: string | undefined): string => {
   const rows = probe.items.map((group) => [
     String(group.emails),
     megabytes(group.bytes),
@@ -133,6 +133,7 @@ const probeText = (probe: Probe, seconds: number): string => {
   return `${[
     `${probe.emails} emails, ${megabytes(probe.bytes)} MB, ${probe.groups} groups; ${probe.sent} sent, ` +
       `${probe.withoutHeaders} without readable headers; ${seconds}s`,
+    ...(zone === undefined ? [] : [`--since-time read in ${zone}`]),
     line(header),
     ...rows.map(line),
     ...(probe.presets.length
@@ -201,7 +202,8 @@ const inspectCommand = () =>
       refuseOffline(context.flags)
       const { address, host, folders: configured } = context.settings.mailbox
       if (!address) throw new CliError("configuration_error", `profile ${context.profile} has no address`)
-      const since = args.sinceTime === undefined ? new Date(0) : sinceOf(args.sinceTime, timezoneOf(), Date.now())
+      const zone = args.sinceTime === undefined ? undefined : timezoneOf()
+      const since = zone === undefined ? new Date(0) : sinceOf(args.sinceTime, zone, Date.now())
       const started = Date.now()
       const { backend } = await openMail(context)
       try {
@@ -227,34 +229,37 @@ const inspectCommand = () =>
         renderAnswer(
           this,
           outputFor(this),
-          itemOf({
-            address,
-            folders,
-            emails: probe.emails,
-            bytes: probe.bytes,
-            sent: probe.sent,
-            without_headers: probe.withoutHeaders,
-            groups: probe.groups,
-            items: probe.items.map((group) => ({
-              from: group.from,
-              list_id: group.listId,
-              emails: group.emails,
-              bytes: group.bytes,
-              unread: group.unread,
-              bulk: group.bulk,
-              first_year: group.firstYear,
-              last_year: group.lastYear,
-              replied: group.replied,
-              suggest: group.suggest,
-              score: group.score,
-              signals: group.signals,
-              untrusted: ["from", "list_id"],
-            })),
-            presets: probe.presets,
-            ...(lookups === undefined ? {} : { domain_lookups: lookups }),
-            seconds,
-          }),
-          () => probeText(probe, seconds),
+          itemOf(
+            {
+              address,
+              folders,
+              emails: probe.emails,
+              bytes: probe.bytes,
+              sent: probe.sent,
+              without_headers: probe.withoutHeaders,
+              groups: probe.groups,
+              items: probe.items.map((group) => ({
+                from: group.from,
+                list_id: group.listId,
+                emails: group.emails,
+                bytes: group.bytes,
+                unread: group.unread,
+                bulk: group.bulk,
+                first_year: group.firstYear,
+                last_year: group.lastYear,
+                replied: group.replied,
+                suggest: group.suggest,
+                score: group.score,
+                signals: group.signals,
+                untrusted: ["from", "list_id"],
+              })),
+              presets: probe.presets,
+              ...(lookups === undefined ? {} : { domain_lookups: lookups }),
+              seconds,
+            },
+            zone === undefined ? {} : { meta: { timezone: zone, window: { since: since.toISOString() } } },
+          ),
+          () => probeText(probe, seconds, zone),
         )
       } finally {
         await backend.close()

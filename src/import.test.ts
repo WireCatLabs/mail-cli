@@ -57,6 +57,16 @@ const gmailProfile = async (address: string, folders: FakeFolder[]) => {
   }
   const started = await mail(["gm", "session", "start", "--address", address, "--json"])
   expect(started.code, started.err).toBe(0)
+  const rows = async () => {
+    const store = await openStore({ path: storePath(env), env, command: "mail" })
+    try {
+      const account = await store.accounts.storedAccount({ provider: "email", account: address })
+      if (!account) throw new Error(`no stored account ${address}`)
+      return await store.mail.emails({ accountId: account.id })
+    } finally {
+      await store.close()
+    }
+  }
   const emails = async () => {
     const store = await openStore({ path: storePath(env), env, command: "mail" })
     try {
@@ -66,8 +76,31 @@ const gmailProfile = async (address: string, folders: FakeFolder[]) => {
       await store.close()
     }
   }
-  return { mail, emails }
+  return { mail, emails, rows }
 }
+
+const withZone = async <T>(zone: string, work: () => Promise<T>): Promise<T> => {
+  const before = process.env.TZ
+  process.env.TZ = zone
+  try {
+    return await work()
+  } finally {
+    if (before === undefined) delete process.env.TZ
+    else process.env.TZ = before
+  }
+}
+
+const RECORD_TIMES = new Set(["createdAt", "updatedAt", "lastSeenAt", "scannedAt"])
+const stored = (value: unknown): unknown =>
+  Array.isArray(value)
+    ? value.map(stored)
+    : value !== null && typeof value === "object"
+      ? Object.fromEntries(
+          Object.entries(value)
+            .filter(([key]) => !RECORD_TIMES.has(key))
+            .map(([key, inner]) => [key, stored(inner)]),
+        )
+      : value
 
 const takeout = (entries: { id: string; subject: string; labels: string }[]) => {
   const path = join(mkdtempSync(join(tmpdir(), "takeout-")), "All mail Including Spam and Trash.mbox")
@@ -131,6 +164,49 @@ describe("messages import", () => {
     expect(first.item.hint).toMatch(/1 new emails are left/)
   })
 
+  it("says the zone it read --since-time in", async () => {
+    const { mail } = await gmailProfile(GMAIL, [{ name: "INBOX", messages: [] }])
+    const file = takeout([{ id: "1700000000000000006", subject: "Hello", labels: "Opened" }])
+
+    const answer = await withZone("Asia/Vladivostok", () =>
+      mail(["gm", "messages", "import", file, "--since-time", "2023-01-01", "--json"]),
+    )
+    expect(answer.code, answer.err).toBe(0)
+    expect(answer.item.timezone).toBe("Asia/Vladivostok")
+    expect(JSON.parse(answer.out).meta).toMatchObject({
+      timezone: "Asia/Vladivostok",
+      window: { since: "2022-12-31T14:00:00.000Z" },
+    })
+  })
+
+  it("stores the same rows whatever zone the process runs in", async () => {
+    const zones = ["Asia/Vladivostok", "America/Los_Angeles"]
+    const hours = zones.map((zone) => withZone(zone, async () => new Date(0).getHours()))
+    expect(new Set(await Promise.all(hours)).size).toBe(2)
+    const results = []
+    for (const zone of zones)
+      results.push(
+        await withZone(zone, async () => {
+          const { mail, rows } = await gmailProfile(GMAIL, [{ name: "INBOX", messages: [] }])
+          const path = join(mkdtempSync(join(tmpdir(), "takeout-")), "zoneless.mbox")
+          writeFileSync(
+            path,
+            "From 1700000000000000007@xxx Mon Jul 24 23:30:00 2023\nX-GM-THRID: 1700000000000000007\n" +
+              "X-Gmail-Labels: Inbox\nMessage-ID: <zoneless@example.com>\nFrom: Ann <ann@example.com>\n" +
+              `To: ${GMAIL}\nDate: Mon, 24 Jul 2023 23:30:00 +0200\nSubject: Late\n\nLate body\n\n`,
+          )
+          const answer = await mail(["gm", "messages", "import", path, "--json"])
+          expect(answer.code, answer.err).toBe(0)
+          await fake?.close()
+          fake = undefined
+          return stored(await rows())
+        }),
+      )
+    expect(results[0]).toHaveLength(1)
+    expect(results[0]).toMatchObject([{ receivedAt: Date.parse("2023-07-24T23:30:00Z") }])
+    expect(results[1]).toEqual(results[0])
+  })
+
   it("refuses a profile that is not Gmail, whose ids would store every email twice", async () => {
     const { mail } = await gmailProfile("me@example.com", [{ name: "INBOX", messages: [] }])
     const file = takeout([{ id: "1700000000000000002", subject: "Old invoice", labels: "Opened" }])
@@ -171,12 +247,14 @@ describe("account inspect", () => {
     expect(item.items[0]).toMatchObject({ list_id: "news.shop.example", emails: 2, unread: 1, bulk: 1 })
     expect(item.items[1]).toMatchObject({ from: "ann@example.com", list_id: null, emails: 1, unread: 0 })
     expect(asked).toEqual([])
+    expect(JSON.parse(answer.out).meta?.timezone).toBeUndefined()
 
     const text = await mail(
       ["ya", "account", "inspect", "--since-time", "2026-01-01", "--limit", "5", "--folder", "INBOX"],
       { rdap: fetch, tty: true },
     )
     expect(text.out).toMatch(/^3 emails, .* 2 groups;/)
+    expect(text.out).toContain(`--since-time read in ${Intl.DateTimeFormat().resolvedOptions().timeZone}`)
     expect(text.out).toMatch(/emails +MB +unread +bulk +years +replied +suggest +score +sender or list/)
     expect(text.out).toContain("news.shop.example (news@shop.example)")
 
