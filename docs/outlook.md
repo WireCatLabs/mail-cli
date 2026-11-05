@@ -50,9 +50,8 @@ section.
 
 ### What you see, and why
 
-WireCat's Microsoft app is not yet publisher-verified. A work or school account belongs to an organisation (a
-"tenant"), and Microsoft does not let ordinary users of another tenant approve a multi-tenant app that has no verified
-publisher. Instead the sign-in stops with a page that says "Need admin approval", or with the error `AADSTS90094` (the
+A work or school account belongs to an organisation (a "tenant"), and a tenant may
+not let ordinary users approve a multi-tenant app such as WireCat's. Instead the sign-in stops with a page that says "Need admin approval", or with the error `AADSTS90094` (the
 administrator must grant consent). The browser shows this page, so `mail` itself prints no Microsoft error code. The
 page is not a fault in your account or in `mail`. An admin has to act once, then everyone in the organisation signs in
 as usual. Microsoft describes the rule on
@@ -75,8 +74,7 @@ endpoint with `client_id`, `scope` (space-separated, written `%20` in a link) an
 for the app. The account needs a role that may grant consent for the organisation, such as Cloud Application
 Administrator or Privileged Role Administrator ([roles](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/grant-admin-consent#prerequisites)).
 
-The admin sees Microsoft's consent page for WireCat. It lists the three permissions and marks the publisher as
-unverified. The admin selects "Accept". Microsoft then sends the browser to `http://localhost/callback`; the tab may
+The admin sees Microsoft's consent page for WireCat. It lists the three permissions. The admin selects "Accept". Microsoft then sends the browser to `http://localhost/callback`; the tab may
 show a connection error because nothing listens there, and that is expected. The consent is already saved.
 
 To undo it, the admin opens the [Microsoft Entra admin center](https://entra.microsoft.com), then "Entra ID", "Enterprise

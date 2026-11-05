@@ -6,9 +6,9 @@ password: no 2-Step Verification on the account, or a Google Workspace domain th
 A Gmail OAuth sign-in uses WireCat's Google app unless you name your own. The first match wins:
 `--client-file <Desktop client JSON>`, then `MAIL_GOOGLE_CLIENT_ID` (with `MAIL_GOOGLE_CLIENT_SECRET`), then the
 profile's `google_client_id` setting (its secret still comes from `MAIL_GOOGLE_CLIENT_SECRET`), then WireCat's app.
-`mail doctor` shows which one a profile uses under `oauth_client`. Google requires a paid security review for an app
-that reads mail for others, and WireCat's app has not had one yet: if Google refuses the sign-in or warns that the
-app is not verified, make your own app as below. It takes about 20 minutes and costs nothing.
+`mail doctor` shows which one a profile uses under `oauth_client`. Making a shared Google app public for mail is
+complex, so Google may refuse the sign-in with WireCat's app. If it does, make your own app as below (it takes about
+20 minutes and costs nothing), or use an app password.
 
 ## 1. A Google Cloud project just for mail
 
