@@ -108,7 +108,7 @@ describe("messages export", () => {
   it("writes the original bytes of the matching mail to one private mbox per folder, mboxrd-escaped", async () => {
     const { exported } = await setup()
     const out = join(folderOf(), "backup")
-    const answer = await exported("invoice", "--output", out)
+    const answer = await exported("invoice", "--output-dir", out)
     expect(answer.code, answer.err).toBe(0)
     expect(answer.item).toMatchObject({ format: "mbox", matched: 2, exported: 2, complete: true, unreadable: 0 })
 
@@ -128,7 +128,7 @@ describe("messages export", () => {
   it("writes a Maildir++ tree with the read and starred state in the file names", async () => {
     const { exported } = await setup()
     const out = join(folderOf(), "Maildir")
-    const answer = await exported("--format", "maildir", "--output", out)
+    const answer = await exported("--format", "maildir", "--output-dir", out)
     expect(answer.item).toMatchObject({ format: "maildir", exported: 4, complete: true })
     expect(readdirSync(out).sort()).toEqual([".Sent", ".mail-export.jsonl", "cur", "new", "tmp"])
     const names = readdirSync(join(out, "cur")).sort()
@@ -141,29 +141,29 @@ describe("messages export", () => {
     expect(readdirSync(join(out, "tmp"))).toEqual([])
   })
 
-  it("stops at --limit, newest first, and --resume writes the rest without repeating a message", async () => {
+  it("stops at --max-messages, newest first, and --resume writes the rest without repeating a message", async () => {
     const { exported } = await setup()
     const out = join(folderOf(), "backup")
-    const first = await exported("--folder", "INBOX", "--limit", "2", "--output", out)
+    const first = await exported("--folder", "INBOX", "--max-messages", "2", "--output-dir", out)
     expect(first.item).toMatchObject({ exported: 2, state: "partial", stopped: "limit", complete: false })
     expect(readFileSync(join(out, "INBOX.mbox"), "latin1")).not.toContain("Invoice October")
 
-    const second = await exported("--folder", "INBOX", "--resume", "--output", out)
+    const second = await exported("--folder", "INBOX", "--resume", "--output-dir", out)
     expect(second.item).toMatchObject({ exported: 1, already_exported: 2, state: "complete", complete: true })
     const inbox = readFileSync(join(out, "INBOX.mbox"), "latin1")
     expect(inbox.match(/^From MAILER-DAEMON/gm)).toHaveLength(3)
 
-    const third = await exported("--folder", "INBOX", "--resume", "--output", out)
+    const third = await exported("--folder", "INBOX", "--resume", "--output-dir", out)
     expect(third.item).toMatchObject({ exported: 0, already_exported: 3, complete: true })
   })
 
   it("stops at --max-pages after a slice of 50, and --resume writes the next slice", async () => {
     const { exported } = await setup(120)
     const out = join(folderOf(), "backup")
-    const first = await exported("--folder", "INBOX", "--max-pages", "1", "--output", out)
+    const first = await exported("--folder", "INBOX", "--max-pages", "1", "--output-dir", out)
     expect(first.item).toMatchObject({ exported: 50, state: "partial", stopped: "requests", complete: false })
     expect(first.item.hint).toContain("--resume")
-    const second = await exported("--folder", "INBOX", "--resume", "--output", out)
+    const second = await exported("--folder", "INBOX", "--resume", "--output-dir", out)
     expect(second.item).toMatchObject({ exported: 70, already_exported: 50, complete: true })
     expect(readFileSync(join(out, "INBOX.mbox"), "latin1").match(/^From MAILER-DAEMON/gm)).toHaveLength(120)
   })
@@ -171,9 +171,9 @@ describe("messages export", () => {
   it("cuts a half-written message after a crash before it goes on", async () => {
     const { exported } = await setup()
     const out = join(folderOf(), "backup")
-    await exported("--folder", "INBOX", "--limit", "1", "--output", out)
+    await exported("--folder", "INBOX", "--max-messages", "1", "--output-dir", out)
     writeFileSync(join(out, "INBOX.mbox"), "From MAILER-DAEMON torn", { flag: "a" })
-    await exported("--folder", "INBOX", "--resume", "--output", out)
+    await exported("--folder", "INBOX", "--resume", "--output-dir", out)
     const inbox = readFileSync(join(out, "INBOX.mbox"), "latin1")
     expect(inbox).not.toContain("torn")
     expect(inbox.match(/^From MAILER-DAEMON/gm)).toHaveLength(3)
@@ -182,7 +182,7 @@ describe("messages export", () => {
   it("never exports into a credential folder", async () => {
     const { exported } = await setup()
     const ssh = join(folderOf(), ".ssh")
-    const refused = await exported("--output", ssh)
+    const refused = await exported("--output-dir", ssh)
     expect(refused.code).toBe(2)
     expect(refused.err).toContain("will not export into")
     expect(existsSync(ssh)).toBe(false)
@@ -192,19 +192,19 @@ describe("messages export", () => {
     const { exported } = await setup()
     const taken = folderOf()
     writeFileSync(join(taken, "mine.txt"), "keep")
-    const refused = await exported("--output", taken)
+    const refused = await exported("--output-dir", taken)
     expect(refused.code).toBe(2)
     expect(refused.err + refused.out).toContain("--replace")
     expect(readFileSync(join(taken, "mine.txt"), "utf8")).toBe("keep")
 
-    const replaced = await exported("--folder", "INBOX", "--replace", "--output", taken)
+    const replaced = await exported("--folder", "INBOX", "--replace", "--output-dir", taken)
     expect(replaced.item).toMatchObject({ exported: 3 })
     expect(readFileSync(join(taken, "mine.txt"), "utf8")).toBe("keep")
 
-    const again = await exported("--folder", "INBOX", "--output", taken)
+    const again = await exported("--folder", "INBOX", "--output-dir", taken)
     expect(again.err + again.out).toContain("--resume")
     mkdirSync(join(taken, "x"), { recursive: true })
-    const nothing = await exported("--resume", "--output", join(folderOf(), "none"))
+    const nothing = await exported("--resume", "--output-dir", join(folderOf(), "none"))
     expect(nothing.code).not.toBe(0)
   })
 })

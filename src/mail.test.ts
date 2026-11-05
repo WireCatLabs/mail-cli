@@ -597,14 +597,14 @@ describe("account check, folders and sync", () => {
     expect(item(again.out)).toMatchObject({ listed: 2, saved: 0, deleted: 0, complete: true })
   })
 
-  it("honours --limit, newest first", async () => {
+  it("honours --max-messages, newest first", async () => {
     const { mail, env } = await ready()
     const limited = await mail([
       "ya",
       "sync",
       "--since-time",
       "2026-10-01",
-      "--limit",
+      "--max-messages",
       "1",
       "--folder",
       "INBOX",
@@ -613,8 +613,8 @@ describe("account check, folders and sync", () => {
     expect(item(limited.out)).toMatchObject({ saved: 1 })
     const body = JSON.parse(limited.out)
     expect(body.item).toMatchObject({ state: "partial", stopped: "limit" })
-    expect(body.next[0]).toMatchObject({ command: "sync", args: { since_time: "2026-10-01", limit: 1 } })
-    expect(body.next[0].why).toContain("--limit")
+    expect(body.next[0]).toMatchObject({ command: "sync", args: { since_time: "2026-10-01", max_messages: 1 } })
+    expect(body.next[0].why).toContain("--max-messages")
     expect(body.item.remaining).toBe(1)
     expect(body.next[0].why).toContain("left 1")
     const store = await openStore({ path: storePath(env), env, command: "mail" })

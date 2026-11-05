@@ -48,7 +48,7 @@ export const importLeaf = (): Command =>
       partial: true,
       examples: [
         `${IDENTITY.command} gm messages import ~/Takeout/Mail/All\\ mail\\ Including\\ Spam\\ and\\ Trash.mbox`,
-        `${IDENTITY.command} gm messages import archive.mbox --since-time 2015-01-01 --limit 5000`,
+        `${IDENTITY.command} gm messages import archive.mbox --since-time 2015-01-01 --max-messages 5000`,
       ],
     }),
     "mail_import",
@@ -66,8 +66,12 @@ export const importLeaf = (): Command =>
       "--since-time <time>",
       "only mail received since this date or time; a date alone starts at local midnight (default: the whole file)",
     )
-    .option("--limit <n>", "save at most this many new emails in this run, newest first", positiveCount("--limit"))
-    .action(async function (this: Command, file: string, args: { sinceTime?: string; limit?: number }) {
+    .option(
+      "--max-messages <n>",
+      "save at most this many new emails in this run, newest first",
+      positiveCount("--max-messages"),
+    )
+    .action(async function (this: Command, file: string, args: { sinceTime?: string; maxMessages?: number }) {
       const context = contextOf(this)
       const { address, host } = context.settings.mailbox
       if (!address) throw new CliError("configuration_error", `profile ${context.profile} has no address`)
@@ -91,7 +95,7 @@ export const importLeaf = (): Command =>
             account: { address, mode: "mbox", rules },
             since,
             ages: knownAges(context.env),
-            ...(args.limit === undefined ? {} : { max: args.limit }),
+            ...(args.maxMessages === undefined ? {} : { max: args.maxMessages }),
             ...(signal ? { signal } : {}),
           })
         } finally {

@@ -255,7 +255,7 @@ mail sync [options]
 | Option | What it does |
 |---|---|
 | `--since-time <time>` | only mail received since this date or time; a date alone starts at local midnight, a time without a zone is local (default: 30 days). |
-| `--limit <n>` | save at most this many new emails in this run, newest first. |
+| `--max-messages <n>` | save at most this many new emails in this run, newest first. |
 | `--max-pages <pages>` | at most this many requests to the mail server in this run; as many as fit the deadline if not given. |
 | `--folder <folder>` | a folder to read; repeat it for more (default: the profile's folders, else INBOX and Sent; All Mail on Gmail). Default: ``. |
 | `--attachments` | read attachments into the search index this run, whatever the profile's read_attachments. |
@@ -265,7 +265,7 @@ mail sync [options]
 
 **Returns:** mail sync — address, since, timezone, folders, state, requests, listed, saved, and 14 more; every field: mail commands info sync
 
-**Example:** `mail personal sync`, `mail personal sync --since-time 2026-10-01 --limit 200`, `mail personal sync --folder INBOX`
+**Example:** `mail personal sync`, `mail personal sync --since-time 2026-10-01 --max-messages 200`, `mail personal sync --folder INBOX`
 
 ## `mail rules`
 
@@ -519,16 +519,16 @@ mail messages export [query] [options]
 | Option | What it does |
 |---|---|
 | `--format <format>` | mbox files or a Maildir++ tree. One of: `mbox`, `maildir`. Default: `mbox`. |
-| `--output <file>` | the folder to write the export into (not one file); made private if it does not exist. |
+| `--output-dir <dir>` | the folder to write the export into (not one file); made private if it does not exist. |
 | `--folder <folder>` | only mail filed in this folder; repeat it for more (default: the folders sync reads). Default: ``. |
-| `--limit <n>` | write at most this many messages in this run, newest first. |
+| `--max-messages <n>` | write at most this many messages in this run, newest first. |
 | `--max-pages <pages>` | at most this many requests to the mail server in this run; as many as fit the deadline if not given. |
 | `--resume` | go on with the export already in the folder, skipping what it holds. |
 | `--replace` | write into a folder that has something in it, over files of the same name. |
 
 **Returns:** mail export — address, format, destination, folders, state, matched, exported, already_exported, and 5 more; every field: mail commands info messages export
 
-**Example:** `mail personal messages export 'from:ann@example.com' --output ~/mail-backup`, `mail personal messages export --folder INBOX --format maildir --output ~/Maildir`, `mail personal messages export 'date>30d' --limit 500 --output ~/mail-backup --resume`
+**Example:** `mail personal messages export 'from:ann@example.com' --output-dir ~/mail-backup`, `mail personal messages export --folder INBOX --format maildir --output-dir ~/Maildir`, `mail personal messages export 'date>30d' --max-messages 500 --output-dir ~/mail-backup --resume`
 
 ### `mail messages import`
 
@@ -547,11 +547,11 @@ mail messages import <file> [options]
 | Option | What it does |
 |---|---|
 | `--since-time <time>` | only mail received since this date or time; a date alone starts at local midnight (default: the whole file). |
-| `--limit <n>` | save at most this many new emails in this run, newest first. |
+| `--max-messages <n>` | save at most this many new emails in this run, newest first. |
 
 **Returns:** mail import — address, file, since, timezone, listed, saved, already_stored, skipped, and 5 more; every field: mail commands info messages import
 
-**Example:** `mail gm messages import ~/Takeout/Mail/All\ mail\ Including\ Spam\ and\ Trash.mbox`, `mail gm messages import archive.mbox --since-time 2015-01-01 --limit 5000`
+**Example:** `mail gm messages import ~/Takeout/Mail/All\ mail\ Including\ Spam\ and\ Trash.mbox`, `mail gm messages import archive.mbox --since-time 2015-01-01 --max-messages 5000`
 
 ### `mail messages mark-read`
 

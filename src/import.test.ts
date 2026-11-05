@@ -159,7 +159,17 @@ describe("messages import", () => {
       { id: "1700000000000000005", subject: "Second", labels: "Opened" },
     ])
 
-    const first = await mail(["gm", "messages", "import", file, "--since-time", "2020-01-01", "--limit", "1", "--json"])
+    const first = await mail([
+      "gm",
+      "messages",
+      "import",
+      file,
+      "--since-time",
+      "2020-01-01",
+      "--max-messages",
+      "1",
+      "--json",
+    ])
     expect(first.item).toMatchObject({ saved: 1, complete: false, remaining: 1 })
     expect(first.item.hint).toMatch(/1 new emails are left/)
   })

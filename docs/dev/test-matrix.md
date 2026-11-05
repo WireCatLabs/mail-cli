@@ -44,7 +44,7 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `folders delete` | `--allow-dangerous` | ✅ |  |
 | `sync` |  | ✅ |  |
 | `sync` | `--since-time` | ✅ |  |
-| `sync` | `--limit` | ✅ |  |
+| `sync` | `--max-messages` | ✅ |  |
 | `sync` | `--max-pages` | ✅ |  |
 | `sync` | `--folder` | ✅ |  |
 | `sync` | `--attachments` | ✅ |  |
@@ -95,15 +95,15 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `messages acknowledge` | `--cursor` | ✅ |  |
 | `messages export` |  | ✅ |  |
 | `messages export` | `--format` | ✅ |  |
-| `messages export` | `--output` | ✅ |  |
+| `messages export` | `--output-dir` | ✅ |  |
 | `messages export` | `--folder` | ✅ |  |
-| `messages export` | `--limit` | ✅ |  |
+| `messages export` | `--max-messages` | ✅ |  |
 | `messages export` | `--max-pages` | ✅ |  |
 | `messages export` | `--resume` | ✅ |  |
 | `messages export` | `--replace` | ✅ |  |
 | `messages import` |  | ✅ |  |
 | `messages import` | `--since-time` | ✅ |  |
-| `messages import` | `--limit` | ✅ |  |
+| `messages import` | `--max-messages` | ✅ |  |
 | `messages mark-read` |  | ✅ |  |
 | `messages mark-read` | `--filter` | ✅ |  |
 | `messages mark-read` | `--limit` | ✅ |  |
