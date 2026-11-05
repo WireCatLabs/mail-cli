@@ -164,18 +164,25 @@ describe("messages mark-read, star and update on an IMAP server", () => {
     ).toBe(true)
     expect((await json("search", "messages", "is:unread")).items).toHaveLength(1)
 
-    const preview = item((await mail(["ya", "messages", "restore", "--run", answer.run, "--json"])).out)
-    expect(preview).toMatchObject({ applied: false, restorable: 1, restored: 0 })
+    const preview = item((await mail(["ya", "messages", "restore", "--run", answer.run_id, "--json"])).out)
+    expect(preview).toMatchObject({
+      applied: false,
+      run_id: null,
+      restored_run_id: answer.run_id,
+      restorable: 1,
+      restored: 0,
+    })
     const dry = item(
-      (await mail(["ya", "messages", "restore", "--run", answer.run, "--yes", "--dry-run", "--json"])).out,
+      (await mail(["ya", "messages", "restore", "--run", answer.run_id, "--yes", "--dry-run", "--json"])).out,
     )
     expect(dry).toMatchObject({ applied: false, restored: 0 })
     expect(folders[0]?.messages[0]?.flags).toContain("\\Seen")
-    const restored = item((await mail(["ya", "messages", "restore", "--run", answer.run, "--yes", "--json"])).out)
-    expect(restored).toMatchObject({ applied: true, restored: 1 })
+    const restored = item((await mail(["ya", "messages", "restore", "--run", answer.run_id, "--yes", "--json"])).out)
+    expect(restored).toMatchObject({ applied: true, restored_run_id: answer.run_id, restored: 1 })
+    expect(restored.run_id).toMatch(/messages-restore/)
     expect(folders[0]?.messages[0]?.flags).not.toContain("\\Seen")
     expect((await json("search", "messages", "is:unread")).items).toHaveLength(2)
-    const again = item((await mail(["ya", "messages", "restore", "--run", answer.run, "--yes", "--json"])).out)
+    const again = item((await mail(["ya", "messages", "restore", "--run", answer.run_id, "--yes", "--json"])).out)
     expect(again).toMatchObject({ restored: 0 })
   })
 
@@ -208,7 +215,7 @@ describe("messages mark-read, star and update on an IMAP server", () => {
     const preview = await mail(["ya", "messages", "mark-read", "--filter", "is:unread", "--json"])
     expect(preview.code, preview.err).toBe(0)
     const body = JSON.parse(preview.out)
-    expect(body.item).toMatchObject({ applied: false, run: null, located: 2, changed: 0 })
+    expect(body.item).toMatchObject({ applied: false, run_id: null, located: 2, changed: 0 })
     expect(body.next[0]).toMatchObject({ command: "messages mark-read", args: { filter: "is:unread", yes: true } })
     expect(commands().some((line) => line.startsWith("UID STORE"))).toBe(false)
     const done = item((await mail(["ya", "messages", "mark-read", "--filter", "is:unread", "--yes", "--json"])).out)
@@ -328,7 +335,7 @@ describe("messages move, copy and delete on an IMAP server", () => {
     const located = await stored((store, id) => store.mail.folderEmails(id, "Archive", "12"))
     expect(located.map(({ uid }) => uid)).toEqual([1])
 
-    const restored = item((await mail(["ya", "messages", "restore", "--run", moved.run, "--yes", "--json"])).out)
+    const restored = item((await mail(["ya", "messages", "restore", "--run", moved.run_id, "--yes", "--json"])).out)
     expect(restored).toMatchObject({ restored: 1 })
     expect(folders[1]?.messages).toHaveLength(0)
     expect(folders[0]?.messages).toHaveLength(3)
@@ -343,7 +350,7 @@ describe("messages move, copy and delete on an IMAP server", () => {
     )
     server.refuseSearches = true
 
-    const restored = await mail(["ya", "messages", "restore", "--run", moved.run, "--yes", "--json"])
+    const restored = await mail(["ya", "messages", "restore", "--run", moved.run_id, "--yes", "--json"])
 
     expect(JSON.parse(restored.err).error.reason, restored.err).toBe("mail.search-refused")
     expect(folders[1]?.messages).toHaveLength(1)
@@ -364,13 +371,13 @@ describe("messages move, copy and delete on an IMAP server", () => {
     expect(moved).toMatchObject({ applied: true, changed: 2 })
     server.refuseSearches = (criteria) => criteria.includes("invoice@example.com")
 
-    const stopped = await mail(["ya", "messages", "restore", "--run", moved.run, "--yes", "--json"])
+    const stopped = await mail(["ya", "messages", "restore", "--run", moved.run_id, "--yes", "--json"])
     expect(JSON.parse(stopped.err).error.reason, stopped.err).toBe("mail.search-refused")
     expect((folders[3] as FakeFolder).messages).toHaveLength(1)
     expect((folders[1] as FakeFolder).messages).toHaveLength(1)
 
     server.refuseSearches = false
-    const rest = item((await mail(["ya", "messages", "restore", "--run", moved.run, "--yes", "--json"])).out)
+    const rest = item((await mail(["ya", "messages", "restore", "--run", moved.run_id, "--yes", "--json"])).out)
     expect(rest).toMatchObject({ restored: 1, missing: 0 })
     expect((folders[1] as FakeFolder).messages).toHaveLength(0)
     expect((folders[0] as FakeFolder).messages).toHaveLength(3)
@@ -385,7 +392,7 @@ describe("messages move, copy and delete on an IMAP server", () => {
     expect(copied).toMatchObject({ applied: true, changed: 1 })
     expect(folders[0]?.messages).toHaveLength(3)
     expect(folders[1]?.messages).toHaveLength(1)
-    expect((await mail(["ya", "messages", "restore", "--run", copied.run, "--yes", "--json"])).code).toBe(0)
+    expect((await mail(["ya", "messages", "restore", "--run", copied.run_id, "--yes", "--json"])).code).toBe(0)
     expect(folders[1]?.messages).toHaveLength(0)
     expect(folders[0]?.messages).toHaveLength(3)
     expect(commands()).toContain("UID EXPUNGE 1")
@@ -404,7 +411,7 @@ describe("messages move, copy and delete on an IMAP server", () => {
     const [original] = inbox.messages.splice(at, 1)
     archive.messages.push({ ...(original as FakeFolder["messages"][number]), uid: copy.uid + 1 })
 
-    const restored = await mail(["ya", "messages", "restore", "--run", copied.run, "--yes", "--json"])
+    const restored = await mail(["ya", "messages", "restore", "--run", copied.run_id, "--yes", "--json"])
     expect(restored.code, restored.err).toBe(0)
     expect(item(restored.out)).toMatchObject({ restored: 1 })
     expect(archive.messages.map(({ uid }) => uid)).toEqual([copy.uid + 1])
@@ -435,7 +442,7 @@ describe("messages move, copy and delete on an IMAP server", () => {
     const twice = item((await mail(["ya", "messages", "delete", ref, "--yes", "--json"])).out)
     expect(twice).toMatchObject({ changed: 0, already_deleted: 1 })
 
-    const restored = item((await mail(["ya", "messages", "restore", "--run", deleted.run, "--yes", "--json"])).out)
+    const restored = item((await mail(["ya", "messages", "restore", "--run", deleted.run_id, "--yes", "--json"])).out)
     expect(restored).toMatchObject({ restored: 1 })
     expect(folders[2]?.messages).toHaveLength(0)
     expect(folders[0]?.messages.map(({ uid }) => uid)).toEqual([1, 2, 4])
@@ -513,7 +520,7 @@ describe("Gmail: labels, Trash and memo's runs", () => {
     expect(folders[1]?.messages[0]?.labels?.sort()).toEqual(["Receipts", "Work"])
     expect((await json("search", "messages", "label:Receipts")).items).toHaveLength(1)
     expect((await json("search", "messages", "label:Inbox invoice")).items).toHaveLength(0)
-    expect((await mail(["ya", "messages", "restore", "--run", moved.run, "--yes", "--json"])).code).toBe(0)
+    expect((await mail(["ya", "messages", "restore", "--run", moved.run_id, "--yes", "--json"])).code).toBe(0)
     expect(folders[1]?.messages[0]?.labels?.sort()).toEqual(["Work", "\\Inbox"])
     expect((await json("search", "messages", "label:Inbox invoice")).items).toHaveLength(1)
   })
@@ -525,7 +532,7 @@ describe("Gmail: labels, Trash and memo's runs", () => {
     expect(deleted).toMatchObject({ applied: true, changed: 1, to: "[Gmail]/Trash" })
     expect(folders[1]?.messages).toHaveLength(1)
     expect(folders[2]?.messages).toHaveLength(1)
-    const restored = item((await mail(["ya", "messages", "restore", "--run", deleted.run, "--yes", "--json"])).out)
+    const restored = item((await mail(["ya", "messages", "restore", "--run", deleted.run_id, "--yes", "--json"])).out)
     expect(restored).toMatchObject({ restored: 1, expired: false })
     expect(folders[2]?.messages).toHaveLength(0)
     const back = folders[1]?.messages.find(({ emailId }) => emailId === "1001")

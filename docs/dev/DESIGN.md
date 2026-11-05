@@ -66,5 +66,10 @@ Claims about our code cite the file. The imapflow notes were read in imapflow 2.
   NEED-2219 A). Since the close comes before the answer (WC-LIFE-4), the message has left by then; the error says it
   was probably sent, and `--operation-id` looks in Sent before it sends (`closedAfterSending`,
   `src/commands/messages.ts`). When the command itself failed, its own error is kept and a failed close is dropped.
+- **A change answers its run as `run_id`; `messages restore` answers `run_id` and `restored_run_id`** (owner,
+  2026-11-05, NEED-2207, renamed with no old keys kept). `run_id` is the registered name (WC-OUT-12), and in every
+  answer it is the run this command made, as `meta.run_id` is; the run a restore undid is `restored_run_id`. The
+  option stays `--run <id>`, cli-base's vocabulary flag "the run it is about" (WC-CMD-10), so a next step's
+  `args: { run }`, which names options, stays too.
 
 ## Open questions for the owner
