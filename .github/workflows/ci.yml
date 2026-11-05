@@ -29,10 +29,6 @@ jobs:
       platform-run: |
         node dist/bin/mail.js commands --json >/dev/null
         node dist/bin/mail.js doctor --json >/dev/null
-      # contracts:upgrade needs local state of the CLI's own and a published version to upgrade from (WC-TEST-14).
-      # Once a CLI has both, it adds the script and removes this skip; see docs/dev/TESTING.md.
-      skip: |
-        contracts:upgrade
       checks: |
         bash scripts/audit.sh
         pnpm smoke:node
