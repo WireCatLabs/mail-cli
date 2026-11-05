@@ -33,6 +33,10 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Fixed
 
+- **A stop signal lets `messages import` finish the read in flight and keep what it saved, as `sync` does.** Before,
+  Ctrl-C or an MCP cancel cut the import at once, while it was still reading. It now stops before the next read and
+  answers `stopped: "cancelled"`. It also gets the deadline of a resumable sync: 15 minutes at a terminal, 45 seconds
+  over MCP, instead of 30 seconds.
 - **The iCloud steps say in plain words how to sign in with the short login.** They no longer quote a command line
   with its flags; `session start --help` still lists `--login`.
 - **`status`, `sync` and `messages restore` show a person their times in the local time zone.** A table read
