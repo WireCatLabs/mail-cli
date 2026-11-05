@@ -124,8 +124,8 @@ const messageOf = (error: unknown) => (error instanceof Error ? error.message : 
 
 describe("the layers below the commands name no command", () => {
   const SRC = fileURLToPath(new URL(".", import.meta.url))
-  // What the owner reads as steps, the identity, the reason registry, and a recorded command line read back.
-  const ALLOWED = new Set(["program.ts", "store.ts", "reasons.ts", "providers.ts", join("mail", "cleanup.ts")])
+  // The identity, the reason registry, and a recorded command line read back.
+  const ALLOWED = new Set(["program.ts", "store.ts", "reasons.ts", join("mail", "cleanup.ts")])
 
   it("keeps command lines and flags out of their strings", () => {
     const named = sourceFiles(SRC)

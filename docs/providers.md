@@ -52,7 +52,7 @@ Sending: `smtp.office365.com` port 587, STARTTLS, with the same OAuth sign-in. I
 4. Select "Generate an app specific password" and follow the on-screen steps.
 5. Copy the password when it appears; Apple's page does not say whether it can be shown again.
 
-- `mail` logs in with the full address. Apple says the name before @icloud.com is the usual login; if the full address is refused, sign in with a new profile name: `mail <profile> session start --address <address> --login <name>`.
+- The sign-in uses the full address as the login. Apple says the name before @icloud.com is the usual login; if the full address is refused, sign in again under a new profile name and give the name before @icloud.com as the login.
 
 Read from: <https://support.apple.com/en-us/102654>, <https://support.apple.com/en-us/102525>
 
