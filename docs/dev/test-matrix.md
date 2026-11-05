@@ -7,7 +7,7 @@ ran it · ⛔ not tested offline, with the reason and where it is checked instea
 Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 [TESTING.md](TESTING.md) for how, and for the states and failures that cut across commands.
 
-**273 ✅ · 26 ⛔ · 0 ❌** — 79 commands, 220 options.
+**273 ✅ · 28 ⛔ · 0 ❌** — 79 commands, 222 options.
 
 | Command | Option | | Note |
 |---|---|---|---|
@@ -281,7 +281,9 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `schedule command` | `--at` | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |
 | `schedule command` | `--at-time` | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |
 | `schedule agent` |  | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |
+| `schedule agent` | `--model` | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |
 | `schedule agent` | `--max-cost` | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |
+| `schedule agent` | `--max-cost-per-day` | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |
 | `schedule agent` | `--every` | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |
 | `schedule agent` | `--at` | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |
 | `schedule agent` | `--at-time` | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |

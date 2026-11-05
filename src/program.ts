@@ -7,6 +7,8 @@ import {
   commandsCommand,
   configCommand,
   createProgram as createSharedProgram,
+  environmentOf,
+  type GlobalFlags,
   outputFor,
   type ProgramDefinition,
   type ProgramOptions,
@@ -105,6 +107,11 @@ export const definition = (): ProgramDefinition => ({
         )
         return { ...base, profile: base.settings.profile }
       },
+      limits: (command) =>
+        configuration.resolveSettings(command.optsWithGlobals<GlobalFlags>(), {
+          env: environmentOf(command).env ?? process.env,
+          needsProfile: false,
+        }).schedule,
     }),
   ],
 })
