@@ -2,6 +2,14 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Fixed
+
+- **`session end` help says what `--revoke` does to your account.** With Gmail over OAuth it asks Google to revoke
+  the sign-in, which signs out every tool that uses the same Google project. The command's description and examples
+  now say so. No behaviour changes.
+
 ## 0.16.1 — 05.11.2026
 
 ### Fixed
