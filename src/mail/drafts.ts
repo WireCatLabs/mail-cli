@@ -133,12 +133,12 @@ export interface Changes {
 
 /** The next version of a draft: each given field replaces the old one; the rest, its thread and its id stay. */
 export const nextVersion = ({ draft, references, parts }: ReadDraft, given: Changes, owner: string): Outgoing => {
-  const people = (list: string[], flag: string) => (list.length ? peopleOf(list, flag) : [])
+  const people = (list: string[], field: string) => (list.length ? peopleOf(list, field) : [])
   return {
     from: peopleOf([draft.from ?? owner], "from")[0] as Person,
-    to: given.to ?? people(draft.to, "--to"),
-    cc: given.cc ?? people(draft.cc, "--cc"),
-    bcc: given.bcc ?? people(draft.bcc, "--bcc"),
+    to: given.to ?? people(draft.to, "to"),
+    cc: given.cc ?? people(draft.cc, "cc"),
+    bcc: given.bcc ?? people(draft.bcc, "bcc"),
     subject: given.subject ?? draft.subject,
     text: given.text ?? draft.text,
     messageId: `<${draft.id}>`,

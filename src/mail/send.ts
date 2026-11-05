@@ -30,7 +30,8 @@ export interface Sending {
   savesSent: boolean
   /** The folders a plain `sync` reads, so the sent message is stored as the next sync would store it. */
   syncFolders: () => Promise<{ folders: string[]; mode: "imap" | "gmail" }>
-  warn: (message: string) => void
+  /** `stores` asks the command layer to name the command that stores what this one could not. */
+  warn: (message: string, stores?: "sync") => void
   /**
    * Run by an agent over MCP, where `ask` would go ahead (WC-MCP-7), and the owner has not set
    * `messages.send.others` in the config: mail to others is then refused, as `readonly` would.
@@ -56,16 +57,15 @@ export const othersOf = (draft: Pick<Draft, "to" | "cc" | "bcc">, owner: Readonl
   everyone(draft).filter(({ address }) => !owner.has(address))
 
 /** The original of a reply or forward on the server: where it is, and its bytes. */
-export const fetchOriginal = async (mailbox: Mailbox, backend: MailBackend, ref: string, profile: string) => {
+export const fetchOriginal = async (mailbox: Mailbox, backend: MailBackend, ref: string) => {
   const { ids } = await selectIds(mailbox, { refs: [ref] })
   const { located } = await locate(mailbox, ids)
   const place = located[0]
   const item = place?.items[0]
   if (!place || !item)
-    throw new CliError(
-      "not_found",
-      `${ref} is not on the server any more, or not where the store last saw it; run \`${IDENTITY.command} ${profile} sync\``,
-    )
+    throw new CliError("not_found", `${ref} is not on the server any more, or not where the store last saw it`, {
+      reason: "mail.original-gone",
+    })
   const [raw] = await backend.fetchRaw([{ uid: String(item.uid), folder: place.folder, receivedAt: "" }])
   if (!(raw instanceof Uint8Array)) throw new CliError("provider_error", "the server did not give the original message")
   return { folder: place.folder, validity: place.validity, uid: item.uid, raw }
@@ -141,7 +141,7 @@ const storeSent = async (sending: Sending, messageId: string): Promise<boolean> 
     // Any other mail of the window is stored too; only this Message-ID says the sent copy is.
     return await holdsSent(sending, folders, mode === "gmail", messageId)
   } catch {
-    sending.warn(`the message was sent; \`${IDENTITY.command} ${sending.profile} sync\` stores it`)
+    sending.warn("the message was sent", "sync")
     return false
   }
 }
@@ -225,9 +225,8 @@ export const sendOut = async (sending: Sending, outgoing: Outgoing): Promise<Sen
         throw new CliError(
           "permission_error",
           `over MCP, profile ${sending.profile} mails only its owner: permissions.${SEND_OTHERS_KEY} is readonly for an ` +
-            "agent until the owner sets it in the config; to let an agent mail others: " +
-            `${IDENTITY.command} ${sending.profile} config set permissions.${SEND_OTHERS_KEY} allow`,
-          { permission: SEND_OTHERS_KEY },
+            "agent until the owner sets it in the config",
+          { permission: SEND_OTHERS_KEY, reason: "mail.others-for-agent" },
         )
       await sending.guard.ask?.(probe)
       sending.guard.check(probe, { reserve: false })
@@ -255,9 +254,8 @@ export const sendOut = async (sending: Sending, outgoing: Outgoing): Promise<Sen
   if (!submit)
     throw new CliError(
       "configuration_error",
-      `profile ${sending.profile} names no submission server; set smtp_host, smtp_port and smtp_security with ` +
-        `\`${IDENTITY.command} ${sending.profile} config set\``,
-      { sent: false },
+      `profile ${sending.profile} names no submission server; set smtp_host, smtp_port and smtp_security`,
+      { sent: false, reason: "mail.no-submission" },
     )
   const { raw, copy } = await build(draft)
   const clock = sending.clock ?? REAL_CLOCK

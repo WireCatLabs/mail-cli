@@ -23,6 +23,7 @@ import { appUpdate } from "@wirecat/cli-core/update"
 import type { Command } from "commander"
 import { accountCommand } from "./commands/account.js"
 import { attachmentsCommand } from "./commands/attachments.js"
+import { localChecks } from "./commands/doctor.js"
 import { draftsCommand } from "./commands/drafts.js"
 import { foldersCommand } from "./commands/folders.js"
 import { messageWrites } from "./commands/messages.js"
@@ -36,7 +37,6 @@ import { syncCommand } from "./commands/sync.js"
 import { tagsCommand } from "./commands/tags.js"
 import { configuration, OWNER_ONLY } from "./config.js"
 import { IDENTITY, PACKAGE, SKILL } from "./identity.js"
-import { localChecks } from "./mail/doctor.js"
 
 const update = appUpdate({
   packageName: PACKAGE,

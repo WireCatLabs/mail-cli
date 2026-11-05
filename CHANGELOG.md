@@ -16,6 +16,11 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   check`, `account inspect`, `folders`, `sync`, `messages export`, the `messages` changes, `drafts` and the sends
   printed their answer first; a failing close now ends in an error instead of after a success. JSON answers are
   unchanged.
+- **Eleven more refusals carry a registered reason**, so `commands info` lists them and a script can tell them apart:
+  `mail.flag-deleted`, `mail.no-selection`, `mail.refs-and-filter`, `mail.move-to-trash`, `mail.original-gone`,
+  `mail.others-for-agent`, `mail.no-submission`, `mail.config-unreadable`, `mail.profile-exists`,
+  `mail.server-unknown` and `mail.export-other`. Their messages are unchanged. A write whose outcome is unknown now
+  says "check the mailbox before running it again", without naming `sync`.
 
 ## 0.16.3 — 05.11.2026
 

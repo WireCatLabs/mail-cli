@@ -5,7 +5,7 @@ export const FILTER_HELP =
   "from:<address, domain or word>, to:<address>, subject:<word> (or a bare word), older:<n>d, larger:<size> (5MB, 300KB), has:attachment, label:<name> " +
   '(label:"Two words"), is:unread, is:bulk, score:<n> (at least); all must hold'
 
-const bad = (why: string) => new CliError("validation_error", `--filter: ${why}`)
+const bad = (why: string) => new CliError("validation_error", why)
 
 const ADDRESS = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -94,9 +94,9 @@ export const actionsOf = (value: string): { action: MailAction; protect: boolean
     .filter(Boolean)
   const tags = parts.filter((part) => part.startsWith("tag:")).map((part) => part.slice(4).trim())
   const actions = parts.filter((part) => !part.startsWith("tag:"))
-  if (tags.some((tag) => tag === "")) throw new CliError("validation_error", "--do: tag: needs a name, e.g. tag:promo")
+  if (tags.some((tag) => tag === "")) throw new CliError("validation_error", "tag: needs a name, e.g. tag:promo")
   if (actions.length !== 1 || !(ACTIONS as readonly string[]).includes(actions[0] as string))
-    throw new CliError("validation_error", `--do: choose ${ACTIONS.join(", ")}, plus any tag:<name>`)
+    throw new CliError("validation_error", `choose ${ACTIONS.join(", ")}, plus any tag:<name>`)
   const action = actions[0] as (typeof ACTIONS)[number]
   return { action: action === "protect" ? "keep" : action, protect: action === "protect", tags }
 }

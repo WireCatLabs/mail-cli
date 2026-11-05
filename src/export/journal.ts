@@ -70,19 +70,16 @@ export const openJournal = async ({ path, format, account, mode }: Destination):
   if (mode === "resume") {
     if (!found) throw new CliError("not_found", `${path} holds no export to resume`, { param: "resume" })
     if (found.header.format !== format || found.header.account !== account)
-      throw new CliError(
-        "validation_error",
-        `${path} holds ${found.header.format} of ${found.header.account}; resume it with the same --format and profile`,
-        { param: "resume" },
-      )
+      throw new CliError("validation_error", `${path} holds ${found.header.format} of ${found.header.account}`, {
+        param: "resume",
+        reason: "mail.export-other",
+      })
   } else if (mode === "new" && entries && entries.length > 0) {
-    throw new CliError(
-      "validation_error",
-      found
-        ? `${path} already holds an export; --resume goes on with it, --replace starts over in it`
-        : `${path} is not empty; --replace writes into it anyway, over files of the same name`,
-      { param: "output", reason: "mail.export-destination-exists" },
-    )
+    throw new CliError("validation_error", found ? `${path} already holds an export` : `${path} is not empty`, {
+      param: "output",
+      reason: "mail.export-destination-exists",
+      resumable: found !== undefined,
+    })
   }
   await mkdir(path, { recursive: true, mode: 0o700 })
   const start = mode === "resume" && found ? found : undefined

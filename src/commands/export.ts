@@ -27,6 +27,7 @@ import { DEFAULT_SYNC, providerFor } from "../providers.js"
 import { openMailStore } from "../store.js"
 import { closing, contextOf, openMail, refuseOffline, repeatable } from "./context.js"
 import { foldersFor } from "./sync.js"
+import { worded } from "./words.js"
 
 const PAGE = 100
 const FETCH_SLICE = 50
@@ -128,12 +129,14 @@ export const exportLeaf = (): Command =>
           { param: "output" },
         )
       const account = address.toLowerCase()
-      const journal = await openJournal({
-        path: destination,
-        format: args.format,
-        account,
-        mode: args.resume ? "resume" : args.replace ? "replace" : "new",
-      })
+      const journal = await worded(context.profile, () =>
+        openJournal({
+          path: destination,
+          format: args.format,
+          account,
+          mode: args.resume ? "resume" : args.replace ? "replace" : "new",
+        }),
+      )
       const budget = runBudgetOf(this, args.maxPages)
       const { backend } = await openMail(context, { canRetry: () => budget.take() === null })
       const result = await closing(backend, () =>

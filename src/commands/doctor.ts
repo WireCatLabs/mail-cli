@@ -1,9 +1,9 @@
 import { type OAuthClientReport, oauthClientReport } from "@wirecat/cli-core/constants"
 import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
+import { runSummaries } from "../mail/changes.js"
 import { GOOGLE_GUIDE, googleClient, microsoftClient, sendScopeOf, signInRecords } from "../oauth.js"
 import { providerFor } from "../providers.js"
-import { runSummaries } from "./changes.js"
 
 const DAY_MS = 86_400_000
 /** As memo's doctor warned: early enough to look at what a cleanup trashed before Gmail empties its Trash. */

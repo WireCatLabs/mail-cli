@@ -41,6 +41,7 @@ import {
 import { DEFAULT_ORGANISE, providerFor } from "../providers.js"
 import { openMailStore } from "../store.js"
 import { contextOf, openMail, refuseOffline, repeatable } from "./context.js"
+import { worded } from "./words.js"
 
 type Action = "message-flag" | "message-move" | "message-copy" | "message-delete" | "message-restore"
 
@@ -141,68 +142,70 @@ export const organising = async <T>(command: Command, work: (opened: Opened) => 
   let shown: (() => void) | undefined
   let result: T
   try {
-    result = await baseContext(command, configuration.resolveSettings).run(async () => {
-      const writes = backend.writes
-      if (!writes) throw new CliError("provider_unavailable", "this mailbox cannot be changed from here")
-      const store = await openMailStore(context.env)
-      context.environment.trackCloseable?.(store)
-      try {
-        const key = { provider: "email", account: address.toLowerCase() }
-        const stored = await store.accounts.storedAccount(key).catch(() => null)
-        if (stored === null)
-          throw new CliError(
-            "not_found",
-            `no mail of ${address} is stored yet; run \`${IDENTITY.command} ${context.profile} sync\` first`,
+    result = await worded(context.profile, () =>
+      baseContext(command, configuration.resolveSettings).run(async () => {
+        const writes = backend.writes
+        if (!writes) throw new CliError("provider_unavailable", "this mailbox cannot be changed from here")
+        const store = await openMailStore(context.env)
+        context.environment.trackCloseable?.(store)
+        try {
+          const key = { provider: "email", account: address.toLowerCase() }
+          const stored = await store.accounts.storedAccount(key).catch(() => null)
+          if (stored === null)
+            throw new CliError(
+              "not_found",
+              `no mail of ${address} is stored yet; run \`${IDENTITY.command} ${context.profile} sync\` first`,
+            )
+          let folders: Awaited<ReturnType<typeof backend.folderList>> | undefined
+          const mailbox: Mailbox = {
+            app: IDENTITY,
+            store,
+            key,
+            accountId: stored.id,
+            writes,
+            folders: async () => {
+              folders ??= await backend.folderList()
+              return folders
+            },
+            organise: providerFor(address, context.settings.mailbox.host)?.organise ?? DEFAULT_ORGANISE,
+            now: Date.now,
+          }
+          // baseContext adds an MCP server's own --permission overrides, which a key checked only here would miss.
+          const { settings } = baseContext(command, configuration.resolveSettings)
+          const guard = guardFor(
+            IDENTITY,
+            { ...settings, permissionDefaults: configuration.permissions?.defaults ?? {} },
+            (message) => outputFor(command).renderer.warn(message),
+            context.env,
+            askingOnce(askedByMailFlags(command, terminalAsker(command))),
           )
-        let folders: Awaited<ReturnType<typeof backend.folderList>> | undefined
-        const mailbox: Mailbox = {
-          app: IDENTITY,
-          store,
-          key,
-          accountId: stored.id,
-          writes,
-          folders: async () => {
-            folders ??= await backend.folderList()
-            return folders
-          },
-          organise: providerFor(address, context.settings.mailbox.host)?.organise ?? DEFAULT_ORGANISE,
-          now: Date.now,
+          const { path, line } = commandLine(command, context.profile)
+          return await work({
+            mailbox,
+            backend,
+            guard,
+            profile: context.profile,
+            env: context.env,
+            path,
+            line,
+            answer: (show) => {
+              shown = show
+            },
+            log: (_action, extra = {}) =>
+              new ChangeLog(context.env, {
+                type: "run",
+                id: currentRun().runId,
+                account: key.account,
+                command: extra.command ?? line,
+                started_at: new Date().toISOString(),
+                ...(extra.restorableUntil ? { restorable_until: extra.restorableUntil } : {}),
+              }),
+          })
+        } finally {
+          await store.close()
         }
-        // baseContext adds an MCP server's own --permission overrides, which a key checked only here would miss.
-        const { settings } = baseContext(command, configuration.resolveSettings)
-        const guard = guardFor(
-          IDENTITY,
-          { ...settings, permissionDefaults: configuration.permissions?.defaults ?? {} },
-          (message) => outputFor(command).renderer.warn(message),
-          context.env,
-          askingOnce(askedByMailFlags(command, terminalAsker(command))),
-        )
-        const { path, line } = commandLine(command, context.profile)
-        return await work({
-          mailbox,
-          backend,
-          guard,
-          profile: context.profile,
-          env: context.env,
-          path,
-          line,
-          answer: (show) => {
-            shown = show
-          },
-          log: (_action, extra = {}) =>
-            new ChangeLog(context.env, {
-              type: "run",
-              id: currentRun().runId,
-              account: key.account,
-              command: extra.command ?? line,
-              started_at: new Date().toISOString(),
-              ...(extra.restorableUntil ? { restorable_until: extra.restorableUntil } : {}),
-            }),
-        })
-      } finally {
-        await store.close()
-      }
-    })
+      }),
+    )
   } finally {
     await backend.close()
   }

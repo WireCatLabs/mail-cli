@@ -34,13 +34,14 @@ export const writeProfile = (
   const path = configPath(env)
   const read = readConfigFile(path)
   if ("issue" in read)
-    throw new CliError("configuration_error", `${path} cannot be read; run \`${IDENTITY.command} doctor\``)
+    throw new CliError("configuration_error", `${path} cannot be read`, { reason: "mail.config-unreadable" })
   const config = isRecord(read.raw) ? read.raw : {}
   const profiles = isRecord(config.profiles) ? config.profiles : {}
   const existed = name in profiles
   if (existed && !replace)
-    throw new CliError("validation_error", `profile ${name} already exists; pass --replace to overwrite it`, {
+    throw new CliError("validation_error", `profile ${name} already exists`, {
       param: "name",
+      reason: "mail.profile-exists",
     })
   saveConfigFile(path, { ...config, profiles: { ...profiles, [name]: profile } })
   configuration.migrate(path)
