@@ -223,7 +223,11 @@ export const sendOut = async (sending: Sending, outgoing: Outgoing): Promise<Sen
       await sending.guard.ask?.(probe)
       sending.guard.check(probe, { reserve: false })
     } catch (error) {
-      sending.guard.record({ ...attempt, outcome: "refused", errorCode: (error as CliError).code ?? "unknown" })
+      sending.guard.record({
+        ...attempt,
+        outcome: "refused",
+        errorCode: error instanceof CliError ? error.code : "unknown",
+      })
       throw error
     }
   }

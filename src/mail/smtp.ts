@@ -5,6 +5,10 @@ import type { MailCredential, MailEndpoint, MailLogin, MailSubmit, RunBounds, Su
 
 type SmtpError = Error & { code?: string; responseCode?: number; command?: string }
 
+// nodemailer rejects with an Error that carries these fields; anything else is wrapped so the checks below stay safe.
+const smtpErrorOf = (value: unknown): SmtpError =>
+  value instanceof Error ? value : new Error("the SMTP client failed")
+
 /** The server's reply can quote addresses, so only its codes reach the caller. */
 const codes = (error: SmtpError) => ({
   ...(error.code && /^[A-Z0-9_]{1,40}$/.test(error.code) ? { cause_code: error.code } : {}),
@@ -132,16 +136,16 @@ export const smtpSubmit = (
       try {
         opened = await open(await credential.login())
       } catch (error) {
-        if (credential.kind !== "oauth" || !loginRefused(error as SmtpError)) throw error
+        if (credential.kind !== "oauth" || !loginRefused(smtpErrorOf(error))) throw error
         try {
           opened = await open(await credential.login({ refresh: true }))
         } catch (again) {
-          if (loginRefused(again as SmtpError)) throw tokenRefused(again as SmtpError, credential)
+          if (loginRefused(smtpErrorOf(again))) throw tokenRefused(smtpErrorOf(again), credential)
           throw again
         }
       }
     } catch (error) {
-      throw error instanceof CliError ? error : beforeSending(error as SmtpError)
+      throw error instanceof CliError ? error : beforeSending(smtpErrorOf(error))
     }
     const { connection, done } = opened
     try {
@@ -150,7 +154,7 @@ export const smtpSubmit = (
       )
       return { accepted: info.accepted, rejected: info.rejected }
     } catch (raw) {
-      const error = raw as SmtpError
+      const error = smtpErrorOf(raw)
       // The envelope is answered before the body goes; a message refused with a code was not taken either.
       if (error.code === "EENVELOPE" || (error.code === "EMESSAGE" && error.responseCode)) throw refused(error)
       throw new CliError(

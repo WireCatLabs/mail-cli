@@ -18,6 +18,16 @@ const ENTRIES: [reason: string, code: string, message: string][] = [
   ["mail.run-unknown", "not_found", "no change run has this id for this mailbox"],
   ["mail.archive-unverified", "validation_error", "no store backup under 8 days old is recorded"],
   ["mail.cleanup-scheduled", "permission_error", "messages delete --rules does not run from a schedule"],
+  ["mail.smtp-login-refused", "authentication_error", "the submission server refused the login"],
+  ["mail.no-drafts", "provider_unavailable", "the mailbox has no Drafts folder this tool can find"],
+  ["mail.draft-unknown", "not_found", "no draft has this id in the Drafts folder"],
+  ["mail.gmail-objectid", "provider_error", "Gmail announces OBJECTID, which this build cannot read"],
+  ["mail.export-destination-exists", "validation_error", "the export folder already holds files"],
+  ["download.exists", "validation_error", "the file to save already exists"],
+  ["mail.unreadable", "invalid_response", "some emails could not be read"],
+  ["mail.deletions-skipped", "outcome_unknown", "deletions on the server were not checked this run"],
+  ["mail.rules-unreadable", "configuration_error", "some stored rules could not be read"],
+  ["mail.export-unreadable", "outcome_unknown", "some emails could not be read for the export"],
 ]
 
 /** mail's own error reasons, so an agent can tell one refusal from another by its id. */

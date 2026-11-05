@@ -244,6 +244,6 @@ export const recordSignIn = async (env: NodeJS.ProcessEnv, profile: string, reco
   if (record) records[profile] = record
   else if (profile in records) delete records[profile]
   else return
-  mkdirSync(paths(env).state, { recursive: true })
+  mkdirSync(paths(env).state, { recursive: true, mode: 0o700 })
   await writeFileAtomic(recordsPath(env), `${JSON.stringify(records, null, 2)}\n`, { mode: 0o600 })
 }

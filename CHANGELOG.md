@@ -2,6 +2,18 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Fixed
+
+- **The sender domain cache and the sign-in records folder are private to you.** `domain-ages.json` is written with
+  mode 600 and the folder that holds `sign-ins.json` with mode 700, as every other private file of mail's.
+- **Every error and issue reason mail raises is in its registry**, so `mail commands info` lists it and an agent can
+  branch on it: `mail.smtp-login-refused`, `mail.no-drafts`, `mail.draft-unknown`, `mail.gmail-objectid`,
+  `mail.export-destination-exists`, `download.exists`, `mail.unreadable`, `mail.deletions-skipped`,
+  `mail.rules-unreadable` and `mail.export-unreadable`. A test keeps the list complete.
+- **The secret scan knows Google's OAuth access tokens, refresh tokens and client secrets.**
+
 ## 0.16.0 — 05.11.2026
 
 ### Changed — may break callers
