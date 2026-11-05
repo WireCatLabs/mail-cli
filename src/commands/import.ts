@@ -29,6 +29,7 @@ const mailImport = v.strictObject({
   address: v.string(),
   file: v.string(),
   since: v.string(),
+  timezone: v.string(),
   listed: v.number(),
   saved: v.number(),
   already_stored: v.number(),
@@ -78,7 +79,8 @@ export const importLeaf = (): Command =>
           { param: "file" },
         )
       const path = resolve(file.replace(/^~(?=\/|$)/, context.env.HOME ?? homedir()))
-      const since = args.sinceTime === undefined ? new Date(0) : sinceOf(args.sinceTime, timezoneOf(), Date.now())
+      const zone = timezoneOf()
+      const since = args.sinceTime === undefined ? new Date(0) : sinceOf(args.sinceTime, zone, Date.now())
       const { signal } = environmentOf(this)
       const report = await baseContext(this, configuration.resolveSettings).run(async () => {
         const store = await openMailStore(context.env)
@@ -105,6 +107,7 @@ export const importLeaf = (): Command =>
             address: report.account,
             file: path,
             since: report.since,
+            timezone: zone,
             listed: report.listed,
             saved: report.saved,
             already_stored: report.alreadyStored,
@@ -115,7 +118,7 @@ export const importLeaf = (): Command =>
             remaining,
             ...(report.complete ? {} : { hint: `${remaining} new emails are left; run the import again for the rest` }),
           },
-          { meta: { complete: report.complete } },
+          { meta: { complete: report.complete, timezone: zone, window: { since: since.toISOString() } } },
         ),
       )
     })

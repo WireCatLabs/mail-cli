@@ -549,7 +549,7 @@ mail messages import <file> [options]
 | `--since-time <time>` | only mail received since this date or time; a date alone starts at local midnight (default: the whole file). |
 | `--limit <n>` | save at most this many new emails in this run, newest first. |
 
-**Returns:** mail import — address, file, since, listed, saved, already_stored, skipped, envelopes, and 4 more; every field: mail commands info messages import
+**Returns:** mail import — address, file, since, timezone, listed, saved, already_stored, skipped, and 5 more; every field: mail commands info messages import
 
 **Example:** `mail gm messages import ~/Takeout/Mail/All\ mail\ Including\ Spam\ and\ Trash.mbox`, `mail gm messages import archive.mbox --since-time 2015-01-01 --limit 5000`
 
