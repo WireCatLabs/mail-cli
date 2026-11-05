@@ -13,7 +13,10 @@ import {
   LOCAL_WRITE,
   listOf,
   listQuery,
+  narrowsUnderLock,
   outputFor,
+  readOnlyLockOf,
+  readOnlyRefusal,
   renderAnswer,
   snakeKeys,
   typedQuery,
@@ -27,6 +30,7 @@ import {
   mapProposedTags,
   PRESET_NAMES,
   type PresetName,
+  ruleInput,
   storedMailRules,
 } from "@wirecat/cli-core/mail"
 import type { MessageStore } from "@wirecat/cli-core/store"
@@ -90,6 +94,14 @@ const matchOf = (options: MatchOptions): MailRuleMatch => {
   if (conditionKeys(match).length === 0)
     throw new CliError("validation_error", "give at least one of --sender, --domain, --list-id, --filter, --kind")
   return match
+}
+
+/** Under `MAIL_READ_ONLY` (memo's scheduled triage) a rule only adds: one already there, perhaps the owner's, stays. */
+const refuseReplacing = async (lock: string, match: MailRuleMatch, store: MessageStore, address: string) => {
+  const same = JSON.stringify(ruleInput({ match, action: "skip", decided_at: "" }).conditions)
+  const rules = await storedMailRules(store, { address })
+  if (rules.some((rule) => JSON.stringify(ruleInput(rule).conditions) === same))
+    throw readOnlyRefusal(lock, `replace the rule for ${describeMatch(match)}; the owner changes it`)
 }
 
 const megabytes = (bytes: number) => (bytes / 1024 / 1024).toFixed(1)
@@ -196,15 +208,17 @@ const listCommand = () =>
 const addCommand = () =>
   answerEntity(
     matchOptions(
-      grantsAuthority(
-        annotate(new Command("add"), {
-          effects: LOCAL_WRITE,
-          examples: [
-            `${IDENTITY.command} ya rules add --domain shop.example --do envelope,tag:promo`,
-            `${IDENTITY.command} ya rules add --sender boss@example.com --do protect --reason "never lose these"`,
-            `${IDENTITY.command} ya rules add --filter "older:365d larger:5MB" --do envelope`,
-          ],
-        }),
+      narrowsUnderLock(
+        grantsAuthority(
+          annotate(new Command("add"), {
+            effects: LOCAL_WRITE,
+            examples: [
+              `${IDENTITY.command} ya rules add --domain shop.example --do envelope,tag:promo`,
+              `${IDENTITY.command} ya rules add --sender boss@example.com --do protect --reason "never lose these"`,
+              `${IDENTITY.command} ya rules add --filter "older:365d larger:5MB" --do envelope`,
+            ],
+          }),
+        ),
       ),
     ),
     "mail_rule",
@@ -222,22 +236,33 @@ const addCommand = () =>
         "in search. Changing an envelope rule to keep, or removing it, reads those emails in full on the next sync. " +
         "Mail already stored in full stays; rules apply cuts or tags it.\n\n" +
         "score: and --kind judge a sender by its mail in the same listing; a sync that lists only new mail judges it " +
-        "from that mail. has:attachment reads Content-Type at list time: a guess, not a parse.",
+        "from that mail. has:attachment reads Content-Type at list time: a guess, not a parse.\n\n" +
+        "Under MAIL_READ_ONLY, as in memo's scheduled mail triage, it takes only --sender, --domain or --list-id, " +
+        "never replaces a rule, and records the rule with source agent.",
     )
     .action(async function (
       this: Command,
       options: MatchOptions & { do: ReturnType<typeof actionsOf>; reason?: string },
     ) {
+      const lock = readOnlyLockOf(IDENTITY, contextOf(this).env)
+      // A free query or a kind could catch a whole mailbox; the triage names one sender, domain or list.
+      if (lock && (options.filter !== undefined || options.kind !== undefined))
+        throw readOnlyRefusal(lock, "add a rule by --filter or --kind; give --sender, --domain or --list-id")
+      const match = matchOf(options)
       const rule: MailRule = {
-        match: matchOf(options),
+        match,
         action: options.do.action,
         ...(options.do.tags.length ? { tags: options.do.tags } : {}),
         ...(options.do.protect ? { protected: true } : {}),
         ...(options.kind === undefined ? {} : { source: `preset:${options.kind}` }),
+        ...(lock ? { source: "agent" } : {}),
         ...(options.reason === undefined ? {} : { reason: options.reason }),
         decided_at: new Date().toISOString(),
       }
-      const saved = await withRules(this, (store, address) => saveRule(store, address, rule))
+      const saved = await withRules(this, async (store, address) => {
+        if (lock) await refuseReplacing(lock, match, store, address)
+        return saveRule(store, address, rule)
+      })
       renderAnswer(this, outputFor(this), itemOf(saved), () => ruleLine(saved))
     })
 

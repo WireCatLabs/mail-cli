@@ -246,13 +246,53 @@ describe("rules", () => {
     const plain = await mail(["ya", "rules", "apply", "--json"])
     expect(plain.code).not.toBe(0)
     expect(plain.err + plain.out).toContain("read-only")
-    expect((await mail(["ya", "rules", "add", "--domain", "x.example", "--do", "skip", "--json"])).code).not.toBe(0)
     const preview = await mail(["ya", "rules", "apply", "--yes", "--dry-run", "--json"])
     expect(preview.code).toBe(0)
     expect(body(preview.out).item).toMatchObject({ applied: false, envelopes: 1 })
     expect(
       (await storedEmails(env)).find(({ fromAddress }) => fromAddress === "deals@shop.example")?.bodyText,
     ).toContain("bargain inside")
+  })
+})
+
+describe("rules add under the read-only lock", () => {
+  it("adds a sender, domain or list rule as the agent's, and never replaces one or takes a query", async () => {
+    const { mail, env } = await harness()
+    await mail(["ya", "rules", "add", "--sender", "boss@example.com", "--do", "protect", "--json"])
+    env.MAIL_READ_ONLY = "1"
+
+    const added = await mail(["ya", "rules", "add", "--domain", "shop.example", "--do", "envelope,tag:promo", "--json"])
+    expect(added.code, added.err).toBe(0)
+    expect(body(added.out).item).toMatchObject({ match: { domain: "shop.example" }, source: "agent" })
+    expect((await mail(["ya", "rules", "add", "--list-id", "deals.shop.example", "--do", "skip"])).code).toBe(0)
+
+    const replace = await mail(["ya", "rules", "add", "--sender", "Boss@example.com", "--do", "skip", "--json"])
+    expect(replace.code).toBe(5)
+    expect(replace.err).toContain("replace the rule for from Boss@example.com")
+    for (const query of [
+      ["--filter", "older:1d"],
+      ["--kind", "newsletters"],
+    ]) {
+      const refused = await mail(["ya", "rules", "add", ...query, "--do", "skip", "--json"])
+      expect([refused.code, refused.err.includes("give --sender, --domain or --list-id")]).toEqual([5, true])
+    }
+    for (const argv of [
+      ["rules", "remove", "--sender", "boss@example.com"],
+      ["rules", "import", "/dev/null"],
+      ["rules", "apply", "--yes"],
+      ["messages", "delete", "--rules", "--yes"],
+      ["messages", "move", "--filter", "from:deals@shop.example", "--folder", "archive", "--yes"],
+      ["messages", "send", "--to", "a@example.com", "--subject", "Hi", "Hello", "--yes"],
+    ])
+      expect((await mail(["ya", ...argv, "--json"])).code).toBe(5)
+
+    delete env.MAIL_READ_ONLY
+    const listed = body((await mail(["ya", "rules", "list", "--json"])).out).items
+    expect(listed.map((rule: { match: object; source?: string }) => [rule.match, rule.source])).toEqual([
+      [{ from: "boss@example.com" }, undefined],
+      [{ domain: "shop.example" }, "agent"],
+      [{ list_id: "deals.shop.example" }, "agent"],
+    ])
   })
 })
 
