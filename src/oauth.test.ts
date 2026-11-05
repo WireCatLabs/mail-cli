@@ -437,6 +437,7 @@ it("keeps the sign-in records in a folder only the owner can open", async () => 
     signed_in_at: "2026-11-05T00:00:00.000Z",
     scopes: [GOOGLE_MAIL_SCOPE],
   })
+  if (process.platform === "win32") return
   expect(statSync(state).mode & 0o777).toBe(0o700)
   expect(statSync(join(state, "sign-ins.json")).mode & 0o777).toBe(0o600)
 })
