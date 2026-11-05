@@ -3,11 +3,12 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Readable } from "node:stream"
 import { memoryKeyring } from "@wirecat/cli-base"
+import { constants } from "@wirecat/cli-core/constants"
 import { afterEach, describe, expect, it } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
 import type { MailCredential, MailEndpoint, RunBounds } from "./mail/backend.js"
 import { imapBackend } from "./mail/imap/index.js"
-import { GOOGLE_MAIL_SCOPE, MICROSOFT_IMAP_SCOPE, MICROSOFT_SMTP_SCOPE, WIRECAT_MICROSOFT_CLIENT_ID } from "./oauth.js"
+import { GOOGLE_MAIL_SCOPE, MICROSOFT_IMAP_SCOPE, MICROSOFT_SMTP_SCOPE } from "./oauth.js"
 import { run } from "./program.js"
 import { providerFor } from "./providers.js"
 import { type FakeImap, startFakeImap } from "./testing/fake-imap.js"
@@ -255,8 +256,8 @@ describe("Microsoft sign-in", { timeout: 20_000 }, () => {
     const { mail, authorizeUrls, tokenCalls } = await harness()
     const started = await mail(["work", "session", "start", "--address", "me@outlook.com", "--json"])
     expect(started.code, started.err).toBe(0)
-    expect(item(started.out)).toMatchObject({ provider: "microsoft", client: "wirecat" })
-    expect(authorizeUrls[0]?.searchParams.get("client_id")).toBe(WIRECAT_MICROSOFT_CLIENT_ID)
+    expect(item(started.out)).toMatchObject({ provider: "microsoft", client: "wirecat", source: "constants" })
+    expect(authorizeUrls[0]?.searchParams.get("client_id")).toBe(constants().microsoft.app.client_id)
     expect(tokenCalls[0]?.get("redirect_uri")).toMatch(/^http:\/\/localhost:\d+\/callback$/)
   })
 
@@ -276,7 +277,13 @@ describe("Microsoft sign-in", { timeout: 20_000 }, () => {
 
     const doctor = await mail(["doctor", "--json"])
     expect(item(doctor.out).oauth).toEqual([
-      { profile: "work", provider: "microsoft", client: "own", signed_in_at: expect.any(String), sends: true },
+      {
+        profile: "work",
+        provider: "microsoft",
+        oauth_client: { client: "own", source: "config" },
+        signed_in_at: expect.any(String),
+        sends: true,
+      },
     ])
 
     const ended = await mail(["work", "session", "end", "--json"])
@@ -391,14 +398,32 @@ describe("Google sign-in edges", { timeout: 20_000 }, () => {
     expect(entry("google")).toBeNull()
   })
 
-  it("signs an OAuth Gmail profile in again with MAIL_GOOGLE_CLIENT_ID, and names the guide without one", async () => {
-    const { mail, authorizeUrls } = await gmail()
+  it("signs an OAuth Gmail profile in again with MAIL_GOOGLE_CLIENT_ID, and with WireCat's app without one", async () => {
+    const { mail, authorizeUrls, tokenCalls } = await gmail()
     expect((await mail([...start, "--client-file", file()])).code).toBe(0)
     const again = await mail(["work", "session", "start", "--json"], { MAIL_GOOGLE_CLIENT_ID: "env-client" })
     expect(again.code, again.err).toBe(0)
     expect(authorizeUrls.at(-1)?.searchParams.get("client_id")).toBe("env-client")
-    const none = await mail(["work", "session", "start", "--json"])
-    expect(failure(none.err)).toMatchObject({ reason: "mail.oauth-no-client" })
-    expect(none.err).toContain("oauth-google.md")
+    const wirecat = await mail(["work", "session", "start", "--json"])
+    expect(wirecat.code, wirecat.err).toBe(0)
+    expect(item(wirecat.out)).toMatchObject({ client: "wirecat", source: "constants" })
+    expect(authorizeUrls.at(-1)?.searchParams.get("client_id")).toBe(constants().google.app.client_id)
+    expect(tokenCalls.at(-1)?.get("client_secret")).toBe(constants().google.app.client_secret)
+    expect(item((await mail(["doctor", "--json"])).out).oauth[0].oauth_client).toEqual({
+      client: "wirecat",
+      source: "constants",
+    })
+  })
+
+  it("takes the profile's google_client_id before WireCat's app, with the secret from the environment", async () => {
+    const { mail, authorizeUrls, tokenCalls } = await gmail()
+    expect((await mail([...start, "--client-file", file()])).code).toBe(0)
+    const set = await mail(["config", "set", "--defaults", "google_client_id", "config-client", "--json"])
+    expect(set.code, set.err).toBe(0)
+    const started = await mail(["work", "session", "start", "--json"], { MAIL_GOOGLE_CLIENT_SECRET: "env-secret" })
+    expect(started.code, started.err).toBe(0)
+    expect(item(started.out)).toMatchObject({ client: "own", source: "config" })
+    expect(authorizeUrls.at(-1)?.searchParams.get("client_id")).toBe("config-client")
+    expect(tokenCalls.at(-1)?.get("client_secret")).toBe("env-secret")
   })
 })

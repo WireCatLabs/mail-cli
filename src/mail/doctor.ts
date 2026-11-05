@@ -1,6 +1,7 @@
+import { type OAuthClientReport, oauthClientReport } from "@wirecat/cli-core/constants"
 import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
-import { GOOGLE_GUIDE, microsoftClient, OAUTH_GUIDE, sendScopeOf, signInRecords } from "../oauth.js"
+import { GOOGLE_GUIDE, googleClient, microsoftClient, sendScopeOf, signInRecords } from "../oauth.js"
 import { providerFor } from "../providers.js"
 import { runSummaries } from "./changes.js"
 
@@ -63,20 +64,22 @@ export const oauthCheck = (env: NodeJS.ProcessEnv, now = Date.now()) => {
     const { mailbox } = configuration.resolveSettings({ profile }, { env })
     const kind = mailbox.address ? providerFor(mailbox.address, mailbox.host)?.oauth : undefined
     if (mailbox.auth !== "oauth" || !kind) return []
-    let client: "wirecat" | "own" | null = "own"
-    if (kind === "microsoft")
-      try {
-        client = microsoftClient(mailbox).source
-      } catch {
-        client = null
-      }
     const record = records[profile]
+    // The app the profile signed in with, which its refresh uses; else the one a new sign-in would take.
+    let oauthClient: OAuthClientReport
+    try {
+      oauthClient = oauthClientReport(
+        record?.source ? record : kind === "microsoft" ? microsoftClient(env, mailbox) : googleClient(env, mailbox),
+      )
+    } catch (error) {
+      oauthClient = { client: null, source: null, reason: error instanceof Error ? error.message : String(error) }
+    }
     const days = record ? Math.floor((now - Date.parse(record.signed_in_at)) / DAY_MS) : null
     return [
       {
         profile,
         provider: kind,
-        client,
+        oauth_client: oauthClient,
         signed_in_at: record?.signed_in_at ?? null,
         sends: record ? record.scopes.includes(sendScopeOf(kind)) : null,
         ...(kind === "google" ? { testing_expiry_risk: days !== null && days >= TESTING_WARN_DAYS } : {}),
@@ -86,18 +89,15 @@ export const oauthCheck = (env: NodeJS.ProcessEnv, now = Date.now()) => {
   const sign = (profile: string) => `\`${IDENTITY.command} ${profile} session start\``
   return {
     fields: { oauth: profiles },
-    notes: profiles.flatMap(({ profile, client, signed_in_at, sends, ...rest }) => [
+    notes: profiles.flatMap(({ profile, oauth_client, signed_in_at, sends, ...rest }) => [
       ...("testing_expiry_risk" in rest && rest.testing_expiry_risk
         ? [
             `profile ${profile} signed in to Google ${TESTING_WARN_DAYS}+ days ago: if your Google app is still in ` +
               `Testing, Google ends the sign-in on day 7. Publish the app (${GOOGLE_GUIDE}), then ${sign(profile)}`,
           ]
         : []),
-      ...(client === null
-        ? [
-            `profile ${profile} has no Microsoft app to sign in with again: set one with ` +
-              `\`${IDENTITY.command} config set --defaults microsoft_client_id <id>\` (${OAUTH_GUIDE})`,
-          ]
+      ...(oauth_client.client === null
+        ? [`profile ${profile} has no OAuth app to sign in with again: ${oauth_client.reason}`]
         : []),
       ...(signed_in_at === null
         ? [`profile ${profile} has no OAuth sign-in on record here; run ${sign(profile)}`]

@@ -64,7 +64,8 @@ desktop app has no secret.
    Both must end with `signed_in: true`. If Microsoft's page shows an error with `AADSTS50011` (the redirect URI does
    not match), check that the address under **Mobile and desktop applications** is exactly `http://localhost/callback`.
 9. For WireCat's own app: send the Application (client) ID to the maintainers. They put it into
-   `WIRECAT_MICROSOFT_CLIENT_ID` in `src/oauth.ts`, and the next release signs in without any config.
+   `microsoft.app.client_id` in cli-core's `constants.json`, and the next cli-core release and mail bump sign in
+   without any config.
 
 ## Later, and not needed to start
 

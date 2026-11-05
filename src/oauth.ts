@@ -1,13 +1,13 @@
 import { mkdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { CliError, isMovedRun, type KeyringStore, resolvePaths, systemKeyring } from "@wirecat/cli-base"
+import { type AppSource, googleApp, microsoftApp } from "@wirecat/cli-core/constants"
 import { writeFileAtomic } from "@wirecat/cli-core/files"
 import {
   credentialStorage,
   type OAuthClient,
   type OAuthProvider,
   oauthAccount,
-  readClientFile,
   standardCodec,
   type TokenCodec,
   type TokenKeeper,
@@ -20,9 +20,6 @@ import { IDENTITY } from "./identity.js"
 import type { MailCredential } from "./mail/backend.js"
 
 export type OAuthKind = "microsoft" | "google"
-
-/** WireCat's Microsoft app: a public client for any Entra tenant and personal accounts (docs/oauth-microsoft.md). */
-export const WIRECAT_MICROSOFT_CLIENT_ID = "f7f05d3a-b948-4d50-b3ce-59c816ce69e9"
 
 export const OAUTH_GUIDE = "https://github.com/WireCatLabs/mail-cli/blob/main/docs/oauth-microsoft.md"
 
@@ -110,20 +107,12 @@ const googleCodec: TokenCodec = {
   },
 }
 
-/** The owner's Desktop client: `--client-file` (private to the owner), else MAIL_GOOGLE_CLIENT_ID; no bundled one. */
-export const googleClient = (env: NodeJS.ProcessEnv, file?: string, platform = process.platform): OAuthClient => {
-  if (!file) {
-    const clientId = env.MAIL_GOOGLE_CLIENT_ID
-    const clientSecret = env.MAIL_GOOGLE_CLIENT_SECRET
-    if (clientId) return { clientId, ...(clientSecret ? { clientSecret } : {}) }
-    throw new CliError(
-      "configuration_error",
-      `Gmail over OAuth needs your own Google app: pass --client-file <Desktop client JSON> (steps: ${GOOGLE_GUIDE})`,
-      { reason: "mail.oauth-no-client" },
-    )
-  }
-  return readClientFile(file, { platform })
-}
+/**
+ * The Google app a Gmail sign-in uses: `--client-file`, `MAIL_GOOGLE_CLIENT_ID` (with `MAIL_GOOGLE_CLIENT_SECRET`),
+ * the profile's `google_client_id`, then WireCat's app (WC-SECR-25).
+ */
+export const googleClient = (env: NodeJS.ProcessEnv, mailbox: Mailbox, file?: string, platform = process.platform) =>
+  googleApp({ env, prefix: "MAIL", clientFile: file, configClientId: mailbox.googleClientId, platform })
 
 const UserInfo = v.object({ email: v.optional(v.string()), email_verified: v.optional(v.boolean()) })
 
@@ -151,19 +140,12 @@ export const googleAddress = async (accessToken: string, fetcher: typeof fetch, 
   return email.toLowerCase()
 }
 
-/** The owner's own Microsoft app when the config names one, else WireCat's; only the owner sets the key (OWNER_ONLY). */
-export const microsoftClient = (mailbox: Mailbox): { client: OAuthClient; source: "wirecat" | "own" } => {
-  const own = mailbox.microsoftClientId?.trim()
-  if (own) return { client: { clientId: own }, source: own === WIRECAT_MICROSOFT_CLIENT_ID ? "wirecat" : "own" }
-  if (WIRECAT_MICROSOFT_CLIENT_ID) return { client: { clientId: WIRECAT_MICROSOFT_CLIENT_ID }, source: "wirecat" }
-  throw new CliError(
-    "configuration_error",
-    "this mail build has no Microsoft app to sign in with yet. Register your own (a free Microsoft Entra app, " +
-      `steps: ${OAUTH_GUIDE}) and set its Application (client) ID once, in a terminal: ` +
-      `\`${IDENTITY.command} config set --defaults microsoft_client_id <id>\``,
-    { reason: "mail.oauth-no-client" },
-  )
-}
+/**
+ * The Microsoft app a sign-in uses: `MAIL_MICROSOFT_CLIENT_ID`, the profile's `microsoft_client_id`, then WireCat's
+ * public client (WC-SECR-25). Only the owner sets the key (OWNER_ONLY).
+ */
+export const microsoftClient = (env: NodeJS.ProcessEnv, mailbox: Mailbox) =>
+  microsoftApp({ env, prefix: "MAIL", configClientId: mailbox.microsoftClientId })
 
 const paths = (env: NodeJS.ProcessEnv) => resolvePaths({ appName: IDENTITY.appName, prefix: IDENTITY.envPrefix, env })
 
@@ -238,6 +220,8 @@ export const tokenCredential = (accessToken: string, kind: OAuthKind): MailCrede
 export interface SignInRecord {
   provider: OAuthKind
   client: "wirecat" | "own"
+  /** Where the app came from (WC-SECR-25); a record written before 0.15 has none. */
+  source?: AppSource
   signed_in_at: string
   scopes: string[]
 }
