@@ -10,7 +10,6 @@
     "STARTTLS",
     "autoconfig",
     "imapflow",
-    "mail",
     "UIDVALIDITY",
     "UIDPLUS",
     "yandex",
