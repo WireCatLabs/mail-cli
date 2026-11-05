@@ -8,9 +8,7 @@ import {
   environmentOf,
   FETCH,
   itemOf,
-  outputFor,
   positiveCount,
-  renderAnswer,
   runBudgetOf,
 } from "@wirecat/cli-core/cli"
 import {
@@ -30,6 +28,7 @@ import { rethreadStored } from "../mail/rethread.js"
 import { DEFAULT_SYNC, providerFor, type SyncFolders } from "../providers.js"
 import { openMailStore } from "../store.js"
 import { closing, contextOf, openMail, refuseOffline, repeatable } from "./context.js"
+import { answerLocally } from "./times.js"
 
 const DAY_MS = 86_400_000
 const DEFAULT_DAYS = 30
@@ -295,9 +294,8 @@ export const syncCommand = (): Command =>
             : moved
               ? `run sync again to continue; ${IDENTITY.command} ${context.profile} status shows how far it is`
               : "this run moved nothing on: raise --timeout or --max-pages, then run sync again"
-      renderAnswer(
+      answerLocally(
         this,
-        outputFor(this),
         itemOf(
           {
             address: report.account,

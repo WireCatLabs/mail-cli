@@ -76,5 +76,11 @@ Claims about our code cite the file. The imapflow notes were read in imapflow 2.
   budget its own flag, so `sync`, `messages import` and `messages export` take `--max-messages` ("at most this many
   messages in one run"). `--output` is "the file to write" and `--output-dir` "the folder to write into" (WC-CMD-10).
   The `messages` changes keep `--limit` with `--filter`: it bounds which items the query selects, as a search's does.
+- **A person reads times in their own zone; storage and JSON stay UTC** (owner, 2026-11-05, NEED-2215 A). mail's own
+  answers go through `answerLocally` (`src/commands/times.ts`): in pretty output every UTC time of the item becomes
+  wall time in the zone in use, without an offset, and one line names the zone (WC-TIME-4). JSON, JSONL, compact
+  rows and agents keep UTC (WC-TIME-2); `next` is never rewritten, since its args run. The answers cli-core draws
+  (`search messages`, `conversations`, `messages show`, `review`, `runs list`) still print UTC: that is fixed in
+  cli-core.
 
 ## Open questions for the owner
