@@ -90,5 +90,10 @@ Claims about our code cite the file. The imapflow notes were read in imapflow 2.
   - **WC-CMD-7: `account inspect` stays under `account`, not under `stats`** (owner, 2026-11-05, NEED-2210 B). It
     checks an account, reading the server without importing, as the bullet on "Everything mail-specific" above says;
     it is not a statistic over stored mail, which is what `stats messages` counts.
+- **Each write has its own `operation_id`, not only the run** (owner, 2026-11-05, NEED-2206 B; WC-OUT-10). `Changer`
+  (`src/mail/organise.ts`) gives every step one, writes it into the step's line of the change log before the server
+  is asked, and lists the step under `writes` in the answer; a restore's step adds `undoes`, the id of the step it
+  reverses. Folder and draft writes answer theirs. A restore of one chosen write would need its own option: the
+  vocabulary's `--operation-id` is the retry of an unknown outcome (WC-CMD-10), so that waits for the owner.
 
 ## Open questions for the owner

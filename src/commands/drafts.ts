@@ -73,6 +73,7 @@ const draftChange = v.strictObject({
   subject: v.optional(v.string()),
   to: v.optional(v.array(v.string())),
   size: v.optional(v.number()),
+  operation_id: v.optional(v.string()),
   hint: v.optional(v.string()),
 })
 
@@ -120,8 +121,13 @@ const ownAddress = (opened: Opened) => opened.mailbox.key.account
 const draftsFolder = async (opened: Opened) => draftsFolderOf(await opened.mailbox.folders(), opened.mailbox.organise)
 
 /** Every change to Drafts goes through the guard, with its own key; none counts toward the send limit. */
-const guarded = <T>(opened: Opened, key: string, act: () => Promise<T>) =>
-  guardedWrite(opened.guard, { chatId: null, kind: "account", key, operationId: newOperationId() }, act)
+const guarded = async <T>(opened: Opened, key: string, act: () => Promise<T>) => {
+  const operationId = newOperationId()
+  return {
+    done: await guardedWrite(opened.guard, { chatId: null, kind: "account", key, operationId }, act),
+    operationId,
+  }
+}
 
 const answer = (command: Command, opened: Opened, change: v.InferOutput<typeof draftChange>) =>
   opened.answer(() =>
@@ -258,7 +264,7 @@ const saveDraft = async (
   const writes = opened.mailbox.writes
   // The owner may have been writing the old version by hand, so it goes to Trash, where it can be got back.
   const trash = replacing ? await trashOf(opened.mailbox) : undefined
-  const stored = await guarded(opened, `drafts.${action}`, async () => {
+  const { done: stored, operationId } = await guarded(opened, `drafts.${action}`, async () => {
     const saved = await writes.append(folder, raw, DRAFT_FLAGS)
     // The new version is in place before the old one goes, so a failure in between leaves two drafts, never none.
     if (replacing && trash) await writes.move(folder, replacing.validity, [replacing.uid], trash)
@@ -270,6 +276,7 @@ const saveDraft = async (
     uid: stored.uid ?? null,
     ...(replacing && trash ? { replaced_uid: replacing.uid, old_version_in: trash } : {}),
     ...shown,
+    operation_id: operationId,
   })
 }
 
@@ -356,8 +363,10 @@ const deleteCommand = () =>
             applied: false,
             hint: "a preview: nothing changed; the owner adds --allow-dangerous to delete it for good",
           })
-        await guarded(opened, "drafts.delete", () => opened.mailbox.writes.expunge(folder, found.validity, [found.uid]))
-        answer(this, opened, { ...shown, applied: true })
+        const { operationId } = await guarded(opened, "drafts.delete", () =>
+          opened.mailbox.writes.expunge(folder, found.validity, [found.uid]),
+        )
+        answer(this, opened, { ...shown, applied: true, operation_id: operationId })
       })
     })
 

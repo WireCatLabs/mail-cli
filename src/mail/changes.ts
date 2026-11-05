@@ -21,6 +21,10 @@ export interface ChangedItem {
 export interface StepLine {
   type: "step"
   step: number
+  /** The write's own id in the send journal; absent in runs logged before mail 0.17. */
+  operation_id?: string
+  /** For a restore's step, the `operation_id` of the step it undoes. */
+  undoes?: string
   op: ChangeOp
   folder: string
   validity: string

@@ -37,6 +37,7 @@ import {
   targetOf,
   trashMessages,
   trashOf,
+  type Write,
 } from "../mail/organise.js"
 import { DEFAULT_ORGANISE, providerFor } from "../providers.js"
 import { openMailStore } from "../store.js"
@@ -47,6 +48,15 @@ import { worded } from "./words.js"
 type Action = "message-flag" | "message-move" | "message-copy" | "message-delete" | "message-restore"
 
 const BULK_KEY = "messages.bulk"
+
+const writeSchema = v.strictObject({
+  operation_id: v.string(),
+  op: v.picklist(["flag", "label", "move", "copy", "trash"]),
+  folder: v.string(),
+  to: v.optional(v.string()),
+  messages: v.number(),
+  undoes: v.optional(v.string()),
+})
 
 const mailChange = v.looseObject({
   action: v.string(),
@@ -62,6 +72,7 @@ const mailChange = v.looseObject({
   folders: v.array(v.strictObject({ folder: v.string(), messages: v.number() })),
   to: v.optional(v.string()),
   kept: v.optional(v.record(v.string(), v.number())),
+  writes: v.optional(v.array(writeSchema)),
   hint: v.optional(v.string()),
 })
 
@@ -76,6 +87,7 @@ const mailRestore = v.looseObject({
   restored: v.number(),
   expired: v.boolean(),
   restorable_until: v.nullable(v.string()),
+  writes: v.optional(v.array(writeSchema)),
 })
 
 const limitOf = (value: string) => {
@@ -261,7 +273,7 @@ const answerChange = (
   command: Command,
   opened: Opened,
   plan: Planned,
-  outcome: { run: string; changed: string[]; kept?: Record<string, number> } | null,
+  outcome: { run: string; changed: string[]; kept?: Record<string, number>; writes: Write[] } | null,
   given: Record<string, unknown>,
   extra: Record<string, unknown> = {},
 ) => {
@@ -311,6 +323,7 @@ const answerChange = (
           folders,
           ...(plan.to ? { to: plan.to } : {}),
           ...(Object.keys(kept).length ? { kept } : {}),
+          ...(outcome ? { writes: outcome.writes } : {}),
           ...extra,
           ...(outcome
             ? { hint: restoreHint(opened, outcome.run) }
@@ -382,7 +395,7 @@ const organiseAction = (
       const changer = new Changer(opened.mailbox, opened.guard, log, key, action)
       try {
         const changed = await plan.change(changer, located.located)
-        answerChange(this, opened, planned, { run: log.run.id, changed }, given)
+        answerChange(this, opened, planned, { run: log.run.id, changed, writes: changer.writes }, given)
       } finally {
         log.end(Date.now())
       }
@@ -637,7 +650,7 @@ backup is under 8 days old, and a first run moves at most 100, to check by hand.
             trash,
             options.rules ? keptNow(rulesOf) : undefined,
           )
-          answer({ run: log.run.id, changed, kept })
+          answer({ run: log.run.id, changed, kept, writes: changer.writes })
         } finally {
           log.end(Date.now())
         }
@@ -724,6 +737,7 @@ Envelopes come back to search at once; mail with text is saved again by the next
                   restored: plan.restored,
                   expired: plan.expired,
                   restorable_until: plan.restorable_until,
+                  ...(apply ? { writes: changer.writes } : {}),
                 },
                 { next },
               ),

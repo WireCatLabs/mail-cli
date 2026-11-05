@@ -231,8 +231,20 @@ const labelBox = (raw: string) => {
   return { externalId: `label:${name}`, name, kind: "label" }
 }
 
+/** One write a change made, as its answer names it (WC-OUT-10). */
+export interface Write {
+  operation_id: string
+  op: StepLine["op"]
+  folder: string
+  to?: string
+  messages: number
+  undoes?: string
+}
+
 /** Runs one step against the server under the guard, recording it before it goes and once it is done. */
 export class Changer {
+  readonly writes: Write[] = []
+
   constructor(
     readonly mailbox: Mailbox,
     readonly guard: SendGuard,
@@ -243,7 +255,7 @@ export class Changer {
   ) {}
 
   async step<T>(
-    line: Omit<StepLine, "type" | "step">,
+    line: Omit<StepLine, "type" | "step" | "operation_id">,
     act: () => Promise<T>,
     moved?: (done: T) => { uids: Map<string, number>; validity?: string },
   ): Promise<T> {
@@ -255,16 +267,26 @@ export class Changer {
       count: line.items.length,
       operationId: newOperationId(),
     }
-    const step = this.log.begin(line)
+    const step = this.log.begin({ ...line, operation_id: request.operationId })
     const done = await guardedWrite(this.guard, request, act)
     this.log.done(
       step,
       line.items.map(({ id }) => id),
       moved?.(done),
     )
+    this.writes.push({
+      operation_id: request.operationId,
+      op: line.op,
+      folder: line.folder,
+      ...(line.to ? { to: line.to } : {}),
+      messages: line.items.length,
+      ...(line.undoes ? { undoes: line.undoes } : {}),
+    })
     return done
   }
 }
+
+const undoing = (step: StepLine) => (step.operation_id ? { undoes: step.operation_id } : {})
 
 const statesOf = async (mailbox: Mailbox, { folder, validity, items }: Located) =>
   mailbox.writes.state(
@@ -637,6 +659,7 @@ export const restoreRun = async (
               op: step.op,
               folder,
               validity,
+              ...undoing(step),
               change: back,
               items: group.flatMap((item) => valuesOf(found, [item.id]).map((uid) => ({ ...item, uid }))),
             },
@@ -668,7 +691,7 @@ export const restoreRun = async (
           found,
           here.map(({ id }) => id),
         )
-        await changer.step({ op: "copy", folder: to, validity, items: here }, () =>
+        await changer.step({ op: "copy", folder: to, validity, ...undoing(step), items: here }, () =>
           mailbox.writes.expunge(to, validity, uids),
         )
         await mailbox.store.mail.setMailboxes(
@@ -689,7 +712,7 @@ export const restoreRun = async (
           found,
           group.map(({ id }) => id),
         )
-        await changer.step({ op: "move", folder: to, validity, to: back, items: group }, () =>
+        await changer.step({ op: "move", folder: to, validity, to: back, ...undoing(step), items: group }, () =>
           mailbox.writes.move(to, validity, uids, back),
         )
         const ids = group.map(({ id }) => id)

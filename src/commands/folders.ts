@@ -60,6 +60,7 @@ const folderChange = v.strictObject({
   to: v.optional(v.string()),
   messages: v.optional(v.nullable(v.number())),
   applied: v.optional(v.boolean()),
+  operation_id: v.optional(v.string()),
   hint: v.optional(v.string()),
 })
 
@@ -100,17 +101,13 @@ const changeFolder = async (
       const folders = await backend.folderList()
       const shown = preview?.(folders)
       if (shown) return { ...shown, applied: false, hint: "a preview: nothing changed; add --yes to delete it" }
-      return guardedWrite(
+      const operationId = newOperationId()
+      const changed = await guardedWrite(
         guard,
-        {
-          chatId: null,
-          kind: "account",
-          action: ACTIONS[action],
-          key: `folders.${action}`,
-          operationId: newOperationId(),
-        },
+        { chatId: null, kind: "account", action: ACTIONS[action], key: `folders.${action}`, operationId },
         () => work(writes, folders),
       )
+      return { ...changed, operation_id: operationId }
     }),
   )
   renderAnswer(command, outputFor(command), itemOf({ action, ...done }))
