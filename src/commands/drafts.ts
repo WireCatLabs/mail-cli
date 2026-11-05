@@ -123,11 +123,13 @@ const draftsFolder = async (opened: Opened) => draftsFolderOf(await opened.mailb
 const guarded = <T>(opened: Opened, key: string, act: () => Promise<T>) =>
   guardedWrite(opened.guard, { chatId: null, kind: "account", key, operationId: newOperationId() }, act)
 
-const answer = (command: Command, change: v.InferOutput<typeof draftChange>) =>
-  renderAnswer(command, outputFor(command), itemOf(change), () =>
-    change.applied
-      ? `${change.action === "delete" ? "deleted" : "saved"} draft ${change.id} in ${change.folder}\n`
-      : `${change.hint ?? "a preview: nothing changed"}\n`,
+const answer = (command: Command, opened: Opened, change: v.InferOutput<typeof draftChange>) =>
+  opened.answer(() =>
+    renderAnswer(command, outputFor(command), itemOf(change), () =>
+      change.applied
+        ? `${change.action === "delete" ? "deleted" : "saved"} draft ${change.id} in ${change.folder}\n`
+        : `${change.hint ?? "a preview: nothing changed"}\n`,
+    ),
   )
 
 /** The message `--reply-to` names, read from the server, so its ids and recipients are exactly what it holds. */
@@ -166,14 +168,16 @@ const listCommand = () =>
       await organising(this, async (opened) => {
         const limit = options.limit ?? LIST_LIMIT
         const found = await listDrafts(opened.backend, await draftsFolder(opened), limit)
-        renderAnswer(
-          this,
-          outputFor(this),
-          listOf("drafts list", { items: found.items, limit, has_more: found.more }),
-          () =>
-            found.items.length === 0
-              ? "no drafts\n"
-              : `${found.items.map((one) => `${one.id}  ${one.subject || "(no subject)"}  to ${one.to.join(", ") || "nobody yet"}`).join("\n")}\n`,
+        opened.answer(() =>
+          renderAnswer(
+            this,
+            outputFor(this),
+            listOf("drafts list", { items: found.items, limit, has_more: found.more }),
+            () =>
+              found.items.length === 0
+                ? "no drafts\n"
+                : `${found.items.map((one) => `${one.id}  ${one.subject || "(no subject)"}  to ${one.to.join(", ") || "nobody yet"}`).join("\n")}\n`,
+          ),
         )
       })
     })
@@ -244,7 +248,13 @@ const saveDraft = async (
   const id = message.messageId.replace(/^<|>$/g, "")
   const shown = { id, folder, subject: message.subject, to: addressesOf(message.to), size: raw.length }
   if (dryRun)
-    return answer(command, { action, applied: false, uid: null, ...shown, hint: "a preview: nothing was saved" })
+    return answer(command, opened, {
+      action,
+      applied: false,
+      uid: null,
+      ...shown,
+      hint: "a preview: nothing was saved",
+    })
   const writes = opened.mailbox.writes
   // The owner may have been writing the old version by hand, so it goes to Trash, where it can be got back.
   const trash = replacing ? await trashOf(opened.mailbox) : undefined
@@ -254,7 +264,7 @@ const saveDraft = async (
     if (replacing && trash) await writes.move(folder, replacing.validity, [replacing.uid], trash)
     return saved
   })
-  answer(command, {
+  answer(command, opened, {
     action,
     applied: true,
     uid: stored.uid ?? null,
@@ -341,13 +351,13 @@ const deleteCommand = () =>
           to: found.read.draft.to,
         }
         if (options.dryRun === true || !dangerous)
-          return answer(this, {
+          return answer(this, opened, {
             ...shown,
             applied: false,
             hint: "a preview: nothing changed; the owner adds --allow-dangerous to delete it for good",
           })
         await guarded(opened, "drafts.delete", () => opened.mailbox.writes.expunge(folder, found.validity, [found.uid]))
-        answer(this, { ...shown, applied: true })
+        answer(this, opened, { ...shown, applied: true })
       })
     })
 

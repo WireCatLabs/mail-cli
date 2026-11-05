@@ -19,7 +19,7 @@ import * as v from "valibot"
 import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
 import { folderNamed } from "../mail/organise.js"
-import { contextOf, openMail, refuseOffline } from "./context.js"
+import { closing, contextOf, openMail, refuseOffline } from "./context.js"
 
 const mailFolder = v.strictObject({
   path: v.string(),
@@ -44,16 +44,14 @@ const listCommand = () =>
       const context = contextOf(this)
       refuseOffline(context.flags)
       const { backend } = await openMail(context)
-      try {
-        const folders = await baseContext(this, configuration.resolveSettings).run(() => backend.folderList())
-        renderAnswer(
-          this,
-          outputFor(this),
-          listOf("folders list", { items: folders, limit: Math.max(1, folders.length), has_more: false }),
-        )
-      } finally {
-        await backend.close()
-      }
+      const folders = await closing(backend, () =>
+        baseContext(this, configuration.resolveSettings).run(() => backend.folderList()),
+      )
+      renderAnswer(
+        this,
+        outputFor(this),
+        listOf("folders list", { items: folders, limit: Math.max(1, folders.length), has_more: false }),
+      )
     })
 
 const folderChange = v.strictObject({
@@ -87,9 +85,9 @@ const changeFolder = async (
   const context = contextOf(command)
   refuseOffline(context.flags)
   const { backend } = await openMail(context)
-  try {
-    const base = baseContext(command, configuration.resolveSettings)
-    const done = await base.run(async () => {
+  const base = baseContext(command, configuration.resolveSettings)
+  const done = await closing(backend, () =>
+    base.run(async () => {
       const writes = backend.writes
       if (!writes) throw new CliError("provider_unavailable", "this mailbox cannot be changed from here")
       const guard = guardFor(
@@ -113,11 +111,9 @@ const changeFolder = async (
         },
         () => work(writes, folders),
       )
-    })
-    renderAnswer(command, outputFor(command), itemOf({ action, ...done }))
-  } finally {
-    await backend.close()
-  }
+    }),
+  )
+  renderAnswer(command, outputFor(command), itemOf({ action, ...done }))
 }
 
 type FolderList = Awaited<ReturnType<Awaited<ReturnType<typeof openMail>>["backend"]["folderList"]>>

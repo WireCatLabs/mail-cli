@@ -29,7 +29,7 @@ import { knownAges, lookUpAges, rdapDeps } from "../mail/domain-age.js"
 import { rethreadStored } from "../mail/rethread.js"
 import { DEFAULT_SYNC, providerFor, type SyncFolders } from "../providers.js"
 import { openMailStore } from "../store.js"
-import { contextOf, openMail, refuseOffline, repeatable } from "./context.js"
+import { closing, contextOf, openMail, refuseOffline, repeatable } from "./context.js"
 
 const DAY_MS = 86_400_000
 const DEFAULT_DAYS = 30
@@ -187,163 +187,159 @@ export const syncCommand = (): Command =>
       const budget = runBudgetOf(this, args.maxPages)
       // A retry is a request of the budget; openMail keeps it from ending after the deadline.
       const { backend } = await openMail(context, { canRetry: () => budget.take() === null })
-      try {
-        const { report, rethreaded, unreadable, senders } = await baseContext(this, configuration.resolveSettings).run(
-          async () => {
-            const { mailbox } = context.settings
-            const defaults = providerFor(address, mailbox.host)?.sync ?? DEFAULT_SYNC
-            const folders = await foldersFor(args.folder, mailbox.folders, defaults, () => backend.folderList())
-            const store = await openMailStore(context.env)
-            environmentOf(this).trackCloseable?.(store)
-            try {
-              // The stored rules, as memo passes them: the saved position holds their fingerprint, so both must agree.
-              const { rules, unreadable } = await storedMailRuleSet(store, { address })
-              const report = await syncMail(backend, store, {
-                account: { address, mode: defaults.mode ?? "imap", folders, rules },
-                since,
-                ages: knownAges(context.env),
-                budget,
-                ...(args.limit === undefined ? {} : { max: args.limit }),
-                ...(args.rescan ? { rescan: true } : {}),
-                attachments: {
-                  read: args.attachments ?? mailbox.attachments.read,
-                  maxBytes: (args.maxAttachmentMb ?? mailbox.attachments.maxMb) * MB,
-                },
-                ...(signal ? { signal } : {}),
-              })
-              const key = mailAccountKey(address)
-              const rethreaded =
-                args.rescan && !report.stopped
-                  ? await rethreadStored(backend, store, key, folders, since, () => budget.take() === null)
-                  : undefined
-              const endsAt = context.environment.deadline?.()?.endsAt
-              const senders = report.stopped
-                ? undefined
-                : await scoreSenders(
-                    store,
-                    address,
-                    {
-                      known: () => knownAges(context.env),
-                      // A registry that does not answer leaves the domain unaged; the sync still succeeds.
-                      lookUp: (domains) =>
-                        lookUpAges(context.env, domains, rdapDeps(context.environment.rdap), endsAt).catch(() => ({
-                          looked: 0,
-                          failed: domains.length,
-                        })),
-                    },
-                    Date.now(),
-                    rules,
-                  )
-              return { report, rethreaded, unreadable, senders }
-            } finally {
-              await store.close()
-            }
-          },
-        )
-        const issues = [
-          ...issuesOf(report),
-          ...(unreadable.length
-            ? [{ code: "configuration_error" as const, reason: "mail.rules-unreadable", source: "rules" }]
-            : []),
-        ]
-        // cli-core reports a run its `max` cut short as incomplete with what it left, but with no reason.
-        const limited = args.limit !== undefined && !report.complete && !report.stopped && report.saved >= args.limit
-        const stopped = report.stopped ?? (limited ? "limit" : undefined)
-        const unthreaded = rethreaded !== undefined && !rethreaded.complete
-        const partial =
-          (report.state ?? (report.complete ? "complete" : "partial")) === "partial" || limited || unthreaded
-        const moved = report.saved + report.alreadyStored + report.skipped + report.envelopes > 0 || unthreaded
-        const timeout = this.optsWithGlobals<{ timeout?: string }>().timeout
-        const refused = report.refusedFolders ?? []
-        const next: NextStep[] =
-          partial && moved && refused.length === 0
-            ? [
-                {
-                  kind: "command",
-                  step: "mail.sync",
-                  command: "sync",
-                  args: Object.fromEntries(
-                    Object.entries({
-                      since_time: args.sinceTime,
-                      limit: args.limit,
-                      max_pages: args.maxPages,
-                      timeout,
-                      folder: args.folder?.length ? args.folder : undefined,
-                      rescan: unthreaded ? true : undefined,
-                      max_attachment_mb: args.maxAttachmentMb,
-                    }).filter(([, value]) => value !== undefined),
-                  ),
-                  why: limited
-                    ? `the run saved the ${args.limit} new emails --limit allows and left ${report.remaining ?? 0}; running it again saves the next ones`
-                    : unthreaded
-                      ? "the run stopped while it moved stored replies into their threads; --rescan again goes on"
-                      : "the sync stopped before its end to answer in time; running it again goes on from where it stopped",
-                  safe_to_auto_execute: true,
-                },
-              ]
-            : []
-        const hint = !partial
-          ? undefined
-          : refused.length
-            ? `the server refused to search ${refused.join(", ")}; nothing there was read or marked deleted — run sync again later, or name the other folders with --folder`
-            : limited
-              ? `${report.remaining ?? 0} new emails are left; run sync again to save the next ${args.limit}`
-              : moved
-                ? `run sync again to continue; ${IDENTITY.command} ${context.profile} status shows how far it is`
-                : "this run moved nothing on: raise --timeout or --max-pages, then run sync again"
-        renderAnswer(
-          this,
-          outputFor(this),
-          itemOf(
-            {
-              address: report.account,
-              since: report.since,
-              timezone: zone,
-              folders: report.coverage?.folders ?? [],
-              state: partial ? "partial" : "complete",
-              ...(stopped ? { stopped } : {}),
-              requests: report.requests ?? 0,
-              listed: report.listed,
-              saved: report.saved,
-              already_stored: report.alreadyStored,
-              deleted: report.deleted,
-              complete: report.complete,
-              remaining: report.remaining ?? 0,
-              ...(rethreaded ? { rethreaded: rethreaded.moved } : {}),
-              unreadable: report.unreadable?.length ?? 0,
-              ...(unreadable.length
-                ? {
-                    rules_unread: unreadable.length,
-                    rules_unread_why: [...new Set(unreadable.map(({ why }) => why))],
-                  }
-                : {}),
-              ...(report.deletionsSkipped ? { deletions_skipped: report.deletionsSkipped } : {}),
-              ...(refused.length ? { refused_folders: refused } : {}),
-              ...(report.partial ? { partial_emails: report.partial } : {}),
-              ...(senders
-                ? {
-                    senders: {
-                      scored: senders.scored,
-                      demoted: senders.demoted,
-                      domains_looked_up: senders.looked,
-                      failed: senders.failed,
-                    },
-                  }
-                : {}),
-              ...(hint ? { hint } : {}),
-            },
-            {
-              next,
-              meta: {
-                complete: report.complete && issues.length === 0,
-                ...(issues.length ? { issues } : {}),
-                timezone: zone,
-                window: { since: since.toISOString() },
+      const { report, rethreaded, unreadable, senders } = await closing(backend, () =>
+        baseContext(this, configuration.resolveSettings).run(async () => {
+          const { mailbox } = context.settings
+          const defaults = providerFor(address, mailbox.host)?.sync ?? DEFAULT_SYNC
+          const folders = await foldersFor(args.folder, mailbox.folders, defaults, () => backend.folderList())
+          const store = await openMailStore(context.env)
+          environmentOf(this).trackCloseable?.(store)
+          try {
+            // The stored rules, as memo passes them: the saved position holds their fingerprint, so both must agree.
+            const { rules, unreadable } = await storedMailRuleSet(store, { address })
+            const report = await syncMail(backend, store, {
+              account: { address, mode: defaults.mode ?? "imap", folders, rules },
+              since,
+              ages: knownAges(context.env),
+              budget,
+              ...(args.limit === undefined ? {} : { max: args.limit }),
+              ...(args.rescan ? { rescan: true } : {}),
+              attachments: {
+                read: args.attachments ?? mailbox.attachments.read,
+                maxBytes: (args.maxAttachmentMb ?? mailbox.attachments.maxMb) * MB,
               },
+              ...(signal ? { signal } : {}),
+            })
+            const key = mailAccountKey(address)
+            const rethreaded =
+              args.rescan && !report.stopped
+                ? await rethreadStored(backend, store, key, folders, since, () => budget.take() === null)
+                : undefined
+            const endsAt = context.environment.deadline?.()?.endsAt
+            const senders = report.stopped
+              ? undefined
+              : await scoreSenders(
+                  store,
+                  address,
+                  {
+                    known: () => knownAges(context.env),
+                    // A registry that does not answer leaves the domain unaged; the sync still succeeds.
+                    lookUp: (domains) =>
+                      lookUpAges(context.env, domains, rdapDeps(context.environment.rdap), endsAt).catch(() => ({
+                        looked: 0,
+                        failed: domains.length,
+                      })),
+                  },
+                  Date.now(),
+                  rules,
+                )
+            return { report, rethreaded, unreadable, senders }
+          } finally {
+            await store.close()
+          }
+        }),
+      )
+      const issues = [
+        ...issuesOf(report),
+        ...(unreadable.length
+          ? [{ code: "configuration_error" as const, reason: "mail.rules-unreadable", source: "rules" }]
+          : []),
+      ]
+      // cli-core reports a run its `max` cut short as incomplete with what it left, but with no reason.
+      const limited = args.limit !== undefined && !report.complete && !report.stopped && report.saved >= args.limit
+      const stopped = report.stopped ?? (limited ? "limit" : undefined)
+      const unthreaded = rethreaded !== undefined && !rethreaded.complete
+      const partial =
+        (report.state ?? (report.complete ? "complete" : "partial")) === "partial" || limited || unthreaded
+      const moved = report.saved + report.alreadyStored + report.skipped + report.envelopes > 0 || unthreaded
+      const timeout = this.optsWithGlobals<{ timeout?: string }>().timeout
+      const refused = report.refusedFolders ?? []
+      const next: NextStep[] =
+        partial && moved && refused.length === 0
+          ? [
+              {
+                kind: "command",
+                step: "mail.sync",
+                command: "sync",
+                args: Object.fromEntries(
+                  Object.entries({
+                    since_time: args.sinceTime,
+                    limit: args.limit,
+                    max_pages: args.maxPages,
+                    timeout,
+                    folder: args.folder?.length ? args.folder : undefined,
+                    rescan: unthreaded ? true : undefined,
+                    max_attachment_mb: args.maxAttachmentMb,
+                  }).filter(([, value]) => value !== undefined),
+                ),
+                why: limited
+                  ? `the run saved the ${args.limit} new emails --limit allows and left ${report.remaining ?? 0}; running it again saves the next ones`
+                  : unthreaded
+                    ? "the run stopped while it moved stored replies into their threads; --rescan again goes on"
+                    : "the sync stopped before its end to answer in time; running it again goes on from where it stopped",
+                safe_to_auto_execute: true,
+              },
+            ]
+          : []
+      const hint = !partial
+        ? undefined
+        : refused.length
+          ? `the server refused to search ${refused.join(", ")}; nothing there was read or marked deleted — run sync again later, or name the other folders with --folder`
+          : limited
+            ? `${report.remaining ?? 0} new emails are left; run sync again to save the next ${args.limit}`
+            : moved
+              ? `run sync again to continue; ${IDENTITY.command} ${context.profile} status shows how far it is`
+              : "this run moved nothing on: raise --timeout or --max-pages, then run sync again"
+      renderAnswer(
+        this,
+        outputFor(this),
+        itemOf(
+          {
+            address: report.account,
+            since: report.since,
+            timezone: zone,
+            folders: report.coverage?.folders ?? [],
+            state: partial ? "partial" : "complete",
+            ...(stopped ? { stopped } : {}),
+            requests: report.requests ?? 0,
+            listed: report.listed,
+            saved: report.saved,
+            already_stored: report.alreadyStored,
+            deleted: report.deleted,
+            complete: report.complete,
+            remaining: report.remaining ?? 0,
+            ...(rethreaded ? { rethreaded: rethreaded.moved } : {}),
+            unreadable: report.unreadable?.length ?? 0,
+            ...(unreadable.length
+              ? {
+                  rules_unread: unreadable.length,
+                  rules_unread_why: [...new Set(unreadable.map(({ why }) => why))],
+                }
+              : {}),
+            ...(report.deletionsSkipped ? { deletions_skipped: report.deletionsSkipped } : {}),
+            ...(refused.length ? { refused_folders: refused } : {}),
+            ...(report.partial ? { partial_emails: report.partial } : {}),
+            ...(senders
+              ? {
+                  senders: {
+                    scored: senders.scored,
+                    demoted: senders.demoted,
+                    domains_looked_up: senders.looked,
+                    failed: senders.failed,
+                  },
+                }
+              : {}),
+            ...(hint ? { hint } : {}),
+          },
+          {
+            next,
+            meta: {
+              complete: report.complete && issues.length === 0,
+              ...(issues.length ? { issues } : {}),
+              timezone: zone,
+              window: { since: since.toISOString() },
             },
-          ),
-        )
-      } finally {
-        await backend.close()
-      }
+          },
+        ),
+      )
     })
