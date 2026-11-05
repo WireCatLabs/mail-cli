@@ -21,7 +21,7 @@ export const draftSendCommand = (): Command =>
   answerEntity(
     annotate(new Command("send"), {
       effects: REMOTE_WRITE,
-      examples: [`${IDENTITY.command} ya drafts send 5b0e1c2a@example.com`],
+      examples: [`${IDENTITY.command} personal drafts send 5b0e1c2a@example.com`],
     }),
     "mail_send",
     mailSend,

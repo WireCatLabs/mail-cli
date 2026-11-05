@@ -44,7 +44,7 @@ const listCommand = (): Command =>
   answerEntity(
     annotate(new Command("list"), {
       effects: REMOTE_READ,
-      examples: [`${IDENTITY.command} ya attachments list ${REF_EXAMPLE}`],
+      examples: [`${IDENTITY.command} personal attachments list ${REF_EXAMPLE}`],
     }),
     "mail_attachment",
     attachment,
@@ -87,8 +87,8 @@ const downloadCommand = (): Command =>
     annotate(new Command("download"), {
       effects: FETCH,
       examples: [
-        `${IDENTITY.command} ya attachments download ${REF_EXAMPLE} --output-dir ./invoices`,
-        `${IDENTITY.command} ya attachments download ${REF_EXAMPLE} 2 --output-dir ./invoices`,
+        `${IDENTITY.command} personal attachments download ${REF_EXAMPLE} --output-dir ./invoices`,
+        `${IDENTITY.command} personal attachments download ${REF_EXAMPLE} 2 --output-dir ./invoices`,
       ],
     }),
     "mail_attachments_saved",

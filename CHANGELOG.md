@@ -6,6 +6,8 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Fixed
 
+- **Docs, help examples and the skill name the example profile `personal`, not `ya`**, as tg does. A second
+  mailbox in an example is `work`. No behaviour changes.
 - **`docs/configuration.md` says which flag answers `ask`**: `--allow-dangerous` for `drafts delete`, `--yes` for
   every other change, and `confirmation_required` without a terminal or a flag.
 - **The sender domain cache and the sign-in records folder are private to you.** `domain-ages.json` is written with

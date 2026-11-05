@@ -323,9 +323,9 @@ export const sendCommand = (): Command =>
         annotate(new Command("send"), {
           effects: REMOTE_WRITE,
           examples: [
-            `${IDENTITY.command} ya messages send --to ann@example.com --subject "Lunch" "See you at noon."`,
-            `${IDENTITY.command} ya messages send --reply-to 'msg:email/me%40example.com/thread-1/1001' "Thanks, done."`,
-            `${IDENTITY.command} ya messages send --to ann@example.com --subject Report --file ./report.pdf "The report."`,
+            `${IDENTITY.command} personal messages send --to ann@example.com --subject "Lunch" "See you at noon."`,
+            `${IDENTITY.command} personal messages send --reply-to 'msg:email/me%40example.com/thread-1/1001' "Thanks, done."`,
+            `${IDENTITY.command} personal messages send --to ann@example.com --subject Report --file ./report.pdf "The report."`,
           ],
         }),
       ),
@@ -391,8 +391,8 @@ export const forwardCommand = (): Command =>
         annotate(new Command("forward"), {
           effects: REMOTE_WRITE,
           examples: [
-            `${IDENTITY.command} ya messages forward 'msg:email/me%40example.com/thread-1/1001' --to bob@example.com`,
-            `${IDENTITY.command} ya messages forward 'msg:email/me%40example.com/thread-1/1001' --to bob@example.com "FYI"`,
+            `${IDENTITY.command} personal messages forward 'msg:email/me%40example.com/thread-1/1001' --to bob@example.com`,
+            `${IDENTITY.command} personal messages forward 'msg:email/me%40example.com/thread-1/1001' --to bob@example.com "FYI"`,
           ],
         }),
       ),

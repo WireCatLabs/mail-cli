@@ -70,9 +70,9 @@ export const exportLeaf = (): Command =>
       cooperative: true,
       partial: true,
       examples: [
-        `${IDENTITY.command} ya messages export 'from:ann@example.com' --output ~/mail-backup`,
-        `${IDENTITY.command} ya messages export --folder INBOX --format maildir --output ~/Maildir`,
-        `${IDENTITY.command} ya messages export 'date>30d' --limit 500 --output ~/mail-backup --resume`,
+        `${IDENTITY.command} personal messages export 'from:ann@example.com' --output ~/mail-backup`,
+        `${IDENTITY.command} personal messages export --folder INBOX --format maildir --output ~/Maildir`,
+        `${IDENTITY.command} personal messages export 'date>30d' --limit 500 --output ~/mail-backup --resume`,
       ],
     }),
     "mail_export",

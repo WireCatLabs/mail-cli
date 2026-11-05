@@ -33,7 +33,7 @@ const listCommand = () =>
   answerEntity(
     annotate(new Command("list"), {
       effects: REMOTE_READ,
-      examples: [`${IDENTITY.command} ya folders list`, `${IDENTITY.command} ya folders list --json`],
+      examples: [`${IDENTITY.command} personal folders list`, `${IDENTITY.command} personal folders list --json`],
     }),
     "mail_folder",
     mailFolder,
@@ -132,7 +132,10 @@ const createCommand = () =>
   answerEntity(
     annotate(new Command("create"), {
       effects: REMOTE_WRITE,
-      examples: [`${IDENTITY.command} ya folders create Receipts`, `${IDENTITY.command} ya folders create Work/2026`],
+      examples: [
+        `${IDENTITY.command} personal folders create Receipts`,
+        `${IDENTITY.command} personal folders create Work/2026`,
+      ],
     }),
     "mail_folder_change",
     folderChange,
@@ -153,7 +156,7 @@ const renameCommand = () =>
   answerEntity(
     annotate(new Command("rename"), {
       effects: REMOTE_WRITE,
-      examples: [`${IDENTITY.command} ya folders rename Receipts Invoices`],
+      examples: [`${IDENTITY.command} personal folders rename Receipts Invoices`],
     }),
     "mail_folder_change",
     folderChange,
@@ -176,7 +179,7 @@ const deleteFolderCommand = () =>
   answerEntity(
     annotate(new Command("delete"), {
       effects: REMOTE_WRITE,
-      examples: [`${IDENTITY.command} ya folders delete Old --yes`],
+      examples: [`${IDENTITY.command} personal folders delete Old --yes`],
     }),
     "mail_folder_change",
     folderChange,
