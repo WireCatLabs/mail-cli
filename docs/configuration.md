@@ -41,7 +41,10 @@ and others). Every WireCat CLI shares that list. `mail` ignores them.
 
 `permissions` decides what a command may do for this profile: `allow`, `ask`, `readonly` or `deny`, per permission
 key. Over MCP there is no one to ask, so `ask` lets the command run. `MAIL_READ_ONLY=1` refuses every write, whatever
-the permissions say.
+the permissions say, but one: `rules add --sender` or `--list-id` with `--do envelope`, for a sender or list that has
+no rule yet, which memo's scheduled mail triage runs. It is recorded with `source: agent` (`rules list source:agent`);
+a replaced rule, `--domain`, `--filter`, `--kind`, any other action and a tag stay refused, as do `rules remove`,
+`rules import` and `rules apply`.
 
 The key of a command is its path: `messages.move`, `folders.delete`. Built in, a change that can be undone goes ahead
 (flags, moves, copies, folders made or renamed, drafts saved), and these ask: `messages.delete`, `folders.delete`,

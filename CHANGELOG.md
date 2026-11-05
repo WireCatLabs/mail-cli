@@ -2,6 +2,15 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Added
+
+- **`MAIL_READ_ONLY` lets `rules add` through, narrowed**, so memo's scheduled mail triage can file a sender as
+  envelopes: only `--sender` or `--list-id` with `--do envelope`, only where no rule with those conditions exists,
+  recorded with `source: agent`. `--domain`, `--filter`, `--kind`, any other action or a tag, a replaced rule,
+  `rules remove|import|apply` and every change on the mail server stay refused.
+
 ## 0.23.1 — 08.11.2026
 
 ### Fixed
