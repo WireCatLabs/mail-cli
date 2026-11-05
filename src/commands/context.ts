@@ -1,6 +1,7 @@
 import type { KeyringStore } from "@wirecat/cli-base"
 import { CliError } from "@wirecat/cli-base"
 import { type BaseEnvironment, environmentOf, type GlobalFlags } from "@wirecat/cli-core/cli"
+import type { OAuthClient } from "@wirecat/cli-core/oauth"
 import { type Command, Option } from "commander"
 import { configuration } from "../config.js"
 import type { DiscoveryDeps } from "../discovery.js"
@@ -13,7 +14,7 @@ import {
   type RunBounds,
 } from "../mail/backend.js"
 import { imapBackend } from "../mail/imap/index.js"
-import { microsoftClient, type OAuthKind, oauthCredential, oauthKeeper } from "../oauth.js"
+import { googleClient, microsoftClient, type OAuthKind, oauthCredential, oauthKeeper } from "../oauth.js"
 import { providerFor } from "../providers.js"
 import { type LookupHimalaya, type PasswordSource, passwordStore } from "../secret.js"
 
@@ -78,9 +79,9 @@ export const oauthKindOf = (mailbox: ReturnType<typeof contextOf>["settings"]["m
 /** A profile's OAuth sign-in, refreshed as each connect asks; nothing is read until a login needs a token. */
 export const oauthKeeperOf = (context: ReturnType<typeof contextOf>, kind: OAuthKind) => {
   const { mailbox } = context.settings
-  let client: { clientId: string }
+  let client: OAuthClient
   try {
-    client = kind === "microsoft" ? microsoftClient(mailbox).client : { clientId: "" }
+    client = (kind === "microsoft" ? microsoftClient(context.env, mailbox) : googleClient(context.env, mailbox)).client
   } catch {
     // A saved sign-in refreshes with the app it was made with, which the entry records.
     client = { clientId: "" }

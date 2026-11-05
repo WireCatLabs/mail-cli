@@ -23,12 +23,14 @@ whatever they say.
 
 `microsoft_client_id` is the Microsoft app that Outlook.com and Microsoft 365 sign in with, when you use your own instead
 of WireCat's. Set it once for every profile with `mail config set --defaults microsoft_client_id <id>`; how to get an
-id is in [register a Microsoft app](oauth-microsoft.md). A profile already signed in keeps refreshing with the app it
-signed in with.
+id is in [register a Microsoft app](oauth-microsoft.md). `google_client_id` does the same for Gmail over OAuth; its
+secret comes from `MAIL_GOOGLE_CLIENT_SECRET`, never the file. `MAIL_MICROSOFT_CLIENT_ID` and `MAIL_GOOGLE_CLIENT_ID`
+win over both settings for one run, and `--client-file` wins over everything for Gmail. A profile already signed in
+keeps refreshing with the app it signed in with. `mail doctor` shows each profile's app under `oauth_client`.
 
 An agent over MCP that holds `mcp.authority` may change settings with `config set`, but never these: the mailbox
-settings above, which decide where the app password goes, `microsoft_client_id`, which decides which app you sign in
-to, and `permissions.messages.send.others`, which lets an agent mail other people. Only you change them, at a terminal.
+settings above, which decide where the app password goes, `microsoft_client_id` and `google_client_id`, which decide
+which app you sign in to, and `permissions.messages.send.others`, which lets an agent mail other people. Only you change them, at a terminal.
 
 `config show` lists each setting and where it came from: the file, a variable or the default.
 

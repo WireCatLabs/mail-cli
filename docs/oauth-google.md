@@ -1,9 +1,14 @@
 # Gmail with your own Google app
 
 Gmail works with an app password, and `mail` uses one by default. Use OAuth instead when you cannot make an app
-password: no 2-Step Verification on the account, or a Google Workspace domain that turns app passwords off. `mail` has
-no Google app of its own for mail (Google requires a paid security review for an app that reads mail for others), so
-you sign in through an app you create. It takes about 20 minutes and costs nothing.
+password: no 2-Step Verification on the account, or a Google Workspace domain that turns app passwords off.
+
+A Gmail OAuth sign-in uses WireCat's Google app unless you name your own. The first match wins:
+`--client-file <Desktop client JSON>`, then `MAIL_GOOGLE_CLIENT_ID` (with `MAIL_GOOGLE_CLIENT_SECRET`), then the
+profile's `google_client_id` setting (its secret still comes from `MAIL_GOOGLE_CLIENT_SECRET`), then WireCat's app.
+`mail doctor` shows which one a profile uses under `oauth_client`. Google requires a paid security review for an app
+that reads mail for others, and WireCat's app has not had one yet: if Google refuses the sign-in or warns that the
+app is not verified, make your own app as below. It takes about 20 minutes and costs nothing.
 
 ## 1. A Google Cloud project just for mail
 
@@ -67,7 +72,7 @@ A new profile:
 mail gm session start --address me@gmail.com --client-file ~/Downloads/client_secret_XXXX.json
 ```
 
-`--client-file` is what makes a new Gmail profile sign in with OAuth. A Gmail profile that has an app password now:
+`--client-file` makes a new Gmail profile sign in with OAuth. A Gmail profile that has an app password now:
 switch it first, in a terminal (an agent cannot change `auth`):
 
 ```sh
@@ -77,7 +82,8 @@ mail gm session start --client-file ~/Downloads/client_secret_XXXX.json
 
 The browser opens Google's page. Choose the account, allow access, and `mail` checks the address and logs in to IMAP
 before it saves anything. On a profile already switched to OAuth, `MAIL_GOOGLE_CLIENT_ID` and
-`MAIL_GOOGLE_CLIENT_SECRET` can stand in for `--client-file`.
+`MAIL_GOOGLE_CLIENT_SECRET` can stand in for `--client-file`; with neither, `mail gm session start` signs in with
+WireCat's app.
 
 ## Signing out
 

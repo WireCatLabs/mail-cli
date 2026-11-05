@@ -13,6 +13,18 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 - **`messages show` reads an email again when one of its attachments was left unread**, every attachment whatever
   its size, so the command now reaches the mail server for such an email. `--offline` or a failed read shows the stored
   email with `meta.complete: false` and the issue `mail.attachments-unread`. `attachments download` keeps a file.
+- **Gmail over OAuth signs in with WireCat's Google app when you name none.** It needed `--client-file` or
+  `MAIL_GOOGLE_CLIENT_ID` and failed with `mail.oauth-no-client` without them. The order is `--client-file`, then
+  `MAIL_GOOGLE_CLIENT_ID` (with `MAIL_GOOGLE_CLIENT_SECRET`), then the profile's new `google_client_id`, then
+  WireCat's app. Google has not reviewed WireCat's app for mail yet: if Google refuses it, use your own
+  ([steps](docs/oauth-google.md)). Choosing OAuth for a Gmail profile is unchanged.
+- **`MAIL_MICROSOFT_CLIENT_ID` picks the Microsoft app for one run**, before the profile's `microsoft_client_id` and
+  WireCat's app, which now comes from cli-core's `constants.json`. `mail.oauth-no-client` is gone: there is always an
+  app.
+- **`doctor`'s `oauth` rows say which app each profile uses as `oauth_client: { client, source }`**, in place of
+  `client`: `source` is `flag`, `env`, `config` or `constants` (WireCat's). A profile's row reports the app it
+  signed in with when its sign-in recorded one. `session start` answers `source` beside `client`.
+- **mail runs on cli-base 0.77.1 and cli-core 0.566.0.**
 
 ### Added
 

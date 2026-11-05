@@ -16,7 +16,7 @@ It finds the server of a new address by itself: a built-in table, the MX record,
 domain's autoconfig file. It signs in with an app password kept in the OS keyring, which works for Yandex, Gmail,
 iCloud, Mail.ru, Fastmail and other providers that offer app passwords. Outlook.com and Microsoft 365 sign in with
 OAuth through WireCat's own Microsoft app, with nothing to register ([guide](outlook.md)); Gmail can use OAuth with
-your own Google app ([steps](oauth-google.md)).
+WireCat's Google app or your own ([steps](oauth-google.md)).
 
 It searches and reads the stored mail of a profile (`search messages`, `messages show`, `conversations`) and asks
 the mail server for mail `sync` has not read yet. `memo` searches every mailbox together with messages and notes. An

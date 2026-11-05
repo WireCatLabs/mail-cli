@@ -80,17 +80,16 @@ const signInWithOAuth = async (command: Command, context: ReturnType<typeof cont
   const { env, environment } = context
   const output = outputFor(command)
   const name = OAUTH_NAMES[given.kind]
+  const { mailbox } = context.settings
   const { client, source } =
-    given.kind === "google"
-      ? { client: googleClient(env, given.clientFile), source: "own" as const }
-      : microsoftClient(context.settings.mailbox)
+    given.kind === "google" ? googleClient(env, mailbox, given.clientFile) : microsoftClient(env, mailbox)
   const scopesAsked = scopesOf(given.kind)
   const { endpoint } = given
   output.renderer.note(`Server: ${endpoint.host}:${endpoint.port} (${endpoint.security}), login ${endpoint.login}`)
   output.renderer.note(prepareText(given.provider, given.prepare))
   output.renderer.note(
     [
-      `${name} will ask you to let ${IDENTITY.command} (app ${source === "own" ? "of your own" : "of WireCat"}):`,
+      `${name} will ask you to let ${IDENTITY.command} (app ${source === "constants" ? "of WireCat" : "of your own"}):`,
       ...scopesAsked.map((scope) => `  - ${SCOPE_WORDS[scope] ?? scope}`),
     ].join("\n"),
   )
@@ -137,9 +136,11 @@ const signInWithOAuth = async (command: Command, context: ReturnType<typeof cont
       },
     }),
   )
+  const owner = source === "constants" ? "wirecat" : "own"
   await recordSignIn(env, context.profile, {
     provider: given.kind,
-    client: source,
+    client: owner,
+    source,
     signed_in_at: new Date().toISOString(),
     scopes,
   })
@@ -151,7 +152,8 @@ const signInWithOAuth = async (command: Command, context: ReturnType<typeof cont
     login: given.endpoint.login,
     auth: "oauth",
     provider: given.kind,
-    client: source,
+    client: owner,
+    source,
     scopes,
     folders,
     ...(config ? { created: true, config } : {}),
@@ -173,7 +175,7 @@ export const sessionStartCommand = () =>
   )
     .summary("sign in; a new profile is created first")
     .description(
-      `sign this profile in. A new profile needs its mailbox: --address, or it is asked at a terminal; the server is found (built-in providers, the MX record, ISPDB, the domain's autoconfig; all providers: ${PROVIDERS_URL}); for a domain the built-in table does not know, the domain, never the address, goes to the DNS resolver, autoconfig.thunderbird.net and autoconfig.<domain>, and --provider or --host skips those lookups; the steps to prepare the mailbox are shown, the app password is asked (hidden) or read from ${IDENTITY.envPrefix}_PASSWORD, checked against the server, and only then the profile and the keyring entry are saved. Outlook.com and Microsoft 365 sign in with OAuth instead, and Gmail with your own Google app (--client-file): the browser opens the provider's page, and the token is checked against the server before it is kept. An existing profile only asks for the password, or signs in, again. Without a terminal nothing is asked: a missing --address or password is a validation error`,
+      `sign this profile in. A new profile needs its mailbox: --address, or it is asked at a terminal; the server is found (built-in providers, the MX record, ISPDB, the domain's autoconfig; all providers: ${PROVIDERS_URL}); for a domain the built-in table does not know, the domain, never the address, goes to the DNS resolver, autoconfig.thunderbird.net and autoconfig.<domain>, and --provider or --host skips those lookups; the steps to prepare the mailbox are shown, the app password is asked (hidden) or read from ${IDENTITY.envPrefix}_PASSWORD, checked against the server, and only then the profile and the keyring entry are saved. Outlook.com and Microsoft 365 sign in with OAuth instead, and Gmail too with --client-file or once auth is oauth (WireCat's Google app unless --client-file, MAIL_GOOGLE_CLIENT_ID or google_client_id names yours): the browser opens the provider's page, and the token is checked against the server before it is kept. An existing profile only asks for the password, or signs in, again. Without a terminal nothing is asked: a missing --address or password is a validation error`,
     )
     .option("--address <email>", "the full mail address of a new profile, also the login for most providers")
     .option("--provider <provider>", `skip discovery and use a built-in provider: ${PROVIDER_NAMES.join(", ")}`)
