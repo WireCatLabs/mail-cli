@@ -19,12 +19,12 @@ Start with [installation](installation.md), then [usage](usage.md). Before the f
 has not read yet (`--backend archive` keeps to the store):
 
 ```sh
-mail ya search messages invoice                                  # best match first, any form of the word
-mail ya search messages 'from:ann@example.com has:attachment date>30d'
-mail ya search messages 'list:github.com is:unread' --newest     # a mailing list, newest first
-mail ya messages show '<ref from a search>'                      # the whole email and its attachments' text
-mail ya conversations list emails_count>1                        # threads, newest first
-mail ya conversations show '<chat:email/… ref>'                  # one thread, oldest first
+mail personal search messages invoice                                  # best match first, any form of the word
+mail personal search messages 'from:ann@example.com has:attachment date>30d'
+mail personal search messages 'list:github.com is:unread' --newest     # a mailing list, newest first
+mail personal messages show '<ref from a search>'                      # the whole email and its attachments' text
+mail personal conversations list emails_count>1                        # threads, newest first
+mail personal conversations show '<chat:email/… ref>'                  # one thread, oldest first
 ```
 
 The query language is the one every WireCat CLI uses ([search guide](https://github.com/WireCatLabs/cli-core/blob/main/docs/search/query-language.md)):

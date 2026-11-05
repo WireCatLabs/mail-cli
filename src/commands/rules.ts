@@ -160,7 +160,10 @@ const listCommand = () =>
     withQuery(
       annotate(new Command("list"), {
         effects: LOCAL_READ,
-        examples: [`${IDENTITY.command} ya rules list`, `${IDENTITY.command} ya rules list protected:true --json`],
+        examples: [
+          `${IDENTITY.command} personal rules list`,
+          `${IDENTITY.command} personal rules list protected:true --json`,
+        ],
       }),
       MAIL_RULES_QUERY,
     ),
@@ -200,9 +203,9 @@ const addCommand = () =>
         annotate(new Command("add"), {
           effects: LOCAL_WRITE,
           examples: [
-            `${IDENTITY.command} ya rules add --domain shop.example --do envelope,tag:promo`,
-            `${IDENTITY.command} ya rules add --sender boss@example.com --do protect --reason "never lose these"`,
-            `${IDENTITY.command} ya rules add --filter "older:365d larger:5MB" --do envelope`,
+            `${IDENTITY.command} personal rules add --domain shop.example --do envelope,tag:promo`,
+            `${IDENTITY.command} personal rules add --sender boss@example.com --do protect --reason "never lose these"`,
+            `${IDENTITY.command} personal rules add --filter "older:365d larger:5MB" --do envelope`,
           ],
         }),
       ),
@@ -247,8 +250,8 @@ const removeCommand = () =>
       annotate(new Command("remove"), {
         effects: LOCAL_WRITE,
         examples: [
-          `${IDENTITY.command} ya rules remove --domain shop.example`,
-          `${IDENTITY.command} ya rules remove --filter "older:365d larger:5MB"`,
+          `${IDENTITY.command} personal rules remove --domain shop.example`,
+          `${IDENTITY.command} personal rules remove --filter "older:365d larger:5MB"`,
         ],
       }),
     ),
@@ -278,8 +281,8 @@ const applyCommand = () =>
   annotate(new Command("apply"), {
     effects: LOCAL_WRITE,
     examples: [
-      `${IDENTITY.command} ya rules apply`,
-      `${IDENTITY.command} ya rules apply --since-time 2026-01-01 --yes`,
+      `${IDENTITY.command} personal rules apply`,
+      `${IDENTITY.command} personal rules apply --since-time 2026-01-01 --yes`,
     ],
   })
     .description("cut stored mail an envelope rule matches to its envelope; dry run unless --yes")
@@ -336,12 +339,12 @@ const applyCommand = () =>
 const exportCommand = () =>
   annotate(new Command("export"), {
     effects: LOCAL_READ,
-    examples: [`${IDENTITY.command} ya rules export`],
+    examples: [`${IDENTITY.command} personal rules export`],
   })
     .description("print this mailbox's rules as JSON, to review, keep or move elsewhere")
     .addHelpText(
       "after",
-      `\n${IDENTITY.command} ya rules export > rules.json; ${IDENTITY.command} ya rules import rules.json reads it ` +
+      `\n${IDENTITY.command} personal rules export > rules.json; ${IDENTITY.command} personal rules import rules.json reads it ` +
         "back. memo mail rules import reads it too.",
     )
     .action(async function (this: Command) {
@@ -357,9 +360,9 @@ const importCommand = () =>
     annotate(new Command("import"), {
       effects: LOCAL_WRITE,
       examples: [
-        `${IDENTITY.command} ya rules import rules.json`,
-        `${IDENTITY.command} ya rules import Filters.json --format gmail`,
-        `${IDENTITY.command} ya rules import Filters.json --format gmail --yes`,
+        `${IDENTITY.command} personal rules import rules.json`,
+        `${IDENTITY.command} personal rules import Filters.json --format gmail`,
+        `${IDENTITY.command} personal rules import Filters.json --format gmail --yes`,
       ],
     }),
   )

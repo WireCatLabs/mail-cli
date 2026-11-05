@@ -42,8 +42,8 @@ const topLeaf = (): Command =>
       effects: LOCAL_READ,
       partial: true,
       examples: [
-        `${IDENTITY.command} ya stats messages top`,
-        `${IDENTITY.command} ya stats messages top --by list --limit 10`,
+        `${IDENTITY.command} personal stats messages top`,
+        `${IDENTITY.command} personal stats messages top --by list --limit 10`,
       ],
     }),
     "mail_group",
@@ -113,8 +113,8 @@ const showLeaf = (): Command =>
     effects: LOCAL_READ,
     output: { entity: "mail_counts" },
     examples: [
-      `${IDENTITY.command} ya stats messages show --by day --timezone Europe/Madrid -- 'date>=30d'`,
-      `${IDENTITY.command} ya stats messages show --by sender --limit 10`,
+      `${IDENTITY.command} personal stats messages show --by day --timezone Europe/Madrid -- 'date>=30d'`,
+      `${IDENTITY.command} personal stats messages show --by sender --limit 10`,
     ],
   })
     .summary("count stored mail received and sent by day, week or sender")

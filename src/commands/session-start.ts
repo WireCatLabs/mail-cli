@@ -167,7 +167,7 @@ export const sessionStartCommand = () =>
       lifetime: "interactive",
       mcp: false,
       examples: [
-        `${IDENTITY.command} ya session start --address me@example.com`,
+        `${IDENTITY.command} personal session start --address me@example.com`,
         `${IDENTITY.command} work session start --address me@outlook.com`,
         `${IDENTITY.command} gm session start --address me@gmail.com --client-file ~/client.json`,
       ],

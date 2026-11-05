@@ -83,7 +83,10 @@ const statusCommand = () =>
   answerEntity(
     annotate(new Command("status"), {
       effects: REMOTE_READ,
-      examples: [`${IDENTITY.command} ya session status`, `${IDENTITY.command} ya session status --check --json`],
+      examples: [
+        `${IDENTITY.command} personal session status`,
+        `${IDENTITY.command} personal session status --check --json`,
+      ],
     }),
     "mail_session_status",
     mailSessionStatus,
@@ -124,7 +127,7 @@ const endCommand = () =>
     annotate(new Command("end"), {
       effects: LOCAL_WRITE,
       mcp: false,
-      examples: [`${IDENTITY.command} ya session end`],
+      examples: [`${IDENTITY.command} personal session end`],
     }),
   )
     .summary("forget this profile's password or sign-in; synced mail stays")
