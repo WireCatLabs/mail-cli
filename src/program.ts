@@ -76,7 +76,16 @@ export const definition = (): ProgramDefinition => ({
     skillCommand(IDENTITY, SKILL),
     appMcpCommand(IDENTITY, configuration, {
       name: "mail",
-      untrusted: ["subjects", "bodies", "HTML parts", "headers", "sender names", "folder names", "file names"],
+      untrusted: [
+        "subjects",
+        "bodies",
+        "HTML parts",
+        "headers",
+        "sender names",
+        "folder names",
+        "file names",
+        "attachment text",
+      ],
       permissionExample: "sync=deny",
       skill: SKILL,
     }),

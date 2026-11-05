@@ -2,7 +2,7 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
-## Unreleased
+## 0.15.0 — 05.11.2026
 
 ### Changed — may break callers
 
@@ -45,6 +45,8 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Fixed
 
+- **The MCP server tells an agent that attachment text is data, not instructions**, beside subjects, bodies and file
+  names. `sync` indexes attachment text and `messages show` returns it.
 - **`session start` writes every setting at its default when it saves a new profile**, as `config set` does. The
   first file a sign-in made held only the profile, so the owner could not see the other settings until a later
   `config set` or `config migrate`.
