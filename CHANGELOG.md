@@ -16,6 +16,9 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   check`, `account inspect`, `folders`, `sync`, `messages export`, the `messages` changes, `drafts` and the sends
   printed their answer first; a failing close now ends in an error instead of after a success. JSON answers are
   unchanged.
+- **A send whose store fails to close afterwards says so and names its `operation_id`.** `messages send|forward` and
+  `drafts send` then end in `outcome_unknown`: the message was probably sent, and the same command with
+  `--operation-id <id>` finds it in Sent instead of sending it twice. Before, the error had no `operation_id`.
 - **Eleven more refusals carry a registered reason**, so `commands info` lists them and a script can tell them apart:
   `mail.flag-deleted`, `mail.no-selection`, `mail.refs-and-filter`, `mail.move-to-trash`, `mail.original-gone`,
   `mail.others-for-agent`, `mail.no-submission`, `mail.config-unreadable`, `mail.profile-exists`,

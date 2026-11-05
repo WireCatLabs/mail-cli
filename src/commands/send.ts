@@ -213,6 +213,7 @@ export const go = async (command: Command, opened: Opened, outgoing: Outgoing, d
   const sending = sendingOf(opened, command)
   showBeforeAsking(command, draft, outgoing.key, sending.owner)
   const sent = await sendOut(sending, outgoing)
+  opened.sent(sent.operationId)
   answer(command, opened, draft, {
     sent: !sent.alreadySent,
     already_sent: sent.alreadySent,
