@@ -77,8 +77,8 @@ interface DownloadFlags {
 const numbersOf = (given: readonly string[]) =>
   given.map((value) => {
     if (!/^\d+$/.test(value.trim()) || Number(value) < 1)
-      throw new CliError("validation_error", "a number is an attachment's number from attachments list", {
-        param: "number",
+      throw new CliError("validation_error", "an attachment is given by its number in attachments list", {
+        param: "attachment",
       })
     return Number(value)
   })
@@ -101,7 +101,7 @@ const downloadCommand = (): Command =>
         "and never go into the store. An existing file is left alone unless --replace",
     )
     .argument("<message>", "the msg:email/… reference search messages shows")
-    .argument("[number...]", "only these attachments, by their number in attachments list (default: all)")
+    .argument("[attachment...]", "only these attachments, by their number in attachments list (default: all)")
     .requiredOption("--output-dir <dir>", "the folder to save into, made if missing")
     .option("--replace", "overwrite a file of the same name in the folder")
     .action(async function (this: Command, reference: string, given: string[], flags: DownloadFlags) {
@@ -118,7 +118,7 @@ const downloadCommand = (): Command =>
       const missing = numbers.filter((number) => !found.some((one) => one.number === number))
       if (missing.length)
         throw new CliError("not_found", `the message has no attachment ${missing.join(", ")}; it has ${found.length}`, {
-          param: "number",
+          param: "attachment",
         })
       const files = wanted.map((one) => ({ ...one, path: resolve(folder, one.name) }))
       await worded(contextOf(this).profile, async () => {
