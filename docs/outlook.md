@@ -120,10 +120,10 @@ More errors: [troubleshooting](troubleshooting.md).
 
 Use this only if your organisation requires its own app. Register it ([steps](oauth-microsoft.md)): platform "Mobile and
 desktop applications", redirect `http://localhost/callback` with no port, never "Web". Then set its id once, in a
-terminal:
+terminal, with your app's id in place of the example id:
 
 ```sh
-mail config set --defaults microsoft_client_id <application-client-id>
+mail config set --defaults microsoft_client_id 11111111-2222-3333-4444-555555555555
 ```
 
 Only you can set it; an agent over MCP is refused.
