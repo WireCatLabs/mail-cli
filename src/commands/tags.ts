@@ -60,6 +60,7 @@ const withMailbox = async <T>(command: Command, work: (store: MessageStore, key:
   const address = context.settings.mailbox.address
   if (!address) throw new CliError("configuration_error", `profile ${context.profile} has no address`)
   const store = await openMailStore(context.env)
+  context.environment.trackCloseable?.(store)
   try {
     return await work(store, { provider: "email", account: address.toLowerCase() })
   } finally {

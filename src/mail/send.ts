@@ -36,7 +36,16 @@ export interface Sending {
    * `messages.send.others` in the config: mail to others is then refused, as `readonly` would.
    */
   agentWithoutOthers?: boolean
+  /** The clock the send pace waits on; a test hands in one that does not sleep. */
+  clock?: SendClock
 }
+
+export interface SendClock {
+  now: () => number
+  sleep: (ms: number) => Promise<void>
+}
+
+const REAL_CLOCK: SendClock = { now: Date.now, sleep: realSleep }
 
 export const everyone = (draft: Pick<Draft, "to" | "cc" | "bcc">): Person[] => {
   const seen = new Set<string>()
@@ -251,7 +260,8 @@ export const sendOut = async (sending: Sending, outgoing: Outgoing): Promise<Sen
       { sent: false },
     )
   const { raw, copy } = await build(draft)
-  const pacer = new Pacer(pacePathFor(IDENTITY, sending.profile, sending.env), DEFAULT_PACE)
+  const clock = sending.clock ?? REAL_CLOCK
+  const pacer = new Pacer(pacePathFor(IDENTITY, sending.profile, sending.env), DEFAULT_PACE, clock.now)
   const submitted: Submitted = await guardedWrite(
     sending.guard,
     attempt,
@@ -259,7 +269,8 @@ export const sendOut = async (sending: Sending, outgoing: Outgoing): Promise<Sen
     () => ({}),
     async () => {
       const at = await pacer.reserve()
-      if (at > Date.now()) await realSleep(at - Date.now())
+      const now = clock.now()
+      if (at > now) await clock.sleep(at - now)
     },
   )
   const sentCopy = await fileCopy(sending, draft.messageId, copy)
