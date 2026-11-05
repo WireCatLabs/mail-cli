@@ -25,6 +25,9 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   `--filter` selection.
 - **The package no longer ships `dist/index.js`.** It re-exported `run`, `createProgram`, `definition` and `IDENTITY`,
   but `package.json` never named it, and no WireCat tool imported it. `mail` is a command, not a library.
+- **`attachments download` takes `[attachment...]` instead of `[number...]`.** The argument names the thing it takes,
+  as the other WireCat arguments do; an agent passes the numbers under `attachment` instead of `number`, and a
+  refusal names `param: "attachment"`. The values are still the numbers `attachments list` shows.
 
 ### Fixed
 

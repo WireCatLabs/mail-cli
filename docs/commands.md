@@ -909,13 +909,13 @@ save the attachments of one stored email into a folder, readable only by you; th
 **Changes something on this computer only.**
 
 ```sh
-mail attachments download <message> [number] [options]
+mail attachments download <message> [attachment] [options]
 ```
 
 | Argument | | What it is |
 |---|---|---|
 | `message` | required | the msg:email/… reference search messages shows. |
-| `number` | optional | only these attachments, by their number in attachments list (default: all). |
+| `attachment` | optional | only these attachments, by their number in attachments list (default: all). |
 
 | Option | What it does |
 |---|---|

@@ -708,9 +708,32 @@ describe("attachments list and download", { timeout: 20_000 }, () => {
     expect(replaced.code, replaced.err).toBe(0)
     expect(readFileSync(join(out, "invoice.pdf"), "utf8")).toBe("%PDF-1.4 invoice")
     const none = await mail(["ya", "attachments", "download", ref, "9", "--output-dir", out, "--json"])
-    expect(errorOf(none.err).code).toBe("not_found")
+    expect(errorOf(none.err)).toMatchObject({ code: "not_found", param: "attachment" })
     expect(folders[0]?.messages[1]?.flags).not.toContain("\\Seen")
     expect(imap.commands.some((line) => /BODY\[\]/i.test(line) && !/PEEK/i.test(line))).toBe(false)
+  })
+
+  it("takes the attachments an agent names under attachment", async () => {
+    const { options, refOf } = await harness()
+    const ref = await refOf("subject:Files")
+    const out = join(mkdtempSync(join(tmpdir(), "out-")), "agent")
+    const { client, close } = await mcpClient(options(), [], "ya")
+    try {
+      const saved = await answered(
+        client.callTool({
+          name: "mail_write",
+          arguments: {
+            command: "attachments download",
+            arguments: { message: ref, attachment: ["2"], output_dir: out },
+          },
+        }),
+      )
+      expect(saved.isError, JSON.stringify(saved.content)).not.toBe(true)
+      expect(readFileSync(join(out, "notes.txt"), "utf8")).toBe("secret plan")
+      expect(() => readFileSync(join(out, "invoice.pdf"))).toThrow()
+    } finally {
+      expect(await close()).toBe(0)
+    }
   })
 })
 
