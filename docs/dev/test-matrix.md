@@ -7,7 +7,7 @@ ran it · ⛔ not tested offline, with the reason and where it is checked instea
 Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 [TESTING.md](TESTING.md) for how, and for the states and failures that cut across commands.
 
-**258 ✅ · 26 ⛔ · 0 ❌** — 76 commands, 208 options.
+**266 ✅ · 26 ⛔ · 0 ❌** — 78 commands, 214 options.
 
 | Command | Option | | Note |
 |---|---|---|---|
@@ -30,6 +30,11 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `session end` | `--revoke` | ✅ |  |
 | `session list` |  | ✅ |  |
 | `account check` |  | ✅ |  |
+| `account inspect` |  | ✅ |  |
+| `account inspect` | `--since-time` | ✅ |  |
+| `account inspect` | `--limit` | ✅ |  |
+| `account inspect` | `--folder` | ✅ |  |
+| `account inspect` | `--domain-age` | ✅ |  |
 | `folders list` |  | ✅ |  |
 | `folders create` |  | ✅ |  |
 | `folders rename` |  | ✅ |  |
@@ -93,6 +98,9 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `messages export` | `--max-pages` | ✅ |  |
 | `messages export` | `--resume` | ✅ |  |
 | `messages export` | `--replace` | ✅ |  |
+| `messages import` |  | ✅ |  |
+| `messages import` | `--since-time` | ✅ |  |
+| `messages import` | `--limit` | ✅ |  |
 | `messages mark-read` |  | ✅ |  |
 | `messages mark-read` | `--filter` | ✅ |  |
 | `messages mark-read` | `--limit` | ✅ |  |
