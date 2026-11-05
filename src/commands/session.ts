@@ -127,11 +127,15 @@ const endCommand = () =>
     annotate(new Command("end"), {
       effects: LOCAL_WRITE,
       mcp: false,
-      examples: [`${IDENTITY.command} personal session end`],
+      examples: [`${IDENTITY.command} personal session end`, `${IDENTITY.command} personal session end --revoke`],
     }),
   )
     .summary("forget this profile's password or sign-in; synced mail stays")
-    .description("forget this profile's app password or OAuth sign-in on this computer; synced mail stays")
+    .description(
+      "forget this profile's app password or OAuth sign-in on this computer; synced mail stays. With --revoke " +
+        "(Gmail over OAuth) it also asks Google to revoke the sign-in: that changes your Google account and signs out " +
+        "every tool that uses the same Google project",
+    )
     .option(
       "--revoke",
       "Gmail over OAuth: also ask Google to revoke the sign-in, which ends every sign-in of that Google project",
