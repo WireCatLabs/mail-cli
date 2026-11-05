@@ -37,6 +37,34 @@
       }
     },
     {
+      "includes": ["src/mail/**", "src/export/**", "!src/mail/imap/**", "!**/*.test.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@modelcontextprotocol/**"],
+                    "message": "cli-core serves MCP; commands and services do not know the protocol"
+                  },
+                  {
+                    "group": ["imapflow", "imapflow/**"],
+                    "message": "only the IMAP adapter in src/mail/imap/ imports imapflow; everything above it speaks the MailBackend port in src/mail/backend.ts (WC-ARCH-3)"
+                  },
+                  {
+                    "group": ["../commands/**", "../../commands/**", "../../../commands/**"],
+                    "message": "src/mail and src/export sit below the commands and never import them (WC-ARCH-1)"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["src/mail/imap/**"],
       "linter": {
         "rules": {
@@ -48,6 +76,10 @@
                   {
                     "group": ["@modelcontextprotocol/**"],
                     "message": "cli-core serves MCP; commands and services do not know the protocol"
+                  },
+                  {
+                    "group": ["../commands/**", "../../commands/**", "../../../commands/**"],
+                    "message": "src/mail and src/export sit below the commands and never import them (WC-ARCH-1)"
                   }
                 ]
               }

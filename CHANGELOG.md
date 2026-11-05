@@ -6,6 +6,8 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Fixed
 
+- **`docs/configuration.md` says which flag answers `ask`**: `--allow-dangerous` for `drafts delete`, `--yes` for
+  every other change, and `confirmation_required` without a terminal or a flag.
 - **The sender domain cache and the sign-in records folder are private to you.** `domain-ages.json` is written with
   mode 600 and the folder that holds `sign-ins.json` with mode 700, as every other private file of mail's.
 - **Every error and issue reason mail raises is in its registry**, so `mail commands info` lists it and an agent can

@@ -46,8 +46,10 @@ the permissions say.
 The key of a command is its path: `messages.move`, `folders.delete`. Built in, a change that can be undone goes ahead
 (flags, moves, copies, folders made or renamed, drafts saved), and these ask: `messages.delete`, `folders.delete`,
 `drafts.delete`, and `messages.bulk`, which every change of more than 20 messages or chosen by `--filter` passes as
-well. At a terminal
-`ask` is a y/N question; `--yes` answers it.
+well. At a terminal `ask` is a y/N question, and no is the default. A flag answers it instead: `--allow-dangerous` for
+`drafts delete`, since a deleted draft does not come back, and `--yes` for every other change, `messages delete`
+included, since Trash and `messages restore` bring the mail back. With no terminal and no flag the command stops with
+`confirmation_required` (exit 7) and changes nothing.
 
 Sending has two keys. `messages.send` and `messages.forward` are the commands themselves and go ahead when the mail
 goes only to you. Mail that reaches anyone else also passes `messages.send.others`, which asks by default; set it to

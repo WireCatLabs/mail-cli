@@ -5,10 +5,10 @@ is for whoever registers that app: WireCat once for everyone, or you for yoursel
 costs nothing.
 
 When the app exists, its **Application (client) ID** goes either into `mail` itself (WireCat's app), or into your
-config once:
+config once, with your app's id in place of the example id:
 
 ```sh
-mail config set --defaults microsoft_client_id <application-client-id>
+mail config set --defaults microsoft_client_id 11111111-2222-3333-4444-555555555555
 ```
 
 Only you can set it, in a terminal: an agent over MCP is refused, as for the mail server settings. The id is public; a
