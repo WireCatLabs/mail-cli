@@ -86,5 +86,5 @@ export const harness = async (given: Partial<FakeOptions> & { provider?: string;
       await store.close()
     }
   }
-  return { mail, json, refOf, env, stored, commands: () => fake?.commands ?? [] }
+  return { mail, json, refOf, env, stored, port, commands: () => fake?.commands ?? [] }
 }

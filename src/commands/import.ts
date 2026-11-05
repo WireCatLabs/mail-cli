@@ -45,6 +45,8 @@ export const importLeaf = (): Command =>
   answerEntity(
     annotate(new Command("import"), {
       effects: LOCAL_WRITE,
+      // A stop lets the read in flight finish and keeps what was saved (WC-LIFE-10, NEED-2214 A).
+      cooperative: true,
       partial: true,
       examples: [
         `${IDENTITY.command} gm messages import ~/Takeout/Mail/All\\ mail\\ Including\\ Spam\\ and\\ Trash.mbox`,
