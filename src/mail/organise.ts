@@ -1,12 +1,12 @@
 import { CliError } from "@wirecat/cli-base"
-import { parseReference } from "@wirecat/cli-core"
 import type { AppIdentity } from "@wirecat/cli-core/cli"
-import { decodedLabelName, ENVELOPE, searchMail } from "@wirecat/cli-core/mail"
+import { decodedLabelName } from "@wirecat/cli-core/mail"
 import { type GuardRequest, guardedWrite, newOperationId, type SendGuard } from "@wirecat/cli-core/sends"
 import type { AccountKey, MessageStore } from "@wirecat/cli-core/store"
 import type { Organise } from "../providers.js"
 import type { FolderInfo, MailWrites, ServerState } from "./backend.js"
-import { appendRestore, type ChangedItem, type ChangeLog, type ChangeRun, type StepLine } from "./changes.js"
+import type { ChangeLog, StepLine } from "./changes.js"
+import type { Located } from "./locate.js"
 
 /** One mailbox as the write commands see it: its stored mail, its server and where its provider differs. */
 export interface Mailbox {
@@ -24,7 +24,6 @@ export const FILTER_LIMIT = 500
 export const MAX_LIMIT = 5_000
 /** More messages than this at once is a bulk change: previewed first and checked as `messages.bulk` too. */
 export const BULK = 20
-const PAGE = 100
 
 const SYSTEM_FLAGS: Record<string, string> = {
   read: "\\Seen",
@@ -55,115 +54,6 @@ export const flagOf = (given: string): string => {
   return word
 }
 
-/** Stored mail by reference or by the shared query, at most `limit`; `more` says the query matched more. */
-export const selectIds = async (
-  mailbox: Mailbox,
-  { refs = [], filter, limit = FILTER_LIMIT }: { refs?: string[]; filter?: string; limit?: number },
-): Promise<{ ids: string[]; more: boolean }> => {
-  if (refs.length === 0 && filter === undefined)
-    throw new CliError("validation_error", "name the messages", { reason: "mail.no-selection" })
-  if (refs.length > 0 && filter !== undefined)
-    throw new CliError("validation_error", "give message references or a query, not both", {
-      param: "filter",
-      reason: "mail.refs-and-filter",
-    })
-  const ids = new Set<string>()
-  for (const ref of refs) {
-    const place = parseReference(ref)
-    if (place.type !== "message")
-      throw new CliError("validation_error", `${ref} names no email — give the msg:email/… reference search shows`)
-    if (place.provider !== mailbox.key.provider || place.account !== mailbox.key.account)
-      throw new CliError("not_found", `${ref} is not mail of this profile's mailbox ${mailbox.key.account}`)
-    ids.add(place.message)
-  }
-  if (filter === undefined) return { ids: [...ids], more: false }
-  let more = false
-  for (let offset = 0; ids.size < limit; offset += PAGE) {
-    const found = await searchMail(
-      mailbox.store,
-      mailbox.key,
-      { text: filter, limit: PAGE, offset, mailAccount: mailbox.key.account, newest: true },
-      { app: mailbox.app },
-    )
-    for (const hit of found.items) {
-      const place = parseReference(hit.locator)
-      if (place.type === "message") ids.add(place.message)
-    }
-    if (!found.hasMore) break
-    more = ids.size >= limit
-  }
-  return { ids: [...ids].slice(0, limit), more: more || ids.size > limit }
-}
-
-interface Located {
-  folder: string
-  validity: string
-  items: ChangedItem[]
-}
-
-/** Gmail searches by its own id; the hash of a Message-ID is found through the stored UIDs. */
-const serverId = (id: string) => !id.startsWith("imap:")
-
-/**
- * Where each email is on the server now, folder by folder. `everywhere` keeps every place an email is in (a flag is
- * set on each copy); otherwise only its first, so one email is moved once. Trash counts only when `trash` is given.
- */
-export const locate = async (
-  mailbox: Mailbox,
-  ids: readonly string[],
-  { everywhere = false, trash }: { everywhere?: boolean; trash?: string } = {},
-): Promise<{ located: Located[]; missing: string[]; deleted: string[]; inTrash: string[] }> => {
-  const byFolder = new Map<string, string[]>()
-  const missing: string[] = []
-  const deleted: string[] = []
-  const inTrash: string[] = []
-  for (const id of ids) {
-    const email = await mailbox.store.mail.email(mailbox.accountId, id)
-    if (email === null) {
-      missing.push(id)
-      continue
-    }
-    if (email.deletedAt !== null) {
-      deleted.push(id)
-      continue
-    }
-    const folders = email.mailboxes.filter(({ kind }) => kind === null).map(({ externalId }) => externalId)
-    const usable = folders.filter((folder) => folder !== trash)
-    if (usable.length === 0 && folders.length > 0) {
-      inTrash.push(id)
-      continue
-    }
-    if (usable.length === 0) {
-      missing.push(id)
-      continue
-    }
-    for (const folder of everywhere ? usable : usable.slice(0, 1))
-      byFolder.set(folder, [...(byFolder.get(folder) ?? []), id])
-  }
-  const located: Located[] = []
-  const placed = new Set<string>()
-  for (const [folder, wanted] of byFolder) {
-    const { validity, uids } = await mailbox.writes.locate(folder, { emailIds: wanted.filter(serverId) })
-    const stored = wanted.some((id) => !serverId(id))
-      ? new Map(
-          (await mailbox.store.mail.folderEmails(mailbox.accountId, folder, validity)).map((row) => [
-            row.externalId,
-            row.uid,
-          ]),
-        )
-      : new Map<string, number>()
-    const items = wanted.flatMap((id) => {
-      const uid = uids.get(id) ?? stored.get(id)
-      return uid === undefined ? [] : [{ id, uid }]
-    })
-    for (const { id } of items) placed.add(id)
-    if (items.length) located.push({ folder, validity, items })
-  }
-  for (const list of byFolder.values())
-    for (const id of list) if (!placed.has(id) && !missing.includes(id)) missing.push(id)
-  return { located, missing, deleted, inTrash }
-}
-
 /** The folder a name or a role names: its path, a role (`archive`, `trash`), then a name in any case. */
 export const folderNamed = (folders: readonly FolderInfo[], given: string): FolderInfo | undefined => {
   const word = given.trim()
@@ -189,7 +79,7 @@ export const trashOf = async (mailbox: Mailbox): Promise<string> => {
   return found.path
 }
 
-const allMailOf = async (mailbox: Mailbox): Promise<string> => {
+export const allMailOf = async (mailbox: Mailbox): Promise<string> => {
   const found = (await mailbox.folders()).find(({ role }) => role === "all")
   if (!found)
     throw new CliError("provider_unavailable", "Gmail's All Mail folder is not listed", { reason: "mail.no-all-mail" })
@@ -225,7 +115,7 @@ export const targetOf = async (mailbox: Mailbox, given: string, copy: boolean): 
   return { kind: "labels", add: [name], remove: copy ? [] : ["\\Inbox"], name }
 }
 
-const storeBox = (folder: string) => ({ externalId: folder, name: folder, kind: null })
+export const storeBox = (folder: string) => ({ externalId: folder, name: folder, kind: null })
 const labelBox = (raw: string) => {
   const name = decodedLabelName(raw)
   return { externalId: `label:${name}`, name, kind: "label" }
@@ -286,8 +176,6 @@ export class Changer {
   }
 }
 
-const undoing = (step: StepLine) => (step.operation_id ? { undoes: step.operation_id } : {})
-
 const statesOf = async (mailbox: Mailbox, { folder, validity, items }: Located) =>
   mailbox.writes.state(
     folder,
@@ -295,7 +183,7 @@ const statesOf = async (mailbox: Mailbox, { folder, validity, items }: Located) 
     items.map(({ uid }) => uid),
   )
 
-const groupBy = <T>(items: T[], keyOf: (item: T) => string) => {
+export const groupBy = <T>(items: T[], keyOf: (item: T) => string) => {
   const groups = new Map<string, [T, ...T[]]>()
   for (const item of items) {
     const group = groups.get(keyOf(item))
@@ -306,7 +194,7 @@ const groupBy = <T>(items: T[], keyOf: (item: T) => string) => {
 }
 
 /** The values of `keys` that `map` holds, in order; a key it lacks is left out. */
-const valuesOf = <K, V>(map: ReadonlyMap<K, V>, keys: readonly K[]): V[] =>
+export const valuesOf = <K, V>(map: ReadonlyMap<K, V>, keys: readonly K[]): V[] =>
   keys.flatMap((key) => {
     const value = map.get(key)
     return value === undefined ? [] : [value]
@@ -321,7 +209,7 @@ const byId = <V>(uids: ReadonlyMap<number, V>, idOf: ReadonlyMap<number, string>
     }),
   )
 
-const flagChanges = (change: { add: string[]; remove: string[] }) => ({
+export const flagChanges = (change: { add: string[]; remove: string[] }) => ({
   ...(change.add.includes("\\Seen") ? { read: true } : change.remove.includes("\\Seen") ? { read: false } : {}),
   ...(change.add.includes("\\Flagged")
     ? { flagged: true }
@@ -413,7 +301,7 @@ const changeLabels = async (changer: Changer, place: Located, add: string[], rem
   return items.map(({ id }) => id)
 }
 
-const relabel = async (mailbox: Mailbox, ids: string[], add: string[], remove: string[]) => {
+export const relabel = async (mailbox: Mailbox, ids: string[], add: string[], remove: string[]) => {
   const scanned = [...add, ...remove].map(labelBox)
   const kept = add.map(labelBox).map(({ externalId }) => externalId)
   if (scanned.length === 0) return
@@ -527,240 +415,4 @@ export const trashMessages = async (
     for (const id of ids) changed.push(id)
   }
   return { changed, kept }
-}
-
-export interface RestorePlan {
-  run: string
-  command: string
-  started_at: string
-  restorable_until: string | null
-  expired: boolean
-  /** Messages the run changed. */
-  logged: number
-  /** Messages a restore puts back: still where the run left them. */
-  restorable: number
-  /** Changed by the run, and no longer where it left them: restored already, moved by hand, or gone for good. */
-  missing: number
-  restored: number
-}
-
-const SYSTEM = new Set(["\\Inbox", "\\Important", "\\Starred", "\\Sent", "\\Drafts", "\\Spam", "\\Trash"])
-
-const inverse = (change: StepLine["change"] = {}, item: ChangedItem) => {
-  const had = new Set(item.had ?? [])
-  return {
-    add: (change.remove ?? []).filter((one) => had.has(one)),
-    remove: (change.add ?? []).filter((one) => !had.has(one)),
-  }
-}
-
-/** Where a step's messages are now: the UIDs it left them under, else found again by id or Message-ID. */
-const whereNow = async (
-  mailbox: Mailbox,
-  folder: string,
-  items: ChangedItem[],
-  given: { uids?: Record<string, number>; validity?: string },
-): Promise<{ validity: string; found: Map<string, number> }> => {
-  const look = await mailbox.writes.locate(folder, {
-    emailIds: items.map(({ id }) => id).filter(serverId),
-    messageIds: items.flatMap(({ id, mid }) => (serverId(id) || mid === undefined ? [] : [mid])),
-  })
-  const found = new Map<string, number>()
-  const same = given.validity === undefined || given.validity === look.validity
-  for (const item of items) {
-    const uid = look.uids.get(item.id) ?? (item.mid ? look.uids.get(item.mid) : undefined)
-    const left = same ? given.uids?.[item.id] : undefined
-    if (uid !== undefined) found.set(item.id, uid)
-    else if (left !== undefined && (await mailbox.writes.state(folder, look.validity, [left])).has(left))
-      found.set(item.id, left)
-  }
-  return { validity: look.validity, found }
-}
-
-/**
- * The copies a copy step made, by the UIDs the server gave them (COPYUID) alone. The original and a copy share the
- * Message-ID, and on a server with OBJECTID the email id too, so finding them again by either could pick the
- * original, which undoing a copy then expunges for good.
- */
-const copiesNow = async (
-  mailbox: Mailbox,
-  folder: string,
-  items: ChangedItem[],
-  done: { uids?: Record<string, number>; to_validity?: string } | undefined,
-): Promise<{ validity: string; found: Map<string, number> }> => {
-  const { uids, to_validity: validity } = done ?? {}
-  if (!uids || !validity)
-    throw new CliError(
-      "provider_unavailable",
-      "the server gave no UIDs for the copies, so they cannot be told from other mail and are left in place",
-      { reason: "mail.copy-not-undoable" },
-    )
-  const left = items.flatMap(({ id }) => (uids[id] === undefined ? [] : [[id, uids[id] as number] as const]))
-  const present = await mailbox.writes.state(
-    folder,
-    validity,
-    left.map(([, uid]) => uid),
-  )
-  return { validity, found: new Map(left.filter(([, uid]) => present.has(uid))) }
-}
-
-/**
- * Undoes a run, last step first, for the messages still where it left them. Without `apply` it only counts. Trash
- * brings mail back to where it was (on Gmail: to the Inbox if it was there, else All Mail, labels put back).
- */
-export const restoreRun = async (
-  changer: Changer,
-  { run, steps, restored: before }: ChangeRun,
-  path: string,
-  apply: boolean,
-): Promise<RestorePlan> => {
-  const { mailbox } = changer
-  const now = mailbox.now()
-  const until = run.restorable_until ?? null
-  const plan: RestorePlan = {
-    run: run.id,
-    command: run.command,
-    started_at: run.started_at,
-    restorable_until: until,
-    expired: until !== null && Date.parse(until) < now,
-    logged: 0,
-    restorable: 0,
-    missing: 0,
-    restored: 0,
-  }
-  const restored: string[] = []
-  // A step can fail after earlier ones changed the mailbox; what came back is recorded, so the next restore skips it.
-  try {
-    for (const { step, done } of [...steps].reverse()) {
-      const items = step.items.filter(({ id }) => !before.has(id))
-      plan.logged += step.items.length
-      if (items.length === 0) continue
-      const folder = step.folder || (step.op === "trash" ? await allMailOf(mailbox) : step.folder)
-      if (step.op === "flag" || step.op === "label") {
-        // A flag or a label does not move a message, so the UID it had is still its UID.
-        const { validity, found } = await whereNow(mailbox, folder, items, {
-          uids: Object.fromEntries(items.map(({ id, uid }) => [id, uid])),
-          validity: step.validity,
-        })
-        const here = items.filter(({ id }) => found.has(id))
-        plan.restorable += here.length
-        plan.missing += items.length - here.length
-        if (!apply) continue
-        for (const group of groupBy(here, (item) => JSON.stringify(inverse(step.change, item))).values()) {
-          const back = inverse(step.change, group[0])
-          if (back.add.length === 0 && back.remove.length === 0) continue
-          const uids = valuesOf(
-            found,
-            group.map(({ id }) => id),
-          )
-          const ids = group.map(({ id }) => id)
-          await changer.step(
-            {
-              op: step.op,
-              folder,
-              validity,
-              ...undoing(step),
-              change: back,
-              items: group.flatMap((item) => valuesOf(found, [item.id]).map((uid) => ({ ...item, uid }))),
-            },
-            () => (step.op === "flag" ? mailbox.writes.flag : mailbox.writes.label)(folder, validity, uids, back),
-          )
-          if (step.op === "flag") {
-            const flags = flagChanges(back)
-            if (Object.keys(flags).length)
-              await mailbox.store.mail.setFlags(mailbox.accountId, new Map(ids.map((id) => [id, flags])), mailbox.now())
-          } else await relabel(mailbox, ids, back.add, back.remove)
-          for (const id of ids) restored.push(id)
-        }
-        continue
-      }
-      const to = step.to || (await trashOf(mailbox))
-      const { validity, found } =
-        step.op === "copy"
-          ? await copiesNow(mailbox, to, items, done)
-          : await whereNow(mailbox, to, items, {
-              ...(done?.uids ? { uids: done.uids } : {}),
-              ...(done?.to_validity ? { validity: done.to_validity } : {}),
-            })
-      const here = items.filter(({ id }) => found.has(id))
-      plan.restorable += here.length
-      plan.missing += items.length - here.length
-      if (!apply || here.length === 0) continue
-      if (step.op === "copy") {
-        const uids = valuesOf(
-          found,
-          here.map(({ id }) => id),
-        )
-        await changer.step({ op: "copy", folder: to, validity, ...undoing(step), items: here }, () =>
-          mailbox.writes.expunge(to, validity, uids),
-        )
-        await mailbox.store.mail.setMailboxes(
-          mailbox.accountId,
-          [storeBox(to)],
-          new Map(here.map(({ id }) => [id, []])),
-          mailbox.now(),
-        )
-        for (const { id } of here) restored.push(id)
-        continue
-      }
-      const gmailTrash = step.op === "trash" && mailbox.organise.labels === true
-      const groups = gmailTrash
-        ? groupBy(here, (item) => ((item.labels ?? []).includes("\\Inbox") ? "INBOX" : folder))
-        : new Map([[folder, here]])
-      for (const [back, group] of groups) {
-        const uids = valuesOf(
-          found,
-          group.map(({ id }) => id),
-        )
-        await changer.step({ op: "move", folder: to, validity, to: back, ...undoing(step), items: group }, () =>
-          mailbox.writes.move(to, validity, uids, back),
-        )
-        const ids = group.map(({ id }) => id)
-        if (step.op === "move")
-          await mailbox.store.mail.setMailboxes(
-            mailbox.accountId,
-            [storeBox(to), storeBox(back)],
-            new Map(ids.map((id) => [id, [back]])),
-            mailbox.now(),
-          )
-        for (const id of ids) restored.push(id)
-      }
-      if (gmailTrash) {
-        const all = await allMailOf(mailbox)
-        const labelled = here.filter((item) => (item.labels ?? []).some((label) => label !== "\\Inbox"))
-        if (labelled.length) {
-          const { validity: allValidity, found: inAll } = await whereNow(mailbox, all, labelled, {})
-          for (const group of groupBy(labelled, (item) =>
-            JSON.stringify((item.labels ?? []).filter((l) => l !== "\\Inbox").sort()),
-          ).values()) {
-            const labels = (group[0].labels ?? []).filter((label) => label !== "\\Inbox")
-            const placed = group.filter(({ id }) => inAll.has(id))
-            if (placed.length === 0) continue
-            await mailbox.writes.label(
-              all,
-              allValidity,
-              valuesOf(
-                inAll,
-                placed.map(({ id }) => id),
-              ),
-              { add: labels.filter((label) => !SYSTEM.has(label) || label === "\\Starred" || label === "\\Important") },
-            )
-          }
-        }
-      }
-      if (step.op === "trash") {
-        // Only an envelope comes back whole at once: it has no text to lose. Full mail is saved again by the next sync.
-        const envelopes = (await mailbox.store.mail.emailRefs({ accountId: mailbox.accountId, includeDeleted: true }))
-          .filter(
-            ({ externalId, mailboxes }) => found.has(externalId) && mailboxes.some(({ kind }) => kind === ENVELOPE),
-          )
-          .map(({ externalId }) => externalId)
-        if (envelopes.length) await mailbox.store.mail.markRestored(mailbox.accountId, envelopes, mailbox.now())
-      }
-    }
-  } finally {
-    if (restored.length) appendRestore(path, restored, mailbox.now())
-  }
-  plan.restored = restored.length
-  return plan
 }

@@ -42,7 +42,7 @@ import { trashOf } from "../mail/organise.js"
 import { fetchOriginal } from "../mail/send.js"
 import { repeatable } from "./context.js"
 import { draftSendCommand } from "./drafts-send.js"
-import { type Opened, organising } from "./messages.js"
+import { type Opened, organising } from "./organising.js"
 import { ownerOf } from "./send.js"
 
 const LIST_LIMIT = 50
