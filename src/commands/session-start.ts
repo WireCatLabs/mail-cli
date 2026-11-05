@@ -234,11 +234,12 @@ export const sessionStartCommand = () =>
             (Array.isArray(flags[flag]) ? flags[flag].length > 0 : flags[flag] !== undefined) &&
             !(flag === "address" && same),
         )
-        if (given.length)
+        const [first] = given
+        if (first !== undefined)
           throw new CliError(
             "validation_error",
-            `profile ${context.profile} already exists, so --${given[0]} cannot change it; edit it with \`${IDENTITY.command} ${context.profile} config set\` or use a new profile name`,
-            { param: given[0] as string },
+            `profile ${context.profile} already exists, so --${first} cannot change it; edit it with \`${IDENTITY.command} ${context.profile} config set\` or use a new profile name`,
+            { param: first },
           )
         endpoint = endpointOf(context.settings)
         address = context.settings.mailbox.address ?? endpoint.login

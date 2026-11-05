@@ -20,7 +20,7 @@ import { imapBackend } from "./mail/imap/index.js"
 import { createProgram, run } from "./program.js"
 import { type FakeFolder, type FakeImap, type FakeOptions, startFakeImap } from "./testing/fake-imap.js"
 import { type FakeSmtp, type FakeSmtpOptions, startFakeSmtp } from "./testing/fake-smtp.js"
-import { mcpClient } from "./testing/mcp.js"
+import { answered, mcpClient } from "./testing/mcp.js"
 
 const PASSWORD = "fixture-app-password-7Kq2"
 const ADDRESS = "me@example.com"
@@ -114,7 +114,7 @@ const harness = async (
           { sleep: async () => {}, ...bounds },
         ),
       ...rest,
-    } as MailEnvironment & Record<string, unknown>
+    } satisfies MailEnvironment
   }
   const mail = async (argv: string[], extra: Partial<MailEnvironment> & { password?: string; env?: object } = {}) => {
     const out: string[] = []
@@ -122,7 +122,7 @@ const harness = async (
     const code = await run(argv, {
       ...options(extra),
       streams: { data: (text) => out.push(text), diagnostic: (text) => err.push(text) },
-    } as MailEnvironment & Record<string, unknown>)
+    } satisfies MailEnvironment)
     return { code, out: out.join("\n"), err: err.join("\n") }
   }
   const started = await mail(["ya", "session", "start", "--address", ADDRESS, "--json"], { password: PASSWORD })
@@ -269,7 +269,7 @@ describe("messages send over SMTP", { timeout: 20_000 }, () => {
           asked.push(question)
           return "y"
         },
-      } as Partial<MailEnvironment>,
+      },
     )
     expect(sent.code, sent.err).toBe(0)
     expect(sent.err).toContain("About to send:")
@@ -407,7 +407,7 @@ describe("messages send over SMTP", { timeout: 20_000 }, () => {
     const { mail, smtp } = await harness()
     const sent = await mail(["ya", "messages", "send", "--to", ADDRESS, "--subject", "Piped", "--json"], {
       stdin: Readable.from(["from a pipe\n"]),
-    } as Partial<MailEnvironment>)
+    })
     expect(sent.code, sent.err).toBe(0)
     expect(smtp.received[0]?.raw).toContain("from a pipe")
   })
@@ -486,16 +486,16 @@ describe("messages send over SMTP", { timeout: 20_000 }, () => {
     const { mail, refOf } = await harness()
     const sent = await mail(["ya", "messages", "send", "--to", ADDRESS, "--subject", "Plain", "words"], {
       tty: true,
-    } as Partial<MailEnvironment>)
+    })
     expect(sent.code, sent.err).toBe(0)
     expect(sent.out).toContain("sent to 1 recipient: Plain")
     const listed = await mail(["ya", "attachments", "list", await refOf("subject:October")], {
       tty: true,
-    } as Partial<MailEnvironment>)
+    })
     expect(listed.out).toContain("no attachments")
     const files = await mail(["ya", "attachments", "list", await refOf("subject:Files")], {
       tty: true,
-    } as Partial<MailEnvironment>)
+    })
     expect(files.out).toContain("1  invoice.pdf  16 bytes")
   })
 
@@ -676,15 +676,17 @@ describe("attachments list and download", { timeout: 20_000 }, () => {
 })
 
 const callSend = (client: Awaited<ReturnType<typeof mcpClient>>["client"], to: string) =>
-  client.callTool({
-    name: "mail_write",
-    arguments: { command: "messages send", arguments: { to: [to], subject: "From the agent", text: "Hello" } },
-  }) as Promise<{ isError?: boolean; content?: { text?: string }[] }>
+  answered(
+    client.callTool({
+      name: "mail_write",
+      arguments: { command: "messages send", arguments: { to: [to], subject: "From the agent", text: "Hello" } },
+    }),
+  )
 
 describe("sending over MCP", { timeout: 20_000 }, () => {
   it("lets an agent mail only the owner by default, and names the key that opens it", async () => {
     const { options, smtp } = await harness()
-    const { client, close } = await mcpClient(options() as Parameters<typeof mcpClient>[0], [], "ya")
+    const { client, close } = await mcpClient(options(), [], "ya")
     try {
       const refused = await callSend(client, "eve@example.com")
       expect(refused.isError).toBe(true)
@@ -701,7 +703,7 @@ describe("sending over MCP", { timeout: 20_000 }, () => {
   it("lets an agent mail others once the owner allows it in the config", async () => {
     const { mail, options, smtp } = await harness()
     expect((await mail(["ya", "config", "set", "permissions.messages.send.others", "allow"])).code).toBe(0)
-    const { client, close } = await mcpClient(options() as Parameters<typeof mcpClient>[0], [], "ya")
+    const { client, close } = await mcpClient(options(), [], "ya")
     try {
       const sent = await callSend(client, "ann@example.com")
       expect(sent.isError, JSON.stringify(sent)).not.toBe(true)
@@ -713,11 +715,7 @@ describe("sending over MCP", { timeout: 20_000 }, () => {
 
   it("does not let an mcp serve --permission open mail to others", async () => {
     const { options, smtp } = await harness()
-    const { client, close } = await mcpClient(
-      options() as Parameters<typeof mcpClient>[0],
-      ["--permission", "messages.send.others=ask"],
-      "ya",
-    )
+    const { client, close } = await mcpClient(options(), ["--permission", "messages.send.others=ask"], "ya")
     try {
       expect((await callSend(client, "eve@example.com")).isError).toBe(true)
     } finally {
@@ -728,21 +726,17 @@ describe("sending over MCP", { timeout: 20_000 }, () => {
 
   it("lets the owner fence an agent to mail only the owner, with messages.send.others=readonly", async () => {
     const { options, smtp } = await harness()
-    const { client, close } = await mcpClient(
-      options() as Parameters<typeof mcpClient>[0],
-      ["--permission", "messages.send.others=readonly"],
-      "ya",
-    )
+    const { client, close } = await mcpClient(options(), ["--permission", "messages.send.others=readonly"], "ya")
     try {
       const send = (to: string) =>
         client.callTool({
           name: "mail_write",
           arguments: { command: "messages send", arguments: { to: [to], subject: "From the agent", text: "Hello" } },
         })
-      const refused = (await send("eve@example.com")) as { isError?: boolean; content?: { text?: string }[] }
+      const refused = await answered(send("eve@example.com"))
       expect(refused.isError).toBe(true)
       expect(JSON.stringify(refused.content)).toContain("permission_error")
-      const own = (await send(ADDRESS)) as { isError?: boolean }
+      const own = await answered(send(ADDRESS))
       expect(own.isError, JSON.stringify(own)).not.toBe(true)
     } finally {
       expect(await close()).toBe(0)
@@ -761,13 +755,15 @@ describe("sending over MCP", { timeout: 20_000 }, () => {
     mkdirSync(join(dir, ".ssh"))
     const key = join(dir, ".ssh", "id_ed25519")
     writeFileSync(key, "key")
-    const { client, close } = await mcpClient(options() as Parameters<typeof mcpClient>[0], [], "ya")
+    const { client, close } = await mcpClient(options(), [], "ya")
     try {
       const send = (extra: Record<string, unknown>) =>
-        client.callTool({
-          name: "mail_write",
-          arguments: { command: "messages send", arguments: { to: [ADDRESS], subject: "Key", text: "x", ...extra } },
-        }) as Promise<{ isError?: boolean; content?: { text?: string }[] }>
+        answered(
+          client.callTool({
+            name: "mail_write",
+            arguments: { command: "messages send", arguments: { to: [ADDRESS], subject: "Key", text: "x", ...extra } },
+          }),
+        )
       const refused = await send({ file: key })
       expect(refused.isError).toBe(true)
       expect(JSON.stringify(refused.content)).toContain("--allow-any-file")
@@ -782,15 +778,17 @@ describe("sending over MCP", { timeout: 20_000 }, () => {
     const dir = mkdtempSync(join(tmpdir(), "files-"))
     writeFileSync(join(dir, "one.txt"), "first")
     writeFileSync(join(dir, "two.txt"), "second")
-    const { client, close } = await mcpClient(options() as Parameters<typeof mcpClient>[0], [], "ya")
+    const { client, close } = await mcpClient(options(), [], "ya")
     try {
-      const sent = (await client.callTool({
-        name: "mail_write",
-        arguments: {
-          command: "messages send",
-          arguments: { to: [ADDRESS], subject: "Two", text: "x", file: [join(dir, "one.txt"), join(dir, "two.txt")] },
-        },
-      })) as { isError?: boolean }
+      const sent = await answered(
+        client.callTool({
+          name: "mail_write",
+          arguments: {
+            command: "messages send",
+            arguments: { to: [ADDRESS], subject: "Two", text: "x", file: [join(dir, "one.txt"), join(dir, "two.txt")] },
+          },
+        }),
+      )
       expect(sent.isError).toBeFalsy()
     } finally {
       expect(await close()).toBe(0)
@@ -807,21 +805,23 @@ describe("sending over MCP", { timeout: 20_000 }, () => {
       for (const name of command === "messages update" ? ["flag", "unflag"] : ["to", "cc", "bcc"])
         expect(JSON.stringify(entries[name]), `${command} ${name}`).toContain('"array"')
     }
-    const { client, close } = await mcpClient(options() as Parameters<typeof mcpClient>[0], [], "ya")
+    const { client, close } = await mcpClient(options(), [], "ya")
     try {
-      const sent = (await client.callTool({
-        name: "mail_write",
-        arguments: {
-          command: "messages send",
+      const sent = await answered(
+        client.callTool({
+          name: "mail_write",
           arguments: {
-            to: ["ann@example.com", "bob@example.com"],
-            cc: ["carol@example.com"],
-            bcc: ["dave@example.com"],
-            subject: "Many",
-            text: "x",
+            command: "messages send",
+            arguments: {
+              to: ["ann@example.com", "bob@example.com"],
+              cc: ["carol@example.com"],
+              bcc: ["dave@example.com"],
+              subject: "Many",
+              text: "x",
+            },
           },
-        },
-      })) as { isError?: boolean }
+        }),
+      )
       expect(sent.isError, JSON.stringify(sent)).toBeFalsy()
     } finally {
       expect(await close()).toBe(0)
@@ -839,13 +839,15 @@ describe("settings an agent cannot change", { timeout: 20_000 }, () => {
   it("refuses an agent with mcp.authority the mail servers and permissions.messages.send.others", async () => {
     const { mail, options, env } = await harness()
     expect((await mail(["ya", "config", "set", "permissions.mcp.authority", "allow"])).code).toBe(0)
-    const { client, close } = await mcpClient(options() as Parameters<typeof mcpClient>[0], [], "ya")
+    const { client, close } = await mcpClient(options(), [], "ya")
     try {
       const set = (setting: string, value: string) =>
-        client.callTool({
-          name: "mail_write",
-          arguments: { command: "config set", arguments: { setting, value } },
-        }) as Promise<{ isError?: boolean; content?: { text?: string }[] }>
+        answered(
+          client.callTool({
+            name: "mail_write",
+            arguments: { command: "config set", arguments: { setting, value } },
+          }),
+        )
       for (const [setting, value] of [
         ["smtp_host", "smtp.evil.example"],
         ["imap_host", "imap.evil.example"],

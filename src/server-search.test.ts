@@ -74,7 +74,7 @@ const harness = async (
           ...bounds,
         }),
       ...extra,
-    } as MailEnvironment & Record<string, unknown>)
+    } satisfies MailEnvironment)
     return { code, out: out.join("\n"), err: err.join("\n") }
   }
   const json = async (argv: string[]) => {

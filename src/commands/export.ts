@@ -1,5 +1,5 @@
 import { resolve } from "node:path"
-import { CliError } from "@wirecat/cli-base"
+import { CliError, isCliError } from "@wirecat/cli-base"
 import { annotate } from "@wirecat/cli-base/commands"
 import type { NextStep } from "@wirecat/cli-base/standards"
 import {
@@ -193,14 +193,12 @@ export const exportLeaf = (): Command =>
                   folder,
                   receivedAt: new Date(email.receivedAt ?? 0).toISOString(),
                 }))
-                const raws = await (
-                  backend as { fetchRaw: (items: Quick[]) => Promise<(Uint8Array | Error)[]> }
-                ).fetchRaw(items)
+                const raws = await backend.fetchRaw(items)
                 const byFolder = new Map<string, Written[]>()
                 for (const [at, entry] of slice.entries()) {
                   const raw = raws[at]
                   if (!(raw instanceof Uint8Array)) {
-                    if (raw instanceof Error && (raw as { code?: string }).code === "not_found") absent++
+                    if (isCliError(raw) && raw.code === "not_found") absent++
                     else unreadable++
                     continue
                   }
@@ -217,12 +215,14 @@ export const exportLeaf = (): Command =>
                   byFolder.set(entry.folder, group)
                 }
                 for (const [folder, batch] of byFolder) {
+                  const [first] = batch
+                  if (!first) continue
                   await writeBatch(
                     args.format,
                     destination,
                     journal,
                     folder,
-                    batch[0]?.validity as string,
+                    first.validity,
                     batch,
                     Boolean(args.replace),
                   )

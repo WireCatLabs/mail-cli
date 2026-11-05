@@ -12,7 +12,7 @@ import type { MailCredential, MailEndpoint, RunBounds } from "./mail/backend.js"
 import { imapBackend } from "./mail/imap/index.js"
 import { createProgram, run } from "./program.js"
 import { type FakeFolder, type FakeImap, type FakeOptions, startFakeImap } from "./testing/fake-imap.js"
-import { mcpClient } from "./testing/mcp.js"
+import { answered, mcpClient } from "./testing/mcp.js"
 
 const PASSWORD = "fixture-app-password-7Kq2"
 const ADDRESS = "me@example.com"
@@ -102,7 +102,7 @@ const harness = async (given: Partial<FakeOptions> & { provider?: string } = {})
           ...bounds,
         }),
       ...rest,
-    } as MailEnvironment & Record<string, unknown>
+    } satisfies MailEnvironment
   }
   const mail = async (argv: string[], extra: Partial<MailEnvironment> & { password?: string; env?: object } = {}) => {
     const out: string[] = []
@@ -110,7 +110,7 @@ const harness = async (given: Partial<FakeOptions> & { provider?: string } = {})
     const code = await run(argv, {
       ...options(extra),
       streams: { data: (text) => out.push(text), diagnostic: (text) => err.push(text) },
-    } as MailEnvironment & Record<string, unknown>)
+    } satisfies MailEnvironment)
     return { code, out: out.join("\n"), err: err.join("\n") }
   }
   const started = await mail(
@@ -492,7 +492,7 @@ describe("an agent over MCP", () => {
       let answer: unknown
       let failed: unknown
       const agent = { result: (value: unknown) => (answer = value), failure: (error: unknown) => (failed = error) }
-      await mail(argv, { agent } as Partial<MailEnvironment>)
+      await mail(argv, { agent })
       if (failed) throw new Error(JSON.stringify(failed))
       return (answer as { item: Record<string, unknown> }).item
     }
@@ -670,13 +670,10 @@ describe("folders create, rename and delete", () => {
       { name: "Empty", uidValidity: 33, messages: [] },
     )
     const { options } = await harness({ folders })
-    const { client, close } = await mcpClient(options() as Parameters<typeof mcpClient>[0], [], "ya")
+    const { client, close } = await mcpClient(options(), [], "ya")
     try {
       const call = (args: Record<string, unknown>) =>
-        client.callTool({ name: "mail_write", arguments: { command: "folders delete", arguments: args } }) as Promise<{
-          isError?: boolean
-          content?: { text?: string }[]
-        }>
+        answered(client.callTool({ name: "mail_write", arguments: { command: "folders delete", arguments: args } }))
       const preview = await call({ folder: "Empty" })
       expect(JSON.stringify(preview.content)).toContain("a preview")
       expect(folders.map(({ name }) => name)).toContain("Empty")

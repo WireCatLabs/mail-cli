@@ -146,7 +146,7 @@ const harness = async (
           credential,
           { sleep: async () => {}, ...bounds },
         ),
-    } as MailEnvironment & Record<string, unknown>)
+    } satisfies MailEnvironment)
     streams.push(...out, ...err)
     return { code, out: out.join("\n"), err: err.join("\n") }
   }

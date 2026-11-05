@@ -296,7 +296,7 @@ const sendAction = async function (this: Command, text: string | undefined, flag
 
 const readText = async (command: Command): Promise<string> => {
   const input = environmentOf(command).stdin ?? process.stdin
-  if ((input as { isTTY?: boolean }).isTTY) return ""
+  if ("isTTY" in input && input.isTTY === true) return ""
   return (await bufferedInput(input)).toString("utf8")
 }
 

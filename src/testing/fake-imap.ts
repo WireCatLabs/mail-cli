@@ -128,7 +128,7 @@ const uidsOf = (set: string): number[] =>
 const tokens = (text: string): string[] => {
   const out: string[] = []
   for (let at = 0; at < text.length; ) {
-    const c = text[at] as string
+    const c = text.charAt(at)
     if (c === " ") at++
     else if (c === "(" || c === ")") {
       out.push(c)
@@ -198,7 +198,7 @@ const listOf = (words: string[], from: number): { values: string[]; end: number 
   if (words[from] !== "(") return { values: [words[from] ?? ""], end: from + 1 }
   const values: string[] = []
   let at = from + 1
-  for (; at < words.length && words[at] !== ")"; at++) values.push(words[at] as string)
+  for (let word = words[at]; word !== undefined && word !== ")"; word = words[++at]) values.push(word)
   return { values, end: at + 1 }
 }
 
@@ -458,8 +458,9 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
               copy: { ...message, flags: [...(message.flags ?? [])], labels: [...(message.labels ?? [])] },
             }))
             const into = moved.map(({ copy }) => landing(name, copy))
-            if (into.some((target) => target === undefined)) return send(`${tag} NO [TRYCREATE] no such folder`)
-            const target = into[0] as FakeFolder
+            const [target] = into
+            if (target === undefined || into.some((one) => one === undefined))
+              return send(`${tag} NO [TRYCREATE] no such folder`)
             const from: number[] = []
             const to: number[] = []
             for (const { message, copy } of moved) {

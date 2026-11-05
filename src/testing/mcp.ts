@@ -53,3 +53,13 @@ export const mcpClient = async (options: RunOptions = {}, flags: string[] = [], 
     },
   }
 }
+
+/** A tool call's answer, narrowed from the SDK's result union: whether it failed, and its content. */
+export const answered = async (called: Promise<unknown>): Promise<{ isError: boolean; content: unknown }> => {
+  const value = await called
+  if (value === null || typeof value !== "object") return { isError: false, content: undefined }
+  return {
+    isError: "isError" in value && value.isError === true,
+    content: "content" in value ? value.content : undefined,
+  }
+}
