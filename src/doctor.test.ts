@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
-import { changesCheck } from "./mail/doctor.js"
+import { changesCheck } from "./commands/doctor.js"
 import { run } from "./program.js"
 
 const DAY = 86_400_000

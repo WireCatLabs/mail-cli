@@ -4,7 +4,7 @@ import { CliError } from "@wirecat/cli-base"
 import { safeName as plainName, writeFileAtomic } from "@wirecat/cli-core/files"
 
 const exists = (path: string) =>
-  new CliError("validation_error", `${path} already exists; pass --replace to overwrite it`, {
+  new CliError("validation_error", `${path} already exists`, {
     reason: "download.exists",
     param: "output-dir",
   })

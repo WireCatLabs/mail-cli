@@ -108,7 +108,10 @@ const sendingOf = (opened: Opened, command: Command): Sending => {
       const folders = await foldersFor(undefined, settings.mailbox.folders, defaults, () => opened.mailbox.folders())
       return { folders, mode: defaults.mode ?? "imap" }
     },
-    warn: (message) => outputFor(command).renderer.warn(message),
+    warn: (message, stores) =>
+      outputFor(command).renderer.warn(
+        stores ? `${message}; \`${IDENTITY.command} ${opened.profile} ${stores}\` stores it` : message,
+      ),
     agentWithoutOthers: environmentOf(command).agent !== undefined && !othersSetInConfig(command),
     ...(environment.sendClock ? { clock: environment.sendClock } : {}),
   }
@@ -247,7 +250,7 @@ const sendAction = async function (this: Command, text: string | undefined, flag
     let draft: Draft
     let original: Outgoing["original"]
     if (flags.replyTo !== undefined) {
-      const fetched = await fetchOriginal(opened.mailbox, opened.backend, flags.replyTo, opened.profile)
+      const fetched = await fetchOriginal(opened.mailbox, opened.backend, flags.replyTo)
       const parent = await originalOf(fetched.raw)
       const to = given.to.length ? given.to : replyPeople(parent, owner, false)
       draft = {
@@ -351,7 +354,7 @@ const forwardAction = async function (this: Command, reference: string, text: st
   const files = await filesOf(this, flags.file ?? [], flags.allowAnyFile === true)
   await organising(this, async (opened) => {
     const operationId = operationIdOf(flags.operationId)
-    const fetched = await fetchOriginal(opened.mailbox, opened.backend, reference, opened.profile)
+    const fetched = await fetchOriginal(opened.mailbox, opened.backend, reference)
     const parent = await originalOf(fetched.raw)
     const from: Person = { address: opened.mailbox.key.account }
     const subject = flags.subject ?? forwardSubject(parent.subject)

@@ -1,4 +1,5 @@
-import { readdirSync, readFileSync } from "node:fs"
+import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { CliError } from "@wirecat/cli-base"
@@ -6,9 +7,14 @@ import { metaOf } from "@wirecat/cli-base/commands"
 import { BASE_REASONS } from "@wirecat/cli-base/standards"
 import { CORE_REASONS } from "@wirecat/cli-core"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { flagParser, inWords } from "./commands/words.js"
 import { discover, domainOf, parseAutoconfig } from "./discovery.js"
+import { openJournal } from "./export/journal.js"
 import { mapImapError } from "./mail/imap/index.js"
+import { flagOf } from "./mail/organise.js"
+import { actionsOf } from "./mail/rules/query.js"
 import { safeName } from "./mail/save.js"
+import { writeProfile } from "./profile.js"
 import { createProgram } from "./program.js"
 import { REASONS } from "./reasons.js"
 import { secretToolLookup } from "./secret.js"
@@ -96,14 +102,14 @@ describe("safeName", () => {
   })
 })
 
-describe("error reasons", () => {
-  const sourceFiles = (dir: string): string[] =>
-    readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-      const path = join(dir, entry.name)
-      if (entry.isDirectory()) return entry.name === "testing" ? [] : sourceFiles(path)
-      return entry.name.endsWith(".ts") && !entry.name.endsWith(".test.ts") ? [path] : []
-    })
+const sourceFiles = (dir: string): string[] =>
+  readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name)
+    if (entry.isDirectory()) return entry.name === "testing" ? [] : sourceFiles(path)
+    return entry.name.endsWith(".ts") && !entry.name.endsWith(".test.ts") ? [path] : []
+  })
 
+describe("error reasons", () => {
   it("registers every reason the source raises, in mail's registry or a shared one", () => {
     const registered = new Set([...REASONS, ...CORE_REASONS, ...BASE_REASONS].map(({ reason }) => reason))
     const raised = sourceFiles(fileURLToPath(new URL(".", import.meta.url))).flatMap((file) =>
@@ -111,5 +117,57 @@ describe("error reasons", () => {
     )
     expect(raised.length).toBeGreaterThan(20)
     expect([...new Set(raised)].filter((reason) => !registered.has(reason))).toEqual([])
+  })
+})
+
+describe("the layers below the commands name no command", () => {
+  const SRC = fileURLToPath(new URL(".", import.meta.url))
+  // What the owner reads as steps, the identity, the reason registry, and a recorded command line read back.
+  const ALLOWED = new Set(["program.ts", "store.ts", "reasons.ts", "providers.ts", join("mail", "cleanup.ts")])
+
+  it("keeps command lines and flags out of their strings", () => {
+    const named = sourceFiles(SRC)
+      .filter((file) => !/^(commands|bin)\//.test(file.slice(SRC.length)) && !ALLOWED.has(file.slice(SRC.length)))
+      .flatMap((file) =>
+        readFileSync(file, "utf8")
+          .split("\n")
+          .filter((line) => !/^\s*(\*|\/\/|\/\*)/.test(line))
+          .filter((line) => /IDENTITY\.command|["'`][^"'`]*--[a-z][a-z-]+/.test(line))
+          .map((line) => `${file.slice(SRC.length)}: ${line.trim()}`),
+      )
+    expect(named).toEqual([])
+  })
+
+  it("words a lower layer's refusal with the command's flags", async () => {
+    const words = (work: () => unknown) => {
+      try {
+        work()
+      } catch (error) {
+        return (inWords(error, "personal") as Error).message
+      }
+      throw new Error("nothing was refused")
+    }
+    expect(words(() => flagOf("deleted"))).toBe(
+      "\\Deleted is how a server expunges mail; messages delete moves it to Trash",
+    )
+    expect(words(() => flagParser("--do", actionsOf)("bogus"))).toBe(
+      "--do: choose skip, envelope, keep, protect, plus any tag:<name>",
+    )
+    const env = { MAIL_CONFIG_DIR: mkdtempSync(join(tmpdir(), "config-")) }
+    writeProfile(env, "personal", {}, false)
+    expect(words(() => writeProfile(env, "personal", {}, false))).toBe(
+      "profile personal already exists; pass --replace to overwrite it",
+    )
+    const full = mkdtempSync(join(tmpdir(), "export-"))
+    writeFileSync(join(full, "x"), "")
+    const refused = await openJournal({ path: full, format: "mbox", account: "me@example.com", mode: "new" }).catch(
+      (error: unknown) => (inWords(error, "personal") as Error).message,
+    )
+    expect(refused).toBe(`${full} is not empty; --replace writes into it anyway, over files of the same name`)
+    const unknown = await discover("x@nowhere.test", {
+      mx: async () => [],
+      fetch: (async () => new Response("", { status: 404 })) as typeof fetch,
+    }).catch((error: unknown) => (inWords(error, "personal") as Error).message)
+    expect(unknown).toMatch(/^no mail server found for nowhere\.test; pass --provider \(.+\), or --host, --port/)
   })
 })

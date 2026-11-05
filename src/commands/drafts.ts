@@ -134,7 +134,7 @@ const answer = (command: Command, opened: Opened, change: v.InferOutput<typeof d
 
 /** The message `--reply-to` names, read from the server, so its ids and recipients are exactly what it holds. */
 const replyTo = async (command: Command, opened: Opened, ref: string, all: boolean) => {
-  const { raw } = await fetchOriginal(opened.mailbox, opened.backend, ref, opened.profile)
+  const { raw } = await fetchOriginal(opened.mailbox, opened.backend, ref)
   const original = await originalOf(raw)
   if (!original.messageId)
     throw new CliError("invalid_response", `${ref} has no Message-ID, so a reply cannot name what it answers`)

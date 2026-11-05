@@ -18,6 +18,7 @@ import type { SendClock } from "../mail/send.js"
 import { googleClient, microsoftClient, type OAuthKind, oauthCredential, oauthKeeper } from "../oauth.js"
 import { providerFor } from "../providers.js"
 import { type LookupHimalaya, type PasswordSource, passwordStore } from "../secret.js"
+import { signInWords } from "./words.js"
 
 /** What a test hands `run()` in place of the network, the keyring and `secret-tool`. */
 export interface MailEnvironment extends BaseEnvironment {
@@ -92,6 +93,7 @@ export const oauthKeeperOf = (context: ReturnType<typeof contextOf>, kind: OAuth
   return oauthKeeper({
     env: context.env,
     profile: context.profile,
+    signInCommand: signInWords(context.profile),
     kind,
     client,
     keyring: context.environment.keyring,
@@ -112,7 +114,7 @@ export const credentialOf = async (
         "configuration_error",
         `profile ${context.profile} signs in with OAuth, which mail can do for Outlook, Microsoft 365 and Gmail only`,
       )
-    return { credential: oauthCredential(oauthKeeperOf(context, kind), kind, context.profile) }
+    return { credential: oauthCredential(oauthKeeperOf(context, kind), kind, signInWords(context.profile)) }
   }
   const stored = await passwordsOf(context).read()
   if (stored === undefined)

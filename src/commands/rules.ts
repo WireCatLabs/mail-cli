@@ -42,6 +42,7 @@ import { ACTION_HELP, actionsOf, FILTER_HELP, filterMatch } from "../mail/rules/
 import { removeRule, ruleCounts, saveRule } from "../mail/rules/store.js"
 import { openMailStore } from "../store.js"
 import { contextOf, openMail, refuseOffline } from "./context.js"
+import { flagParser } from "./words.js"
 
 const mailRule = v.looseObject({
   id: v.optional(v.number()),
@@ -105,7 +106,7 @@ const matchOf = (options: MatchOptions): MailRuleMatch => {
     ...(options.sender === undefined ? {} : { from: options.sender }),
     ...(options.domain === undefined ? {} : { domain: options.domain }),
     ...(options.listId === undefined ? {} : { list_id: options.listId }),
-    ...(options.filter === undefined ? {} : filterMatch(options.filter)),
+    ...(options.filter === undefined ? {} : flagParser("--filter", filterMatch)(options.filter)),
     ...(options.kind === undefined ? {} : { preset: options.kind }),
   }
   if (conditionKeys(match).length === 0)
@@ -235,7 +236,7 @@ const addCommand = () =>
     mailRule,
   )
     .description("decide mail by sender, list, subject, age, size, label or kind; repeats replace")
-    .requiredOption("--do <actions>", ACTION_HELP, actionsOf)
+    .requiredOption("--do <actions>", ACTION_HELP, flagParser("--do", actionsOf))
     .option("--reason <text>", "why, for the owner later")
     .addHelpText(
       "after",

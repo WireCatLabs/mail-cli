@@ -73,7 +73,7 @@ const writeError = (raw: unknown): CliError => {
   if (error.code !== "network_error" && error.code !== "timeout") return error
   return new CliError(
     "outcome_unknown",
-    `${error.message}; the server may have made the change — check the mailbox, or sync, before running it again`,
+    `${error.message}; the server may have made the change — check the mailbox before running it again`,
     { ...error.details, retryable: false },
   )
 }

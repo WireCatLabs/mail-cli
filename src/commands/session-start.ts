@@ -46,6 +46,7 @@ import {
 } from "./context.js"
 import { checkLogin } from "./login.js"
 import { chosen, type MailboxFlags, type Pick, securityOf } from "./mailbox.js"
+import { inWords, signInWords, worded } from "./words.js"
 
 const answer = (command: Command, item: unknown) => renderAnswer(command, outputFor(command), itemOf(item))
 
@@ -96,6 +97,7 @@ const signInWithOAuth = async (command: Command, context: ReturnType<typeof cont
   const keeper = oauthKeeper({
     env,
     profile: context.profile,
+    signInCommand: signInWords(context.profile),
     kind: given.kind,
     client,
     address: given.address,
@@ -267,12 +269,18 @@ export const sessionStartCommand = () =>
               )
             }
           : undefined
-        const found = await chosen(address, flags, environment, pick)
+        const found = await worded(context.profile, () => chosen(address, flags, environment, pick))
         auth = flags.clientFile ? "oauth" : found.auth
         endpoint = { ...found.imap, login: found.login }
         provider = found.provider
         prepare = found.prepare
-        created = () => writeProfile(env, context.profile, { ...profileOf(found, flags.folder), auth }, false).path
+        created = () => {
+          try {
+            return writeProfile(env, context.profile, { ...profileOf(found, flags.folder), auth }, false).path
+          } catch (error) {
+            throw inWords(error, context.profile)
+          }
+        }
       }
 
       if (auth === "oauth") {

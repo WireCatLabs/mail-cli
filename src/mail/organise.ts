@@ -42,13 +42,10 @@ export const flagOf = (given: string): string => {
   const system = SYSTEM_FLAGS[word.toLowerCase().replace(/^\\/, "")]
   if (system) return system
   if (/^\\deleted$/i.test(word) || word.toLowerCase() === "deleted")
-    throw new CliError(
-      "validation_error",
-      "\\Deleted is how a server expunges mail; messages delete moves it to Trash",
-      {
-        param: "flag",
-      },
-    )
+    throw new CliError("validation_error", "\\Deleted is how a server expunges mail", {
+      param: "flag",
+      reason: "mail.flag-deleted",
+    })
   if (!KEYWORD.test(word))
     throw new CliError(
       "validation_error",
@@ -64,9 +61,12 @@ export const selectIds = async (
   { refs = [], filter, limit = FILTER_LIMIT }: { refs?: string[]; filter?: string; limit?: number },
 ): Promise<{ ids: string[]; more: boolean }> => {
   if (refs.length === 0 && filter === undefined)
-    throw new CliError("validation_error", "name the messages: their msg:email/… references, or --filter <query>")
+    throw new CliError("validation_error", "name the messages", { reason: "mail.no-selection" })
   if (refs.length > 0 && filter !== undefined)
-    throw new CliError("validation_error", "give message references or --filter, not both", { param: "filter" })
+    throw new CliError("validation_error", "give message references or a query, not both", {
+      param: "filter",
+      reason: "mail.refs-and-filter",
+    })
   const ids = new Set<string>()
   for (const ref of refs) {
     const place = parseReference(ref)
@@ -203,13 +203,10 @@ export const targetOf = async (mailbox: Mailbox, given: string, copy: boolean): 
   const folders = await mailbox.folders()
   const found = folderNamed(folders, given)
   if (found?.role === "trash")
-    throw new CliError(
-      "validation_error",
-      "moving to Trash is a deletion: use messages delete, which messages restore undoes",
-      {
-        param: "folder",
-      },
-    )
+    throw new CliError("validation_error", "moving to Trash is a deletion", {
+      param: "folder",
+      reason: "mail.move-to-trash",
+    })
   if (!mailbox.organise.labels) {
     if (!found)
       throw new CliError("not_found", `no folder "${given}"; folders list shows them, folders create makes one`, {

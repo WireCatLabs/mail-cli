@@ -11,6 +11,7 @@ import { distinctNames, refuseExisting, safeName, savePrivately } from "../mail/
 import { fetchOriginal } from "../mail/send.js"
 import { contextOf } from "./context.js"
 import { type Opened, organising } from "./messages.js"
+import { worded } from "./words.js"
 
 const REF_EXAMPLE = "'msg:email/me%40example.com/thread-1/1001'"
 
@@ -28,7 +29,7 @@ const saved = v.looseObject({
 
 /** The message's attachments as the store numbered them at sync: the same parser, so the same order and names. */
 const attachmentsOf = async (opened: Opened, reference: string) => {
-  const { raw } = await fetchOriginal(opened.mailbox, opened.backend, reference, opened.profile)
+  const { raw } = await fetchOriginal(opened.mailbox, opened.backend, reference)
   const parsed = await parseMail(raw, undefined, Number.POSITIVE_INFINITY)
   const names = distinctNames(parsed.attachments.map(({ id, name }) => safeName(name, `attachment-${id + 1}`)))
   return parsed.attachments.map((one, at) => ({
@@ -120,8 +121,10 @@ const downloadCommand = (): Command =>
           param: "number",
         })
       const files = wanted.map((one) => ({ ...one, path: resolve(folder, one.name) }))
-      if (!flags.replace) for (const { path } of files) refuseExisting(path)
-      for (const { path, content } of files) await savePrivately(path, content, flags.replace === true)
+      await worded(contextOf(this).profile, async () => {
+        if (!flags.replace) for (const { path } of files) refuseExisting(path)
+        for (const { path, content } of files) await savePrivately(path, content, flags.replace === true)
+      })
       renderAnswer(
         this,
         outputFor(this),

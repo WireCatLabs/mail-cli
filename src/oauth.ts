@@ -175,10 +175,10 @@ export const oauthStorage = ({ env, profile, kind, keyring = systemKeyring, stor
     codec: kind === "google" ? googleCodec : standardCodec(kind),
   })
 
-export const signInWords = (profile: string) => `${IDENTITY.command} ${profile} session start`
-
 export interface KeeperOptions extends OAuthOptions {
   client: OAuthClient
+  /** The command that signs this profile in again, named in a refusal. */
+  signInCommand: string
   /** Sent as `login_hint`, so the provider offers the right account first. */
   address?: string | undefined
   fetch?: typeof fetch | undefined
@@ -195,14 +195,14 @@ export const oauthKeeper = (options: KeeperOptions): TokenKeeper =>
     storage: oauthStorage(options),
     lockDir: paths(options.env).config,
     fetch: options.fetch ?? globalThis.fetch,
-    signInCommand: signInWords(options.profile),
+    signInCommand: options.signInCommand,
     ...(options.signal ? { signal: options.signal } : {}),
   })
 
-export const oauthCredential = (keeper: TokenKeeper, kind: OAuthKind, profile: string): MailCredential => ({
+export const oauthCredential = (keeper: TokenKeeper, kind: OAuthKind, signInCommand: string): MailCredential => ({
   kind: "oauth",
   provider: kind,
-  signInCommand: signInWords(profile),
+  signInCommand,
   login: async ({ refresh = false } = {}) => ({ accessToken: await keeper.accessToken({ refresh }) }),
 })
 

@@ -140,11 +140,8 @@ export const discover = async (input: string, deps: DiscoveryDeps = {}): Promise
     const parsed = xml ? parseAutoconfig(xml, address) : undefined
     if (parsed) return { ...parsed, provider: domain, auth: "app-password", found_by, prepare: GENERIC_PREPARE }
   }
-  throw new CliError(
-    "not_found",
-    `no mail server found for ${domain}; pass --provider (${PROVIDER_NAMES.join(", ")}), or --host, --port and --security yourself`,
-    {
-      param: "address",
-    },
-  )
+  throw new CliError("not_found", `no mail server found for ${domain}`, {
+    param: "address",
+    reason: "mail.server-unknown",
+  })
 }
