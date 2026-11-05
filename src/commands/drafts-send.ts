@@ -5,7 +5,7 @@ import { Command } from "commander"
 import { IDENTITY } from "../identity.js"
 import { type Draft, messageIdFor, peopleOf } from "../mail/compose.js"
 import { draftIdOf, draftsFolderOf, findDraft } from "../mail/drafts.js"
-import { organising } from "./messages.js"
+import { organising } from "./organising.js"
 import { go, mailSend, operationIdOf } from "./send.js"
 
 interface Flags {

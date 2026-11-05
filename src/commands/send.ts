@@ -33,7 +33,7 @@ import {
 import { everyone, fetchOriginal, type Outgoing, othersOf, type Sending, sendOut } from "../mail/send.js"
 import { DEFAULT_SYNC, providerFor } from "../providers.js"
 import { contextOf, repeatable } from "./context.js"
-import { type Opened, organising } from "./messages.js"
+import { type Opened, organising } from "./organising.js"
 import { foldersFor } from "./sync.js"
 
 const OPERATION_ID = /^-?[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/

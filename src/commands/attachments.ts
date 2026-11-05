@@ -10,7 +10,7 @@ import { IDENTITY } from "../identity.js"
 import { distinctNames, refuseExisting, safeName, savePrivately } from "../mail/save.js"
 import { fetchOriginal } from "../mail/send.js"
 import { contextOf } from "./context.js"
-import { type Opened, organising } from "./messages.js"
+import { type Opened, organising } from "./organising.js"
 import { worded } from "./words.js"
 
 const REF_EXAMPLE = "'msg:email/me%40example.com/thread-1/1001'"

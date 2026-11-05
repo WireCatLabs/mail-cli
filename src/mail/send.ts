@@ -14,7 +14,8 @@ import { SEND_OTHERS_KEY } from "../config.js"
 import { IDENTITY } from "../identity.js"
 import type { MailBackend, Submitted } from "./backend.js"
 import { build, type Draft, type Person } from "./compose.js"
-import { locate, type Mailbox, selectIds } from "./organise.js"
+import { locate, selectIds } from "./locate.js"
+import type { Mailbox } from "./organise.js"
 
 type Attempt = Parameters<typeof guardedWrite>[1]
 
