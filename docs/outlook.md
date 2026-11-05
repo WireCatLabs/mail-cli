@@ -89,10 +89,10 @@ If your organisation does not allow third-party apps, an admin registers a priva
 1. In the Microsoft Entra admin center, register an application. Platform: "Mobile and desktop applications".
    Redirect URI: `http://localhost/callback`. Turn "Allow public client flows" to Yes.
 2. Copy the Application (client) ID.
-3. Each user sets it once, in a terminal:
+3. Each user sets it once, in a terminal, with the id from step 2 in place of this example one:
 
    ```sh
-   mail config set --defaults microsoft_client_id <application-client-id>
+   mail config set --defaults microsoft_client_id 11111111-2222-3333-4444-555555555555
    ```
 
 The full steps, with the permissions to list, are in [Microsoft app registration](oauth-microsoft.md).

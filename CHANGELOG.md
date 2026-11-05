@@ -21,6 +21,11 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   `mail.others-for-agent`, `mail.no-submission`, `mail.config-unreadable`, `mail.profile-exists`,
   `mail.server-unknown` and `mail.export-other`. Their messages are unchanged. A write whose outcome is unknown now
   says "check the mailbox before running it again", without naming `sync`.
+- **The user pages give example values instead of placeholders, and state each fact once.** Commands in the usage
+  guide, the Outlook pages and the overview use example references and ids (`msg:email/me%40example.com/…`) where they
+  had `<ref>` or `<id>`; the provider list is on the "Prepare the mailbox" page only, and the overview links the
+  search guide instead of repeating it. The usage guide no longer speaks of mail 0.1, and the Microsoft app page no
+  longer describes how the maintainers release a client id. No behaviour changes.
 
 ## 0.16.3 — 05.11.2026
 

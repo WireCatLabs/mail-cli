@@ -9,8 +9,8 @@ an [issue on GitHub](https://github.com/WireCatLabs/mail-cli/issues).
 `mail` reads a mailbox over IMAP into the shared WireCat store, and organises it on the server: flags, moves,
 copies, deletion to Trash and folders, each change one `messages restore` undoes. It keeps drafts on the server,
 sends, replies and forwards over SMTP behind a recipient check and an hourly limit, and lists and downloads
-attachments. It exports stored mail to mbox or Maildir, and a timer (`schedule`) can run any command. The owner's
-mail rules and the envelope cleanup moved here from memo.
+attachments. It exports stored mail to mbox or Maildir, and a timer (`schedule`) can run any command. It keeps the owner's
+mail rules and runs the envelope cleanup.
 
 `review` shows what is new since the last look, what you owe an answer (`--unanswered`) and what waits for one
 (`--waiting`), and `--holder` gives each agent its own processing mark that `messages acknowledge` moves.
@@ -27,8 +27,8 @@ schedule, and the `schedule_model_claude`, `schedule_model_codex`, `schedule_lea
 `schedule_max_cost_per_day` settings change it for every new one.
 
 It finds the server of a new address by itself: a built-in table, the MX record, Thunderbird's ISPDB and the
-domain's autoconfig file. It signs in with an app password kept in the OS keyring, which works for Yandex, Gmail,
-iCloud, Mail.ru, Fastmail and other providers that offer app passwords. Outlook.com and Microsoft 365 sign in with
+domain's autoconfig file. It signs in with an app password kept in the OS keyring, which works for the
+[providers](providers.md) that offer app passwords. Outlook.com and Microsoft 365 sign in with
 OAuth through WireCat's own Microsoft app, with nothing to register ([guide](outlook.md)); Gmail can use OAuth with
 WireCat's Google app or your own ([steps](oauth-google.md)).
 

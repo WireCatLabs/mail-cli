@@ -15,21 +15,5 @@ Start with [installation](installation.md), then [usage](usage.md). Before the f
 
 ## Search your mail
 
-`mail` searches and reads the mail its profile synced, in the local store, and asks the mail server for mail `sync`
-has not read yet (`--backend archive` keeps to the store):
-
-```sh
-mail personal search messages invoice                                  # best match first, any form of the word
-mail personal search messages 'from:ann@example.com has:attachment date>30d'
-mail personal search messages 'list:github.com is:unread' --newest     # a mailing list, newest first
-mail personal messages show '<ref from a search>'                      # the whole email and its attachments' text
-mail personal conversations list emails_count>1                        # threads, newest first
-mail personal conversations show '<chat:email/… ref>'                  # one thread, oldest first
-```
-
-The query language is the one every WireCat CLI uses ([search guide](https://github.com/WireCatLabs/cli-core/blob/main/docs/search/query-language.md)):
-`from:`, `to:`, `cc:`, `subject:`, `mailbox:` or `label:`, `list:` (a List-Id or its domain), `is:unread`,
-`has:attachment`, `filename:`, `content:` (the text of attachments), `size>` and `date:`. Each command reads its
-profile's mailbox only; [memo](https://github.com/WireCatLabs/cli-memo) searches every mailbox together with your
-messages and notes (`memo search mail`, `memo search all`). The store keeps text, not the original message, so there
-is no raw source to show.
+`mail` searches the mail its profile synced, in the local store, and asks the mail server for mail `sync` has not
+read yet. [Search your mail](usage.md#search-your-mail) shows the commands and the query language.

@@ -24,28 +24,31 @@ Languages: ru, en.
 
 ## Further answers
 
+Claims about our code cite the file. The imapflow notes were read in imapflow 2.9.1's source, not run, except the
+`BODY.PEEK` one, which a test asserts. The thread id rule is cli-core's `mailIds`, read, not tested here.
+
 - **Scope of P1:** `session start|status|end` (start also creates the profile), `account check`, `folders list`, `sync`. Messages commands,
   rules, mbox, Gmail extensions, OAuth and sending are later phases.
 - **Port:** the `MailSource` shape and `syncMail` come from `@wirecat/cli-core/mail`; mail keeps no copy of either.
-- **Port and adapter:** every command opens the mailbox through `openMail` (`src/commands/context.ts`), which hands
-  it a `MailBackend` (`src/mail/backend.ts`): cli-core's `MailSource` plus `folderList`, `check` and `close`. The IMAP
+- **Port and adapter:** every command opens the mailbox through `openMail` (`src/commands/context.ts:142`), which hands
+  it a `MailBackend` (`src/mail/backend.ts:115`): cli-core's `MailSource` plus `folderList`, `check` and `close`. The IMAP
   adapter in `src/mail/imap/` on imapflow is the only implementation: `connection.ts` (connections, deadlines,
   retries), `read.ts` (what the sync reads), `account.ts` (folders and capabilities), `messages.ts` (ids and headers).
-  Ids come from cli-core's `mailIds`, which memo uses too, so both give one email one id. On Gmail the ids are its
-  X-GM-MSGID and X-GM-THRID, since stored Gmail mail is keyed on them; a Gmail that also announced OBJECTID is refused,
-  since imapflow would then fetch EMAILID instead. Anywhere else the id is a hash of the Message-ID header, and
+  Ids come from cli-core's `mailIds` (`src/mail/imap/messages.ts:48`), which memo uses too, so both give one email one id. On Gmail the ids are its
+  X-GM-MSGID and X-GM-THRID, since stored Gmail mail is keyed on them; a Gmail that also announced OBJECTID is refused
+  (`src/mail/imap/read.ts:47`), since imapflow would then fetch EMAILID instead. Anywhere else the id is a hash of the Message-ID header, and
   OBJECTID's EMAILID is not used: a server that turns OBJECTID on keeps its ids. Off Gmail a listing asks only for UID,
   flags, date and size (`quick`) and the hash is taken from the Message-ID of the raw message (`identify`), which must
   equal imapflow's ENVELOPE value (the trimmed first header) or stored mail would get a second id. The thread id is a
   hash of the first Message-ID in References, else of In-Reply-To, else of the message's own Message-ID: a reply then
   shares its first email's thread on Yandex and Mail.ru too. Gmail labels arrive decoded from imapflow and are not
-  decoded again (`decodedLabelName`).
-- **Password:** OS keyring (service `mail-cli`, account the profile); when it fails, a 0600 `credentials.json` in the
+  decoded again (`decodedLabelName`, `src/mail/imap/messages.ts:27`).
+- **Password:** OS keyring (service `mail-cli`, account the profile; `src/secret.ts:40`); when it fails, a 0600 `credentials.json` in the
   config folder without asking (WC-SECR-4, owner 2026-10-31, which replaces "no file fallback");
   `--credential-storage file` chooses the file. `MAIL_PASSWORD` first; read-only fallback to Himalaya's `secret-tool`
   entry.
-- **imapflow, checked against 2.9.1:** a header or body fetch uses `BODY.PEEK` (read in `fetch.js`; the test asserts
-  the commands sent to a fake server). It opens a folder with `getMailboxLock` and reports `uidValidity` as a bigint.
+- **imapflow, checked against 2.9.1:** a header or body fetch uses `BODY.PEEK` (read in `fetch.js`;
+  `src/mail/imap/imap.test.ts:77` asserts the commands sent to a fake server). It opens a folder with `getMailboxLock` and reports `uidValidity` as a bigint.
   A Gmail style `NO [THROTTLED]` surfaces as a plain error with `responseStatus` NO and the code only in the parsed
   response; only the Microsoft 365 backoff text becomes `code ETHROTTLE`, which `fetch` retries three times. imapflow
   keeps one command in flight, so several `UID SEARCH` cannot share a round trip.
