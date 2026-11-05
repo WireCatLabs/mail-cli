@@ -69,11 +69,9 @@ desktop app has no secret.
 
 ## Later, and not needed to start
 
-- **Publisher verification** puts a verified badge on the consent page, and some organisations allow only verified
-  apps. It is free, but it needs a Microsoft AI Cloud Partner Program account and a verified custom domain
-  ([publisher verification](https://learn.microsoft.com/en-us/entra/identity-platform/publisher-verification-overview)).
-  Until then a Microsoft 365 user whose admin restricts consent asks the admin to approve the app, or to register the
-  organisation's own app with these steps and give them its id.
+- **A shared app for a whole organisation.** Making a shared Microsoft app public is complex, so an admin who
+  restricts consent may refuse WireCat's app. The admin approves it, or registers the organisation's own app with these
+  steps and gives you its id.
 - **Sending from Microsoft 365** needs "Authenticated SMTP" on for the mailbox. Security defaults, and organisations
   created after January 2020, turn it off; an admin turns it on per mailbox
   ([SMTP AUTH](https://learn.microsoft.com/en-us/exchange/clients-and-mobile-in-exchange-online/authenticated-client-smtp-submission)).

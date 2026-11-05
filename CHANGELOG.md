@@ -2,6 +2,13 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Fixed
+
+- **The Microsoft sign-in notes no longer describe publisher verification.** They say that making a shared Microsoft
+  app public is complex, and point to your own Microsoft app. No behaviour changes.
+
 ## 0.16.2 — 05.11.2026
 
 ### Fixed
