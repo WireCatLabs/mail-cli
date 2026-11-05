@@ -20,6 +20,33 @@ regex = '''(?i)(?:app[_ -]?password|MAIL_PASSWORD|imap[_-]?pass(?:word)?)["'\s:=
 secretGroup = 1
 tags = ["mail", "password"]
 
+# gitleaks' own rules know Google API keys (AIza…) only. Gmail over OAuth keeps Google tokens in the keyring, and a
+# token pasted into a fixture or a log would pass unseen. Google calls its OAuth tokens opaque, so these prefixes are
+# the observed format, not a promised one (the same rules as gcal-cli and drive-cli). Microsoft's tokens have no
+# documented shape, so no rule covers them.
+[[rules]]
+id = "google-oauth-access-token"
+description = "Google OAuth 2.0 access token"
+regex = '''\b(ya29\.[A-Za-z0-9._-]{20,})'''
+secretGroup = 1
+keywords = ["ya29."]
+
+[[rules]]
+id = "google-oauth-refresh-token"
+description = "Google OAuth 2.0 refresh token"
+regex = '''(?:^|[^A-Za-z0-9/])(1//[A-Za-z0-9_-]{30,})'''
+secretGroup = 1
+entropy = 3.5
+keywords = ["1//"]
+
+# gitleaks' generic-api-key finds a GOCSPX- secret only beside a word like client_secret; a bare one passed unseen.
+[[rules]]
+id = "google-oauth-client-secret"
+description = "Google OAuth 2.0 client secret"
+regex = '''\b(GOCSPX-[A-Za-z0-9_-]{20,})'''
+secretGroup = 1
+keywords = ["GOCSPX-"]
+
 [allowlist]
 description = "Synthetic values used by tests and documentation"
 regexTarget = "match"

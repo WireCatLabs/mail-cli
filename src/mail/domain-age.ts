@@ -1,6 +1,6 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs"
+import { readFileSync } from "node:fs"
 import { join } from "node:path"
-import { resolvePaths } from "@wirecat/cli-base"
+import { resolvePaths, writeSecurely } from "@wirecat/cli-base"
 import { providerRequest } from "@wirecat/cli-core/cli"
 import type { DomainAge } from "@wirecat/cli-core/mail"
 import { IDENTITY } from "../identity.js"
@@ -30,10 +30,7 @@ const loadCache = (env: NodeJS.ProcessEnv): AgeCache => {
 }
 
 const saveCache = (env: NodeJS.ProcessEnv, cache: AgeCache): void => {
-  const file = fileOf(env)
-  mkdirSync(join(file, ".."), { recursive: true })
-  writeFileSync(`${file}.tmp`, JSON.stringify(cache))
-  renameSync(`${file}.tmp`, file)
+  writeSecurely(fileOf(env), JSON.stringify(cache), 0o600)
 }
 
 /** The ages already looked up; reads no network. */

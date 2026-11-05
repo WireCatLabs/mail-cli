@@ -1,4 +1,4 @@
-import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
+import { chmodSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Readable } from "node:stream"
@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
 import type { MailCredential, MailEndpoint, RunBounds } from "./mail/backend.js"
 import { imapBackend } from "./mail/imap/index.js"
-import { GOOGLE_MAIL_SCOPE, MICROSOFT_IMAP_SCOPE, MICROSOFT_SMTP_SCOPE } from "./oauth.js"
+import { GOOGLE_MAIL_SCOPE, MICROSOFT_IMAP_SCOPE, MICROSOFT_SMTP_SCOPE, recordSignIn } from "./oauth.js"
 import { run } from "./program.js"
 import { providerFor } from "./providers.js"
 import { type FakeImap, startFakeImap } from "./testing/fake-imap.js"
@@ -426,4 +426,17 @@ describe("Google sign-in edges", { timeout: 20_000 }, () => {
     expect(authorizeUrls.at(-1)?.searchParams.get("client_id")).toBe("config-client")
     expect(tokenCalls.at(-1)?.get("client_secret")).toBe("env-secret")
   })
+})
+
+it("keeps the sign-in records in a folder only the owner can open", async () => {
+  const state = join(mkdtempSync(join(tmpdir(), "mail-sign-ins-")), "state")
+  const env = { MAIL_STATE_DIR: state }
+  await recordSignIn(env, "work", {
+    provider: "google",
+    client: "wirecat",
+    signed_in_at: "2026-11-05T00:00:00.000Z",
+    scopes: [GOOGLE_MAIL_SCOPE],
+  })
+  expect(statSync(state).mode & 0o777).toBe(0o700)
+  expect(statSync(join(state, "sign-ins.json")).mode & 0o777).toBe(0o600)
 })

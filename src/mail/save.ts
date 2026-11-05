@@ -9,12 +9,14 @@ const exists = (path: string) =>
     param: "output-dir",
   })
 
+const errnoOf = (error: unknown) => (error instanceof Error && "code" in error ? error.code : undefined)
+
 export const present = (path: string): boolean => {
   try {
     lstatSync(path)
     return true
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false
+    if (errnoOf(error) === "ENOENT") return false
     throw error
   }
 }
@@ -25,7 +27,7 @@ export const savePrivately = async (path: string, bytes: Uint8Array, overwrite: 
   try {
     await writeFileAtomic(path, bytes, { overwrite })
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "EEXIST") throw exists(path)
+    if (errnoOf(error) === "EEXIST") throw exists(path)
     throw error
   }
 }

@@ -1,10 +1,16 @@
+import { readdirSync, readFileSync } from "node:fs"
+import { join } from "node:path"
+import { fileURLToPath } from "node:url"
 import { CliError } from "@wirecat/cli-base"
 import { metaOf } from "@wirecat/cli-base/commands"
+import { BASE_REASONS } from "@wirecat/cli-base/standards"
+import { CORE_REASONS } from "@wirecat/cli-core"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { discover, domainOf, parseAutoconfig } from "./discovery.js"
 import { mapImapError } from "./mail/imap/index.js"
 import { safeName } from "./mail/save.js"
 import { createProgram } from "./program.js"
+import { REASONS } from "./reasons.js"
 import { secretToolLookup } from "./secret.js"
 
 afterEach(() => vi.unstubAllEnvs())
@@ -87,5 +93,23 @@ describe("safeName", () => {
     expect(safeName("invoice\u202Efdp.exe", "attachment-1")).toBe("invoicefdp.exe")
     expect(safeName("zero\u200Bwidth.pdf", "attachment-1")).toBe("zerowidth.pdf")
     expect(safeName("..", "attachment-2")).toBe("attachment-2")
+  })
+})
+
+describe("error reasons", () => {
+  const sourceFiles = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const path = join(dir, entry.name)
+      if (entry.isDirectory()) return entry.name === "testing" ? [] : sourceFiles(path)
+      return entry.name.endsWith(".ts") && !entry.name.endsWith(".test.ts") ? [path] : []
+    })
+
+  it("registers every reason the source raises, in mail's registry or a shared one", () => {
+    const registered = new Set([...REASONS, ...CORE_REASONS, ...BASE_REASONS].map(({ reason }) => reason))
+    const raised = sourceFiles(fileURLToPath(new URL(".", import.meta.url))).flatMap((file) =>
+      [...readFileSync(file, "utf8").matchAll(/reason: "([a-z][a-z0-9.-]*)"/g)].map(([, reason]) => `${reason}`),
+    )
+    expect(raised.length).toBeGreaterThan(20)
+    expect([...new Set(raised)].filter((reason) => !registered.has(reason))).toEqual([])
   })
 })
