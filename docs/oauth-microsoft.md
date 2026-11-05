@@ -53,19 +53,19 @@ desktop app has no secret.
    Select **Add permissions**. Do not grant admin consent for these: each person allows them for their own mailbox
    when they sign in. Microsoft lets users do that by default for their own mail
    ([user consent](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-user-consent)).
-8. Test the redirect. Put the id into your config as above, then sign in twice:
+8. Test the redirect. Put the id into your config as above, then sign in twice. The id and the address below are
+   examples: use your app's Application (client) ID and your own address.
 
    ```sh
-   mail config set --defaults microsoft_client_id <application-client-id>
-   mail outlook-test session start --address <your-address>@outlook.com
+   mail config set --defaults microsoft_client_id 11111111-2222-3333-4444-555555555555
+   mail outlook-test session start --address you@outlook.com
    mail outlook-test session start
    ```
 
    Both must end with `signed_in: true`. If Microsoft's page shows an error with `AADSTS50011` (the redirect URI does
    not match), check that the address under **Mobile and desktop applications** is exactly `http://localhost/callback`.
-9. For WireCat's own app: send the Application (client) ID to the maintainers. They put it into
-   `microsoft.app.client_id` in cli-core's `constants.json`, and the next cli-core release and mail bump sign in
-   without any config.
+9. For WireCat's own app: send the Application (client) ID to the maintainers. A later release of `mail` then signs
+   in with it without any config.
 
 ## Later, and not needed to start
 

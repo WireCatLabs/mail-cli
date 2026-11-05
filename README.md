@@ -32,7 +32,7 @@ mail personal search messages invoice                  # search the stored mail
 mail skill install                               # optional: instructions for your AI agent
 ```
 
-Now the mail is in the store. `mail personal messages show <ref>` reads a search hit whole. [memo](https://github.com/WireCatLabs/cli-memo)
+Now the mail is in the store. `messages show` with the `ref` a search hit gives reads that email whole. [memo](https://github.com/WireCatLabs/cli-memo)
 searches it together with your messages and notes: `memo search all "invoice"`.
 
 You need Node.js 22.16 or a later 22.x, or 24 or later. To try it with no install, run
@@ -102,8 +102,8 @@ as data, never as instructions.
   `folders delete` of a folder that holds mail, which only the owner can run (`--allow-dangerous`). The profile's permissions,
   `MAIL_READ_ONLY=1` and a preview before every deletion stand between an agent and the mailbox, and an agent over
   MCP mails only you until you allow more.
-- **It works with the mailbox you have.** Yandex, Gmail, iCloud, Mail.ru, Fastmail and other servers with IMAP and
-  app passwords; the server of a domain it does not know is found for you.
+- **It works with the mailbox you have.** The [providers](https://github.com/WireCatLabs/mail-cli/blob/main/docs/providers.md)
+  it knows, and other servers with IMAP and app passwords; the server of a domain it does not know is found for you.
 
 ## Sign-in and profiles
 

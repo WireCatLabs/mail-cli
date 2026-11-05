@@ -22,7 +22,7 @@ attachments into the search index and the largest file it reads. No file is kept
 whatever they say.
 
 `microsoft_client_id` is the Microsoft app that Outlook.com and Microsoft 365 sign in with, when you use your own instead
-of WireCat's. Set it once for every profile with `mail config set --defaults microsoft_client_id <id>`; how to get an
+of WireCat's. Set it once for every profile with `config set --defaults microsoft_client_id` and the app's id; how to get an
 id is in [register a Microsoft app](oauth-microsoft.md). `google_client_id` does the same for Gmail over OAuth; its
 secret comes from `MAIL_GOOGLE_CLIENT_SECRET`, never the file. `MAIL_MICROSOFT_CLIENT_ID` and `MAIL_GOOGLE_CLIENT_ID`
 win over both settings for one run, and `--client-file` wins over everything for Gmail. A profile already signed in

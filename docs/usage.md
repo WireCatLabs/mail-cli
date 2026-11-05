@@ -1,6 +1,8 @@
 # Use it
 
 This page explains how a command is built, and how an agent uses the tool. Read it before your first command.
+The references, ids and cursors in its examples are made up (`me%40example.com`, `5b0e1c2a@example.com`): use the
+ones your own search, run or list gives.
 
 ## The profile comes first
 
@@ -26,8 +28,8 @@ mail personal folders list                  # folders with role and counts
 mail personal sync --since-time 2026-10-01  # reads new mail into the shared store; stored mail is skipped
 ```
 
-`session start` on a new profile must find the mail server. It looks in a built-in table (Yandex, Gmail, iCloud,
-Mail.ru, Fastmail, Outlook). Then it looks at the domain's MX record. Then it asks Thunderbird's list of mail servers and the
+`session start` on a new profile must find the mail server. It looks in its table of [providers](providers.md).
+Then it looks at the domain's MX record. Then it asks Thunderbird's list of mail servers and the
 domain's own settings file. If none knows the server, set it yourself with `--host`, `--port` and
 `--security`, or name a provider from the table: `--provider yandex`.
 
@@ -51,7 +53,7 @@ run. `--rescan` lists the whole window again. It saves text and headers, and the
 name and size. `messages show` of an email with such a file reads that email again from the server, every attachment
 whatever its size, and shows the text; `--offline` shows the stored email instead. To keep a file, use
 `attachments download`. The
-account's rules (`mail <profile> rules`, the same table memo reads) hold here too: mail a skip rule names is not read,
+account's rules (`mail <profile> rules`, which memo keeps too) hold here too: mail a skip rule names is not read,
 and an envelope rule keeps only its sender, date and size.
 
 A big mailbox does not fit in one run. `sync` has a budget of requests to the server, set by its deadline: 15
@@ -65,9 +67,9 @@ run went, and `doctor` says when a run keeps failing.
 
 Yandex gives no message id. For such a server, `sync` lists only each message's number, flags, date and size, and it
 downloads each new message once. It skips stored mail by that number, so a rerun reads nothing twice. It does not
-notice mail deleted on the server or changed flags on mail it skips. `--rescan` does both. It also moves a reply stored
-by mail 0.1 into the thread of the first email it answers: run `mail <profile> sync --rescan --since-time <date>` once,
-with a date as old as the stored mail, and `rethreaded` says how many it moved.
+notice mail deleted on the server or changed flags on mail it skips. `--rescan` does both. It also moves a stored reply
+that is outside its thread into the thread of the first email it answers, back to `--since-time`; `rethreaded` says how
+many it moved.
 
 Sometimes the server cannot answer for one message (Yandex answers some with `NO [UNAVAILABLE]`). `sync` asks for it
 again at the end of the run. If it still fails, `sync` counts it in `unreadable` and leaves it for the next run.
@@ -125,7 +127,7 @@ order mail was stored — so mail stored late, with an old date, is not skipped:
 
 ```sh
 mail personal review --holder mail-triage --json        # what is stored past its mark; the answer gives a cursor
-mail personal messages acknowledge --holder mail-triage --cursor <cursor>   # once processed: move the mark there
+mail personal messages acknowledge --holder mail-triage --cursor 9123.1762090000000   # once processed: move the mark there
 mail personal status                                    # how far each holder got, what it held and skipped
 ```
 
@@ -141,9 +143,9 @@ has not read yet (`--backend archive` keeps to the store):
 mail personal search messages invoice                                  # best match first, any form of the word
 mail personal search messages 'from:ann@example.com has:attachment date>30d'
 mail personal search messages 'list:github.com is:unread' --newest     # a mailing list, newest first
-mail personal messages show '<ref from a search>'                      # the whole email and its attachments' text
+mail personal messages show 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E' # the whole email and its attachments' text
 mail personal conversations list emails_count>1                        # threads, newest first
-mail personal conversations show '<chat:email/… ref>'                  # one thread, oldest first
+mail personal conversations show 'chat:email/me%40example.com/thread-1' # one thread, oldest first
 ```
 
 The query language is the one every WireCat CLI uses ([search guide](https://github.com/WireCatLabs/cli-core/blob/main/docs/search/query-language.md)):
@@ -234,13 +236,13 @@ Every change goes to the server first and then into the store, so `search messag
 are named by the `ref` a search gives, or chosen by `--filter` with the same query:
 
 ```sh
-mail personal messages mark-read '<ref>'                               # also mark-unread, star, unstar
-mail personal messages update '<ref>' --flag answered --unflag '$Junk'  # flags and keywords; --replace sets the whole set
-mail personal messages move '<ref>' --folder archive                   # a folder by path, name or role
+mail personal messages mark-read 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E'                               # also mark-unread, star, unstar
+mail personal messages update 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E' --flag answered --unflag '$Junk'  # flags and keywords; --replace sets the whole set
+mail personal messages move 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E' --folder archive                   # a folder by path, name or role
 mail personal messages copy --filter 'list:github.com' --folder Lists --yes
 mail personal messages delete --filter 'from:shop@example.com date<2025-01-01'   # a preview: nothing moves
 mail personal messages delete --filter 'from:shop@example.com date<2025-01-01' --yes
-mail personal messages restore --run '<run id the change answered with>' --yes
+mail personal messages restore --run 20261101T101500Z-messages-delete-1a2b3c --yes
 mail personal folders create Receipts                                  # also folders rename, folders delete
 ```
 
@@ -273,11 +275,11 @@ send it from your mail app, or with `drafts send`.
 
 ```sh
 mail personal drafts create --to anna@example.com --subject 'Monday' 'Shall we meet at ten?'
-mail personal drafts create --reply-to '<ref>' --reply-all 'Thanks, agreed.'   # in the thread, to everyone but you
+mail personal drafts create --reply-to 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E' --reply-all 'Thanks, agreed.'   # in the thread, to everyone but you
 mail personal drafts create --to anna@example.com --subject Notes - < notes.txt # - reads the text from stdin
 mail personal drafts list                                                       # newest first, read from the server
-mail personal drafts update '<id>' 'New text'                                   # only what you give changes
-mail personal drafts delete '<id>' --allow-dangerous                             # the owner's; gone for good, a preview without it
+mail personal drafts update 5b0e1c2a@example.com 'New text'                                   # only what you give changes
+mail personal drafts delete 5b0e1c2a@example.com --allow-dangerous                             # the owner's; gone for good, a preview without it
 ```
 
 - **The id** is the draft's Message-ID, as `drafts list` shows it, with or without `<>`. It stays the same when the
@@ -300,10 +302,10 @@ Tags of your own go on stored mail and stay on this computer: the server never s
 reads, and a search finds them.
 
 ```sh
-mail personal tags add invoices --message '<ref>'     # one email; --chat '<conversation ref>' tags a whole conversation
+mail personal tags add invoices --message 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E'     # one email; --chat 'chat:email/me%40example.com/thread-1' tags a whole conversation
 mail personal search messages 'tag:invoices date>30d'
 mail personal tags list tag:invoices                  # what is tagged; type:message or type:chat
-mail personal tags remove invoices --message '<ref>'
+mail personal tags remove invoices --message 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E'
 ```
 
 A tag is 1–32 letters a–z, digits and hyphens; upper case is lowered. What the server keeps instead are keywords
@@ -317,11 +319,11 @@ A tag is 1–32 letters a–z, digits and hyphens; upper case is lowered. What t
 ```sh
 mail personal messages send --to ann@example.com --subject Lunch "See you at noon."
 echo "The report." | mail personal messages send --to ann@example.com --subject Report --file ./report.pdf
-mail personal messages send --reply-to '<ref>' "Paid today."                # Re:, In-Reply-To, References, the quote
-mail personal messages send --reply-to '<ref>' --reply-all "Thanks, all."   # also to the original's To and Cc, not you
-mail personal messages forward '<ref>' --to bob@example.com "FYI"           # the original attached whole
+mail personal messages send --reply-to 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E' "Paid today."                # Re:, In-Reply-To, References, the quote
+mail personal messages send --reply-to 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E' --reply-all "Thanks, all."   # also to the original's To and Cc, not you
+mail personal messages forward 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E' --to bob@example.com "FYI"           # the original attached whole
 mail personal messages send --to ann@example.com --subject Hi "Hello" --dry-run   # build it, send nothing
-mail personal drafts send '<draft id>'                                     # send a saved draft, then remove it
+mail personal drafts send 5b0e1c2a@example.com                                     # send a saved draft, then remove it
 ```
 
 - **The question.** Mail to anyone but you asks first, and shows from, to, cc, bcc, subject, each attachment and the
@@ -337,7 +339,7 @@ mail personal drafts send '<draft id>'                                     # sen
 - **A lost answer.** If the line breaks after the message left, the answer is `outcome_unknown` with an `operation_id`.
   Run the same command with `--operation-id <id>`: when Sent holds the message, nothing is sent again. On a provider
   that does not file sent mail itself the first try may still have gone; look in the recipient's mail before a retry.
-- **Attachments.** `attachments list '<ref>'` numbers the files of one email; `attachments download '<ref>'
-  --output-dir ./folder` saves them, readable only by you, under their plain names; `attachments download '<ref>' 2
+- **Attachments.** `attachments list 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E'` numbers the files of one email; `attachments download 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E'
+  --output-dir ./folder` saves them, readable only by you, under their plain names; `attachments download 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E' 2
   --output-dir ./folder` saves only the second. The bytes come from the
   server and never go into the store. An existing file stays unless `--replace`.
