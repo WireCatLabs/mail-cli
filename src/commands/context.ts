@@ -26,6 +26,8 @@ export interface MailEnvironment extends BaseEnvironment {
   backend?: OpenBackend
   /** The OAuth token endpoint and the browser, replaced in tests. */
   fetch?: typeof fetch
+  /** The domain registries (RDAP) the sender score asks, replaced in tests. */
+  rdap?: typeof fetch
   openBrowser?: (url: string) => Promise<void>
 }
 

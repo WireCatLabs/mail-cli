@@ -51,5 +51,13 @@ Languages: ru, en.
   keeps one command in flight, so several `UID SEARCH` cannot share a round trip.
 - **MCP and doctor:** `mcp` and `doctor` are cli-core's `appMcpCommand` and `appDoctorCommand`, as in gcal; permission
   keys are command paths (`commandPermissions`), so `--permission sync=deny`.
+- **Everything mail-specific lives here, not in memo** (owner, 2026-11-04; cli-core `docs/dev/TOOL-BOUNDARIES.md`):
+  `account inspect` (memo's `mail inspect`), `messages import` for Google Takeout mbox files (memo's `mode: "mbox"`
+  accounts) and the sender scoring with domain ages that `memo sync` ran after each import. The inspect is
+  `account inspect` because the vocabulary's `inspect` is "a mailbox without importing" and the account is the
+  mailbox; it reads the server, so it is not under `stats`, which counts stored mail. The import is under `messages`
+  beside `messages export`, whose mbox it mirrors. The domain-age cache is mail's own (`domain-ages.json` in its state
+  folder); memo's old cache is not read, so a domain is asked once more. The probe, the score and `scoreSenders` stay
+  in cli-core.
 
 ## Open questions for the owner

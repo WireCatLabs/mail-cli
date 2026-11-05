@@ -9,6 +9,7 @@ import { IDENTITY } from "../identity.js"
 import { openMailStore } from "../store.js"
 import { contextOf } from "./context.js"
 import { exportLeaf } from "./export.js"
+import { importLeaf } from "./import.js"
 import { serverAccess } from "./server-search.js"
 
 const reads: MailReads = {
@@ -46,6 +47,9 @@ const reads: MailReads = {
  */
 export const readCommands = () => {
   const commands = mailReadCommands(reads)
-  commands.find((command) => command.name() === "messages")?.addCommand(exportLeaf())
+  commands
+    .find((command) => command.name() === "messages")
+    ?.addCommand(exportLeaf())
+    .addCommand(importLeaf())
   return commands
 }

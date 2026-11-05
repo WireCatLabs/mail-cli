@@ -146,6 +146,25 @@ mail account check
 
 **Example:** `mail ya account check`, `mail ya account check --json`
 
+### `mail account inspect`
+
+read the headers of the mailbox's mail, store nothing, and group it by mailing list or sender, the largest group first; each group's suggest is skip when a group has at least 20 emails, at least 80% of them list or bulk mail (List-Id, List-Unsubscribe or Precedence: bulk) and the owner never sent mail to its sender. Its score adds: in Gmail's Spam +4, Gmail's DMARC check failed +3 (only beside another sign of fraud), a brand in the display name sent from another domain +3, the domain under 180 days old when the mail came +5 (only with looked-up ages), Reply-To on another domain +1, none of its mail ever opened +2, Gmail's DKIM check not passed +2, a throwaway-mail domain +2, bulk mail never replied to +1, replied to by the owner -5. The owner decides; rules add adds a rule
+
+```sh
+mail account inspect [options]
+```
+
+| Option | What it does |
+|---|---|
+| `--since-time <time>` | only mail received since this date or time; a date alone starts at local midnight (default: all mail). |
+| `--limit <n>` | show this many of the largest groups. Default: `50`. |
+| `--folder <folder>` | a folder to read; repeat it for more (default: the profile's folders, else INBOX and Sent; All Mail on Gmail). Default: ``. |
+| `--domain-age` | ask each shown sender domain's registry when it was registered (RDAP); tells each registry its domain. |
+
+**Returns:** mail account inspect — address, folders, emails, bytes, sent, without_headers, groups, items, and 3 more; every field: mail commands info account inspect
+
+**Example:** `mail gm account inspect`, `mail gm account inspect --since-time 2025-01-01 --limit 20 --domain-age`
+
 ## `mail folders`
 
 the folders of this profile's mailbox
@@ -241,7 +260,7 @@ mail sync [options]
 | `--folder <folder>` | a folder to read; repeat it for more (default: the profile's folders, else INBOX and Sent; All Mail on Gmail). Default: ``. |
 | `--rescan` | list the whole window again; also moves stored replies into their thread where the server has no thread ids. |
 
-**Returns:** mail sync — address, since, timezone, folders, state, requests, listed, saved, and 13 more; every field: mail commands info sync
+**Returns:** mail sync — address, since, timezone, folders, state, requests, listed, saved, and 14 more; every field: mail commands info sync
 
 **Example:** `mail ya sync`, `mail ya sync --since-time 2026-10-01 --limit 200`, `mail ya sync --folder INBOX`
 
@@ -505,6 +524,29 @@ mail messages export [query] [options]
 **Returns:** mail export — address, format, destination, folders, state, matched, exported, already_exported, and 5 more; every field: mail commands info messages export
 
 **Example:** `mail ya messages export 'from:ann@example.com' --output ~/mail-backup`, `mail ya messages export --folder INBOX --format maildir --output ~/Maildir`, `mail ya messages export 'date>30d' --limit 500 --output ~/mail-backup --resume`
+
+### `mail messages import`
+
+add the mail of a Gmail mbox file from Google Takeout to this Gmail profile's stored mail; Takeout keeps Gmail's own ids, so an email both the file and sync bring is stored once. Only adds: mail missing from the file is never marked deleted, Spam and Trash are left out, and the owner's rules skip what they skip. An unchanged file read to the end is not read again
+
+**Changes something on this computer only.**
+
+```sh
+mail messages import <file> [options]
+```
+
+| Argument | | What it is |
+|---|---|---|
+| `file` | required | the .mbox file Google Takeout wrote. |
+
+| Option | What it does |
+|---|---|
+| `--since-time <time>` | only mail received since this date or time; a date alone starts at local midnight (default: the whole file). |
+| `--limit <n>` | save at most this many new emails in this run, newest first. |
+
+**Returns:** mail import — address, file, since, listed, saved, already_stored, skipped, envelopes, and 4 more; every field: mail commands info messages import
+
+**Example:** `mail gm messages import ~/Takeout/Mail/All\ mail\ Including\ Spam\ and\ Trash.mbox`, `mail gm messages import archive.mbox --since-time 2015-01-01 --limit 5000`
 
 ### `mail messages mark-read`
 

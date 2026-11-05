@@ -40,6 +40,12 @@ your DNS resolver, for the domain's MX record; Thunderbird's list of mail server
 `https://autoconfig.<domain>`, the domain's own server. It stops at the first answer. `--provider` (a name in the
 table) or `--host` skips every lookup, and nothing leaves the computer before the login to that server.
 
+`account inspect --domain-age` and `sync` ask when a sender's domain was registered: first IANA's list of registries
+(`https://data.iana.org/rdap/dns.json`, once a month), then each domain's own registry over RDAP, never a relay, so
+each registry learns only the names of its own domains. They never ask about a big mailbox provider's domain or a
+sender you replied to. The answers stay in `domain-ages.json` in `mail`'s state folder. `messages import` reads only
+the file you name.
+
 The app password is typed at a terminal with no echo, or set in `MAIL_PASSWORD` for a run with no terminal. It goes to the OS keyring (service
 `mail-cli`, account the profile name) only after the server accepted it. It is never an argument, never part of a
 URL, never written to `config.json`, a log or a run record. When the keyring fails, it goes to `credentials.json` in

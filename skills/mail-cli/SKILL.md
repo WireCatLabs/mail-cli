@@ -40,6 +40,8 @@ Find your way with the tool itself, not this file:
 - `mail ya messages export '<query>' --output <folder> [--format mbox|maildir] [--limit n]` writes the original
   messages to a private folder for backup; a run can be partial: run it again with `--resume`. Never `--replace` unless
   the owner says so. `mail ya stats messages top --by sender|list|domain` ranks the stored mail.
+- Before a big first sync, `mail ya account inspect --json` groups the server's mail by sender and list with a
+  spam score, storing nothing; `mail gm messages import <file.mbox>` adds a Google Takeout file to a Gmail profile.
 - Change the mailbox only when the owner asked for that change. `mail ya messages mark-read|star|move|copy|delete
   <ref…>` (or `--filter '<query>'`) changes the server and the store; a deletion, a `--filter` change or one of more
   than 20 messages answers with a preview (`applied: false`) and the same command with `yes` in `next`. Show the

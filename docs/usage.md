@@ -187,6 +187,33 @@ mail ya stats messages top --by list --limit 10                          # which
 - **In parts.** A run stops at `--limit`, `--max-pages` or before its deadline and says `state: "partial"`; run it again
   with `--resume`. Mail the store has no UID for (sync again) or the server no longer has is counted, not written.
 
+## Look before you sync, and bring in an archive
+
+`account inspect` reads the headers of the mailbox's mail from the server, stores nothing, and groups it by mailing
+list or sender, the largest group first, so you can decide what to keep before a big first `sync`:
+
+```sh
+mail gm account inspect                                    # every email the profile's folders hold
+mail gm account inspect --since-time 2025-01-01 --limit 20
+mail gm account inspect --domain-age                       # also asks when each sender's domain was registered
+mail gm messages import ~/Takeout/Mail/archive.mbox         # a Google Takeout file of the same Gmail account
+```
+
+- **What a group shows.** How many emails and MB, the share unread and sent as bulk, the years, whether you replied,
+  a `skip` suggestion, and a score: how much the sender looks like spam, a scam or a robot. The kinds of mail a
+  built-in rule kind would match close the list; `rules add --kind <kind> --do envelope` makes one a rule.
+- **Sender domain age.** A domain registered a few months before its mail arrived is a sign of fraud. `--domain-age`
+  asks each shown group's domain registry over RDAP, one question a second, and keeps the answer in `mail`'s state
+  folder for good. `sync` scores every sender of the stored mail at most once a day, asks the registries about the
+  domains heard from in the last two years that it does not know yet, and stops asking before its deadline; search
+  ranks the mail of a sender with signs of fraud lower. Big mailbox providers and senders you replied to are never
+  asked, and most country domains (.ru, .de, .es, .io) have no RDAP and stay unknown.
+- **A Takeout archive.** `messages import` reads a Gmail mbox file that Google Takeout wrote into this Gmail
+  profile's stored mail. Takeout keeps Gmail's own ids, so an email both the file and `sync` bring is stored once. It
+  only adds: Spam and Trash are left out, the profile's rules skip what they skip, and mail missing from the file is
+  never marked deleted. An unchanged file read to the end is not read again; `--limit` and `--since-time` bound a run.
+  A profile that is not Gmail is refused, because its ids would store every email twice.
+
 ## Organise the mailbox
 
 Every change goes to the server first and then into the store, so `search messages` shows it at once. The messages

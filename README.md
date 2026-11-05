@@ -53,7 +53,9 @@ You need Node.js 22.16 or a later 22.x, or 24 or later. To try it with no instal
 - **Sync a big mailbox in parts.** A run stops before its deadline, keeps what it read and tells you to run it again;
   `status` shows how far it is.
 - **Check a mailbox.** `account check` shows what the server supports, `folders list` the folders with their role and
-  message counts.
+  message counts, and `account inspect` groups its mail by sender and list, with a spam score, before you sync it.
+- **Bring in a Gmail archive.** `messages import <file.mbox>` adds a Google Takeout file to a Gmail profile's stored
+  mail, each email once.
 - **Organise it on the server.** `messages mark-read|mark-unread|star|unstar|update` change flags and keywords,
   `messages move|copy --folder` file mail (by label on Gmail), `messages delete` moves it to Trash, and
   `messages restore --run <id>` undoes any of them. `folders create|rename|delete` look after the folders. A search
