@@ -28,6 +28,9 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 - **The iCloud steps say in plain words how to sign in with the short login.** They no longer quote a command line
   with its flags; `session start --help` still lists `--login`.
+- **`status`, `sync` and `messages restore` show a person their times in the local time zone.** A table read
+  `2025-12-31T14:00:00.000Z`; it now reads `2026-01-01 00:00`, with no offset, and a line `times in <zone>` names the
+  zone (the `TZ` of the computer, or the zone it is set to). JSON and JSONL answers keep UTC.
 - **Commands that talk to the mail server answer only after they closed the connection and the store.** `account
   check`, `account inspect`, `folders`, `sync`, `messages export`, the `messages` changes, `drafts` and the sends
   printed their answer first; a failing close now ends in an error instead of after a success. JSON answers are

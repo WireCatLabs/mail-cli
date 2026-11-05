@@ -41,6 +41,7 @@ import {
 import { DEFAULT_ORGANISE, providerFor } from "../providers.js"
 import { openMailStore } from "../store.js"
 import { contextOf, openMail, refuseOffline, repeatable } from "./context.js"
+import { answerLocally } from "./times.js"
 import { worded } from "./words.js"
 
 type Action = "message-flag" | "message-move" | "message-copy" | "message-delete" | "message-restore"
@@ -709,9 +710,8 @@ Envelopes come back to search at once; mail with text is saved again by the next
                 ]
               : []
           opened.answer(() =>
-            renderAnswer(
+            answerLocally(
               this,
-              outputFor(this),
               itemOf(
                 {
                   run_id: log?.run.id ?? null,

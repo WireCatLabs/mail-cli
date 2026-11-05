@@ -2,7 +2,7 @@ import { existsSync } from "node:fs"
 import { CliError } from "@wirecat/cli-base"
 import { annotate } from "@wirecat/cli-base/commands"
 import { progressOf } from "@wirecat/cli-core/background"
-import { answerEntity, baseContext, itemOf, LOCAL_READ, outputFor, renderAnswer } from "@wirecat/cli-core/cli"
+import { answerEntity, baseContext, itemOf, LOCAL_READ } from "@wirecat/cli-core/cli"
 import { mailAccountKey, mailProgress, marksOf } from "@wirecat/cli-core/mail"
 import { mailMark, markItem } from "@wirecat/cli-core/mail/cli"
 import { Command } from "commander"
@@ -11,6 +11,7 @@ import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
 import { openMailStore } from "../store.js"
 import { contextOf } from "./context.js"
+import { answerLocally } from "./times.js"
 
 const nullableNumber = v.nullable(v.number())
 
@@ -86,5 +87,5 @@ export const statusCommand = (): Command =>
         ...(report.length ? { total: report.reduce((sum, { total }) => sum + total, 0) } : {}),
         ...(updatedAt === undefined ? {} : { updatedAt }),
       })
-      renderAnswer(this, outputFor(this), itemOf({ ...progress, folders: report, holders: holders.map(markItem) }))
+      answerLocally(this, itemOf({ ...progress, folders: report, holders: holders.map(markItem) }))
     })
