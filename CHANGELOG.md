@@ -6,6 +6,7 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Fixed
 
+- **The tests of the private file modes skip the mode check on Windows**, where files have no Unix modes.
 - **Docs, help examples and the skill name the example profile `personal`, not `ya`**, as tg does. A second
   mailbox in an example is `work`. No behaviour changes.
 - **`docs/configuration.md` says which flag answers `ask`**: `--allow-dangerous` for `drafts delete`, `--yes` for

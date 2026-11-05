@@ -49,7 +49,8 @@ describe("lookUpAges", () => {
     await lookUpAges(env, ["old-shop.example", "gone.example"], deps)
     expect(asked).toEqual([])
     expect(readFileSync(join(env.MAIL_STATE_DIR, "domain-ages.json"), "utf8")).toContain("old-shop")
-    expect(statSync(join(env.MAIL_STATE_DIR, "domain-ages.json")).mode & 0o777).toBe(0o600)
+    if (process.platform !== "win32")
+      expect(statSync(join(env.MAIL_STATE_DIR, "domain-ages.json")).mode & 0o777).toBe(0o600)
   })
 
   it("stops before the deadline it is given and leaves the rest for a later run", async () => {
