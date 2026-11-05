@@ -39,8 +39,6 @@ MCP server gives AI agents the same commands, and an agent can mail only the own
 
 ## Next
 
-- **Microsoft publisher verification**, which puts a verified badge on the consent page and which some
-  organisations require before they allow the app. Waiting until users with work accounts appear.
 - **A live test of Gmail over OAuth.** The sign-in is built, and has not yet been tried on a real Google account.
 
 ## Not planned

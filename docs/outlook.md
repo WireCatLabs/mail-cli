@@ -84,8 +84,7 @@ entry. To remove the app from the organisation, the admin deletes WireCat from "
 
 ### Option B: the organisation registers its own app
 
-If your organisation does not allow third-party apps, an admin registers a private app, which needs no publisher
-verification inside its own tenant:
+If your organisation does not allow third-party apps, an admin registers a private app, which works inside its own tenant:
 
 1. In the Microsoft Entra admin center, register an application. Platform: "Mobile and desktop applications".
    Redirect URI: `http://localhost/callback`. Turn "Allow public client flows" to Yes.
