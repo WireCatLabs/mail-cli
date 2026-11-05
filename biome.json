@@ -5,7 +5,7 @@
       "!**/node_modules",
       "!**/dist",
       "!.worktrees",
-      "!pnpm-lock.yaml",
+      "!**/pnpm-lock.yaml",
       "!config/wirecat",
       "!lint/baseline"
     ]

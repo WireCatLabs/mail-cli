@@ -1,0 +1,95 @@
+{
+  "command": "node",
+  "args": ["../dist/bin/mail.js"],
+  "previous": {
+    "entry": "./previous/node_modules/@wirecat/previous-cli/dist/bin/mail.js",
+    "version": "0.16.3"
+  },
+  "fixtures": [
+    {
+      "path": "takeout.mbox",
+      "text": "From 1700000000000000001@xxx Mon Jul 24 10:00:00 +0000 2023\nX-GM-THRID: 1700000000000000001\nX-Gmail-Labels: Inbox,Opened\nMessage-ID: <upgrade-1@example.com>\nFrom: Ann Example <ann@example.com>\nTo: owner@gmail.com\nSubject: Synthetic upgrade note\nDate: Mon, 24 Jul 2023 10:00:00 +0000\n\nwirecat-synthetic-mail-canary\n\n"
+    }
+  ],
+  "canaries": ["wirecat-synthetic-mail-canary"],
+  "cases": [
+    {
+      "id": "previous-address",
+      "args": ["gm", "config", "set", "address", "owner@gmail.com", "--json"],
+      "exit": 0,
+      "stream": "stdout",
+      "kind": "json",
+      "previous": true
+    },
+    {
+      "id": "previous-import",
+      "args": ["gm", "messages", "import", "{{root}}/takeout.mbox", "--since-time", "2020-01-01", "--json"],
+      "exit": 0,
+      "stream": "stdout",
+      "kind": "json",
+      "previous": true,
+      "json": {
+        "item": {
+          "saved": 1,
+          "complete": true
+        }
+      }
+    },
+    {
+      "id": "previous-search",
+      "args": ["gm", "search", "messages", "wirecat-synthetic-mail-canary", "--offline", "--json"],
+      "exit": 0,
+      "stream": "stdout",
+      "kind": "json",
+      "previous": true,
+      "allowSensitiveOutput": true,
+      "capture": {
+        "ref": "/items/0/ref"
+      }
+    },
+    {
+      "id": "candidate-status",
+      "args": ["gm", "status", "--json"],
+      "exit": 0,
+      "stream": "stdout",
+      "kind": "json"
+    },
+    {
+      "id": "candidate-search",
+      "args": ["gm", "search", "messages", "wirecat-synthetic-mail-canary", "--offline", "--json"],
+      "exit": 0,
+      "stream": "stdout",
+      "kind": "json",
+      "allowSensitiveOutput": true,
+      "json": {
+        "items": [
+          {
+            "ref": "{{ref}}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "candidate-show",
+      "args": ["gm", "messages", "show", "{{ref}}", "--json"],
+      "exit": 0,
+      "stream": "stdout",
+      "kind": "json",
+      "allowSensitiveOutput": true,
+      "contains": "wirecat-synthetic-mail-canary"
+    },
+    {
+      "id": "candidate-import-repeat",
+      "args": ["gm", "messages", "import", "{{root}}/takeout.mbox", "--since-time", "2020-01-01", "--json"],
+      "exit": 0,
+      "stream": "stdout",
+      "kind": "json",
+      "json": {
+        "item": {
+          "saved": 0,
+          "complete": true
+        }
+      }
+    }
+  ]
+}
