@@ -6,6 +6,12 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Fixed
 
+- **The "Prepare the mailbox" page lists the international providers first**: Gmail, Outlook, Microsoft 365, iCloud,
+  Fastmail, then Yandex. Mail.ru is no longer on the English page; it stays a built-in provider and keeps its steps
+  in the Russian translation. No behaviour changes.
+- **The Google and Microsoft sign-in notes no longer describe WireCat's review or verification status.** They say that
+  making a shared Google app public for mail is complex, so Google may refuse WireCat's app, and then point to your own
+  Google app or an app password. No behaviour changes.
 - **`session end` help says what `--revoke` does to your account.** With Gmail over OAuth it asks Google to revoke
   the sign-in, which signs out every tool that uses the same Google project. The command's description and examples
   now say so. No behaviour changes.

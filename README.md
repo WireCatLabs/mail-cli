@@ -137,8 +137,8 @@ mail personal config show                            # every setting and where i
   `folders delete --allow-dangerous` of a folder that holds mail (outside Gmail, its mail is gone).
   Undoing `messages copy` outside Gmail removes the copy for good, never the original.
 - Text and headers only: the text of attachments is stored, not the files, nor the original message.
-- Gmail over OAuth signs in with WireCat's Google app, which Google has not reviewed for mail yet; if Google refuses
-  it, use a Google app of your own ([steps](https://github.com/WireCatLabs/mail-cli/blob/main/docs/oauth-google.md)).
+- Gmail over OAuth signs in with WireCat's Google app. Making a shared Google app public for mail is complex, so
+  Google may refuse it; then use a Google app of your own ([steps](https://github.com/WireCatLabs/mail-cli/blob/main/docs/oauth-google.md)).
 - Gmail caps IMAP downloads at 2,500 MB a day; a new Yandex app password can take 2 to 3 hours to work.
 - Search reads the store and asks the mail server for mail `sync` has not read yet; `--backend archive` keeps to
   the store.

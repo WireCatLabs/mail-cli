@@ -1,4 +1,7 @@
-import { GENERIC_PREPARE, PROVIDER_KEYS, PROVIDERS, type ProviderKey } from "../dist/providers.js"
+import { GENERIC_PREPARE, PROVIDERS, type ProviderKey } from "../dist/providers.js"
+
+// International providers first. Mail.ru is documented only in the Russian translation of this page.
+const PAGE_ORDER: ProviderKey[] = ["gmail", "outlook", "microsoft365", "icloud", "fastmail", "yandex"]
 
 const section = (key: ProviderKey): string => {
   const { name, prepare, smtp, auth } = PROVIDERS[key]
@@ -35,7 +38,7 @@ export const providersPage = (): string =>
     "named under every provider. Labels are quoted in the language of the provider's interface. A provider can change",
     "its screens; the help page is the source of truth.",
     "",
-    ...PROVIDER_KEYS.map(section),
+    ...PAGE_ORDER.map(section),
     "## Any other provider",
     "",
     GENERIC_PREPARE.notes.join(" "),
