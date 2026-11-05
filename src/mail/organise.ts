@@ -236,7 +236,8 @@ export class Changer {
   constructor(
     readonly mailbox: Mailbox,
     readonly guard: SendGuard,
-    readonly log: ChangeLog,
+    /** A preview passes a log that records nothing. */
+    readonly log: Pick<ChangeLog, "begin" | "done">,
     readonly key: string,
     readonly action: "message-flag" | "message-move" | "message-copy" | "message-delete" | "message-restore",
   ) {}

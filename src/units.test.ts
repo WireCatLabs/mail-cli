@@ -68,11 +68,11 @@ describe("discovery edges", () => {
       mx: async () => {
         throw new Error("no dns")
       },
-      fetch: (async (url: string) => {
-        urls.push(url)
-        if (url.includes("thunderbird")) throw new Error("offline")
+      fetch: async (url) => {
+        urls.push(String(url))
+        if (String(url).includes("thunderbird")) throw new Error("offline")
         return new Response(xml)
-      }) as unknown as typeof fetch,
+      },
     })
     expect(found).toMatchObject({ found_by: "autoconfig", login: "x@own.test", imap: { host: "imap.own.test" } })
     expect(urls[0]).toContain("autoconfig.thunderbird.net")
@@ -120,6 +120,8 @@ describe("error reasons", () => {
   })
 })
 
+const messageOf = (error: unknown) => (error instanceof Error ? error.message : String(error))
+
 describe("the layers below the commands name no command", () => {
   const SRC = fileURLToPath(new URL(".", import.meta.url))
   // What the owner reads as steps, the identity, the reason registry, and a recorded command line read back.
@@ -143,7 +145,7 @@ describe("the layers below the commands name no command", () => {
       try {
         work()
       } catch (error) {
-        return (inWords(error, "personal") as Error).message
+        return messageOf(inWords(error, "personal"))
       }
       throw new Error("nothing was refused")
     }
@@ -161,13 +163,13 @@ describe("the layers below the commands name no command", () => {
     const full = mkdtempSync(join(tmpdir(), "export-"))
     writeFileSync(join(full, "x"), "")
     const refused = await openJournal({ path: full, format: "mbox", account: "me@example.com", mode: "new" }).catch(
-      (error: unknown) => (inWords(error, "personal") as Error).message,
+      (error: unknown) => messageOf(inWords(error, "personal")),
     )
     expect(refused).toBe(`${full} is not empty; --replace writes into it anyway, over files of the same name`)
     const unknown = await discover("x@nowhere.test", {
       mx: async () => [],
-      fetch: (async () => new Response("", { status: 404 })) as typeof fetch,
-    }).catch((error: unknown) => (inWords(error, "personal") as Error).message)
+      fetch: async () => new Response("", { status: 404 }),
+    }).catch((error: unknown) => messageOf(inWords(error, "personal")))
     expect(unknown).toMatch(/^no mail server found for nowhere\.test; pass --provider \(.+\), or --host, --port/)
   })
 })

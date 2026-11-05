@@ -132,6 +132,9 @@ export interface Opened {
   answer: (show: () => void) => void
 }
 
+const stringsOf = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((one): one is string => typeof one === "string") : []
+
 /** Opens the store and the mailbox for one write command, and closes both after `work`, then answers. */
 export const organising = async <T>(command: Command, work: (opened: Opened) => Promise<T>): Promise<T> => {
   const context = contextOf(command)
@@ -225,7 +228,7 @@ interface Planned {
   selected: { ids: string[]; more: boolean }
   located: Awaited<ReturnType<typeof locate>>
   to?: string
-  kept?: Record<string, number>
+  kept?: Partial<Record<string, number>>
 }
 
 const restoreHint = (opened: Opened, run: string) =>
@@ -419,8 +422,8 @@ const updateCommand = (): Command =>
     .option("--replace", "--flag is the whole set: every other flag and keyword is taken away")
     .action(
       organiseAction("message-flag", "messages.update", async (_opened, options) => {
-        const add = ((options.flag as string[] | undefined) ?? []).map(flagOf)
-        const remove = ((options.unflag as string[] | undefined) ?? []).map(flagOf)
+        const add = stringsOf(options.flag).map(flagOf)
+        const remove = stringsOf(options.unflag).map(flagOf)
         if (options.replace && remove.length)
           throw new CliError("validation_error", "--replace takes --flag only: everything else is taken away")
         if (!options.replace && add.length === 0 && remove.length === 0)
@@ -580,7 +583,7 @@ backup is under 8 days old, and a first run moves at most 100, to check by hand.
           selected,
           located,
           to: trash,
-          ...(cleanup ? { kept: cleanup.kept as Record<string, number> } : {}),
+          ...(cleanup ? { kept: cleanup.kept } : {}),
         }
         const given = {
           ...givenArgs(refs, options),
@@ -653,7 +656,7 @@ Envelopes come back to search at once; mail with text is saved again by the next
         const changer = new Changer(
           opened.mailbox,
           opened.guard,
-          log ?? ({ begin: () => 0, done: () => {}, run: { id: "" } } as unknown as ChangeLog),
+          log ?? { begin: () => 0, done: () => {} },
           "messages.restore",
           "message-restore",
         )

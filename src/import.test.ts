@@ -52,7 +52,7 @@ const gmailProfile = async (address: string, folders: FakeFolder[]) => {
           sleep: async () => {},
           ...bounds,
         }),
-    } as MailEnvironment & Record<string, unknown>)
+    } satisfies MailEnvironment)
     return { code, out: out.join("\n"), err: err.join("\n"), item: out.length ? JSON.parse(out.join("")).item : null }
   }
   const started = await mail(["gm", "session", "start", "--address", address, "--json"])

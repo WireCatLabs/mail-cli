@@ -69,9 +69,10 @@ const withMailbox = async <T>(command: Command, work: (store: MessageStore, key:
 }
 
 const targetOf = (key: AccountKey, { message, chat }: { message?: string; chat?: string }): MailTarget => {
-  if ((message === undefined) === (chat === undefined))
+  const ref = message ?? chat
+  if (ref === undefined || (message !== undefined && chat !== undefined))
     throw new CliError("validation_error", "name one email with --message, or one conversation with --chat")
-  const place = parseReference((message ?? chat) as string)
+  const place = parseReference(ref)
   if (message !== undefined && place.type !== "message")
     throw new CliError("validation_error", `${message} names no email — give the msg:email/… reference`, {
       param: "message",
@@ -153,7 +154,7 @@ const listCommand = () =>
   ).action(async function (this: Command, words: string[], options: { limit?: number }) {
     const terms = queryTerms(words, TAG_QUERY, "tags list")
     const tag = terms.get("tag")
-    const type = terms.get("type") as (typeof TYPES)[number] | undefined
+    const type = TYPES.find((one) => one === terms.get("type"))
     const limit = options.limit ?? LIST_LIMIT
     const items = await withMailbox(this, async (store, key) => {
       const rows = (
@@ -167,11 +168,13 @@ const listCommand = () =>
           ),
         )
       ).flat()
-      return rows.map((row) => {
+      return rows.flatMap((row) => {
+        const { chatId, messageId } = row
+        if (chatId === undefined || (row.type === "message" && messageId === undefined)) return []
         const target: MailTarget =
-          row.type === "message"
-            ? { type: "message", chatId: row.chatId as string, messageId: row.messageId as string }
-            : { type: "chat", chatId: row.chatId as string }
+          row.type === "message" && messageId !== undefined
+            ? { type: "message", chatId, messageId }
+            : { type: "chat", chatId }
         return {
           tag: row.tag,
           type: target.type,

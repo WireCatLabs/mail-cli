@@ -111,7 +111,7 @@ const addressesOf = (people: readonly Person[]) =>
 const textOf = async (command: Command, text: string | undefined) => {
   if (text !== "-") return text
   const input = environmentOf(command).stdin ?? process.stdin
-  if ((input as { isTTY?: boolean }).isTTY) throw new CliError("validation_error", "- reads the text from a pipe")
+  if ("isTTY" in input && input.isTTY === true) throw new CliError("validation_error", "- reads the text from a pipe")
   return (await bufferedInput(input)).toString("utf8")
 }
 

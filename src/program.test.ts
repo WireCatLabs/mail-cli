@@ -41,7 +41,7 @@ it("doctor answers without a config file", async () => {
 })
 
 it("doctor --online says whether a newer version is published, and does not log in", async () => {
-  const published = (async () => Response.json({ version: "99.0.0" })) as unknown as typeof fetch
+  const published: typeof fetch = async () => Response.json({ version: "99.0.0" })
   const { code, out } = await ran(["doctor", "--online", "--json"], published)
   expect(code).toBe(0)
   expect(json(out).item.online).toMatchObject({

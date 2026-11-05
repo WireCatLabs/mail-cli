@@ -56,7 +56,7 @@ export const harness = async (given: Partial<FakeOptions> & { provider?: string;
           ...bounds,
         }),
       ...rest,
-    } as MailEnvironment & Record<string, unknown>)
+    } satisfies MailEnvironment)
     return { code, out: out.join("\n"), err: err.join("\n") }
   }
   const started = await mail(
@@ -80,7 +80,8 @@ export const harness = async (given: Partial<FakeOptions> & { provider?: string;
     const store = await openStore({ path: storePath(env), env, command: "mail" })
     try {
       const account = await store.accounts.storedAccount({ provider: "email", account: ADDRESS })
-      return await work(store, account?.id as number)
+      if (!account) throw new Error(`no stored account ${ADDRESS}`)
+      return await work(store, account.id)
     } finally {
       await store.close()
     }

@@ -495,11 +495,11 @@ it("ignores OBJECTID's EMAILID: the id is the Message-ID's, as memo makes it, an
 })
 
 it("names Gmail labels as memo does, so stored label:Inbox mailboxes keep matching", () => {
-  const message = {
+  const message: FetchMessageObject = {
     uid: 1,
     seq: 1,
     flags: new Set(["\\Flagged"]),
     labels: new Set(["\\Inbox", "\\Important", "Работа", "R&D-team"]),
-  } as unknown as FetchMessageObject
+  }
   expect(quickOf(message, "[Gmail]/All Mail").labels).toEqual(["Important", "Inbox", "R&D-team", "Starred", "Работа"])
 })

@@ -34,7 +34,7 @@ const attachmentsOf = async (opened: Opened, reference: string) => {
   const names = distinctNames(parsed.attachments.map(({ id, name }) => safeName(name, `attachment-${id + 1}`)))
   return parsed.attachments.map((one, at) => ({
     number: one.id + 1,
-    name: names[at] as string,
+    name: names[at] ?? `attachment-${one.id + 1}`,
     mime: one.mime,
     bytes: one.bytes?.byteLength ?? 0,
     content: one.bytes ?? new Uint8Array(),
