@@ -352,6 +352,47 @@ describe("messages move, copy and delete on an IMAP server", () => {
     )
   })
 
+  it("--write undoes one write of a run and leaves the others; the run's restore then does the rest", async () => {
+    const folders = yandex()
+    const { mail, refOf } = await harness({ folders })
+    const subjects = (name: string) =>
+      (folders.find((one) => one.name === name)?.messages ?? []).map(
+        ({ raw }) => /Subject: (.*)/.exec(String(raw))?.[1],
+      )
+    const invoice = await refOf("invoice")
+    expect((await mail(["ya", "messages", "move", invoice, "--folder", "archive", "--json"])).code).toBe(0)
+    const deleted = item(
+      (await mail(["ya", "messages", "delete", invoice, await refOf("lunch"), "--yes", "--json"])).out,
+    )
+    const lunch = deleted.writes.find(({ folder }: { folder: string }) => folder === "INBOX").operation_id
+    const restore = ["ya", "messages", "restore", "--run", deleted.run_id]
+
+    const preview = item((await mail([...restore, "--write", lunch, "--json"])).out)
+    expect(preview).toMatchObject({ applied: false, logged: 1, restorable: 1 })
+    expect(JSON.parse((await mail([...restore, "--write", lunch, "--json"])).out).next[0].args).toMatchObject({
+      run: deleted.run_id,
+      write: lunch,
+      yes: true,
+    })
+
+    const one = item((await mail([...restore, "--write", lunch, "--yes", "--json"])).out)
+    expect(one).toMatchObject({ applied: true, restored: 1 })
+    expect(one.writes).toEqual([expect.objectContaining({ op: "move", folder: "Trash", to: "INBOX", undoes: lunch })])
+    expect(subjects("INBOX")).toEqual(["Big offer", "Lunch friday"])
+    expect(subjects("Trash")).toEqual(["Invoice October"])
+
+    const again = item((await mail([...restore, "--write", lunch, "--yes", "--json"])).out)
+    expect(again).toMatchObject({ restorable: 0, restored: 0 })
+    const rest = item((await mail([...restore, "--yes", "--json"])).out)
+    expect(rest).toMatchObject({ logged: 2, restored: 1 })
+    expect(subjects("Archive")).toEqual(["Invoice October"])
+    expect(subjects("Trash")).toEqual([])
+
+    const unknown = await mail([...restore, "--write", "no-such-write", "--json"])
+    expect(unknown.code).not.toBe(0)
+    expect(unknown.err).toContain("has no write no-such-write")
+  })
+
   it("answers a folder change and a draft with the operation_id of their write", async () => {
     const { mail } = await harness({
       folders: [...yandex(), { name: "Drafts", attributes: ["\\Drafts"], messages: [] }],
@@ -577,6 +618,11 @@ describe("Gmail: labels, Trash and memo's runs", () => {
     expect(folders[2]?.messages).toHaveLength(0)
     const back = folders[1]?.messages.find(({ emailId }) => emailId === "1001")
     expect(back?.labels?.sort()).toEqual(["Work", "\\Inbox"])
+    const trashed = deleted.writes[0].operation_id
+    expect(restored.writes).toEqual([
+      expect.objectContaining({ op: "move", to: "INBOX", undoes: trashed }),
+      expect.objectContaining({ op: "label", folder: "[Gmail]/All Mail", messages: 1, undoes: trashed }),
+    ])
   })
 
   it("restores a cleanup run memo made, by its id", async () => {

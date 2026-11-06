@@ -56,6 +56,8 @@ export interface RestoreLine {
   type: "restore"
   at: string
   ids: string[]
+  /** The write these messages came back from; without it (an older restore, a step with no id) it counts for all. */
+  undoes?: string
 }
 
 type Line = RunLine | StepLine | DoneLine | RestoreLine | { type: "end"; ended_at: string }
@@ -63,7 +65,8 @@ type Line = RunLine | StepLine | DoneLine | RestoreLine | { type: "end"; ended_a
 export interface ChangeRun {
   run: RunLine
   steps: { step: StepLine; done?: DoneLine }[]
-  restored: Set<string>
+  /** Whether a restore already brought this message of this step back. */
+  restored: (step: StepLine, id: string) => boolean
 }
 
 const RUN_ID = /^[\w.:-]+$/
@@ -139,10 +142,28 @@ export class ChangeLog {
   }
 }
 
-export const appendRestore = (path: string, ids: string[], at: number) => {
+export const appendRestore = (path: string, ids: string[], at: number, undoes?: string) => {
   // A file another program wrote may end without a newline, and the line would join its last one and be lost.
   const lead = readFileSync(path, "utf8").endsWith("\n") ? "" : "\n"
-  appendFileSync(path, `${lead}${JSON.stringify({ type: "restore", at: new Date(at).toISOString(), ids })}\n`)
+  const line: RestoreLine = { type: "restore", at: new Date(at).toISOString(), ids, ...(undoes ? { undoes } : {}) }
+  appendFileSync(path, `${lead}${JSON.stringify(line)}\n`)
+}
+
+/**
+ * What came back, per write: a line naming the write it undid counts for that write alone, so undoing one write of a
+ * message leaves the run's other writes of it to a later restore.
+ */
+const restoredOf = (lines: Line[]) => {
+  const all = new Set<string>()
+  const byWrite = new Map<string, Set<string>>()
+  for (const line of lines) {
+    if (line.type !== "restore") continue
+    const into = line.undoes ? (byWrite.get(line.undoes) ?? new Set<string>()) : all
+    if (line.undoes) byWrite.set(line.undoes, into)
+    for (const id of line.ids) into.add(id)
+  }
+  return (step: Pick<StepLine, "operation_id">, id: string) =>
+    all.has(id) || (step.operation_id !== undefined && (byWrite.get(step.operation_id)?.has(id) ?? false))
 }
 
 /** Gmail's own names for its system labels, as `X-GM-LABELS` takes them. */
@@ -170,6 +191,7 @@ const memoRun = (env: NodeJS.ProcessEnv, account: string, id: string): { path: s
     if (String(head?.account ?? "").toLowerCase() !== account.toLowerCase()) continue
     const started = String(head?.started_at ?? "")
     const emails = lines.filter(({ type }) => type === "email")
+    const back = memoRestored(lines)
     const step: StepLine = {
       type: "step",
       step: 1,
@@ -195,7 +217,7 @@ const memoRun = (env: NodeJS.ProcessEnv, account: string, id: string): { path: s
         },
         // Every logged email, not only those a batch line confirms: a move Gmail made but did not answer leaves none.
         steps: [{ step }],
-        restored: memoRestored(lines),
+        restored: (_step, one) => back.has(one),
       },
     }
   }
@@ -225,7 +247,7 @@ export const readRun = (env: NodeJS.ProcessEnv, account: string, id: string): { 
           const finished = done.get(step.step)
           return { step, ...(finished ? { done: finished } : {}) }
         }),
-      restored: new Set(lines.filter((line): line is RestoreLine => line.type === "restore").flatMap(({ ids }) => ids)),
+      restored: restoredOf(lines),
     },
   }
 }
@@ -250,13 +272,13 @@ const summaryOf = (lines: Line[]): RunSummary | undefined => {
       .filter((line): line is DoneLine => line.type === "done")
       .flatMap(({ step, ids }) => ids.map((one) => `${step}:${one}`)),
   )
-  const restored = new Set(
-    lines.filter((line): line is RestoreLine => line.type === "restore").flatMap(({ ids }) => ids),
-  )
+  const restored = restoredOf(lines)
   const trashed = new Set(
     lines
       .filter((line): line is StepLine => line.type === "step" && line.op === "trash")
-      .flatMap(({ step, items }) => items.filter(({ id }) => done.has(`${step}:${id}`)).map(({ id }) => id)),
+      .flatMap((step) =>
+        step.items.filter(({ id }) => done.has(`${step.step}:${id}`) && !restored(step, id)).map(({ id }) => id),
+      ),
   )
   return {
     id: run.id,
@@ -265,7 +287,7 @@ const summaryOf = (lines: Line[]): RunSummary | undefined => {
     started_at: run.started_at,
     unfinished: !lines.some(({ type }) => type === "end"),
     restorable_until: run.restorable_until ?? null,
-    in_trash: [...trashed].filter((one) => !restored.has(one)).length,
+    in_trash: trashed.size,
   }
 }
 

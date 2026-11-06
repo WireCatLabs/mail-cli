@@ -2,7 +2,7 @@ import { existsSync } from "node:fs"
 import { CliError } from "@wirecat/cli-base"
 import { annotate } from "@wirecat/cli-base/commands"
 import { progressOf } from "@wirecat/cli-core/background"
-import { answerEntity, baseContext, itemOf, LOCAL_READ } from "@wirecat/cli-core/cli"
+import { answerEntity, answerLocally, baseContext, itemOf, LOCAL_READ, outputFor } from "@wirecat/cli-core/cli"
 import { mailAccountKey, mailProgress, marksOf } from "@wirecat/cli-core/mail"
 import { mailMark, markItem } from "@wirecat/cli-core/mail/cli"
 import { Command } from "commander"
@@ -11,9 +11,9 @@ import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
 import { openMailStore } from "../store.js"
 import { contextOf } from "./context.js"
-import { answerLocally } from "./times.js"
 
 const nullableNumber = v.nullable(v.number())
+const STALE_SCHEMA = /needs schema \d+ maintenance before a read-only open/
 
 /** cli-core's `sync_progress` with the folders it adds up; that entity is strict, so this one is mail's own. */
 const mailSyncStatus = v.strictObject({
@@ -60,8 +60,12 @@ export const statusCommand = (): Command =>
       const { folders: report, holders } = await baseContext(this, configuration.resolveSettings).run(async () => {
         const { storePath } = await import("@wirecat/cli-core/store")
         if (!existsSync(storePath(context.env))) return { folders: [], holders: [] }
-        // Read-only, so it answers while a sync holds the write lock.
-        const store = await openMailStore(context.env, { readOnly: true })
+        // Read-only, so it answers while a sync holds the write lock. A store an older tool left at an older schema
+        // refuses a read-only open, so status brings it up to date once, as the first sync after an upgrade would.
+        const store = await openMailStore(context.env, { readOnly: true }).catch((error: unknown) => {
+          if (error instanceof CliError && STALE_SCHEMA.test(error.message)) return openMailStore(context.env)
+          throw error
+        })
         context.environment.trackCloseable?.(store)
         try {
           const folders = (await mailProgress(store, key)).map(({ folder, since, done, total, updatedAt }) => ({
@@ -87,5 +91,5 @@ export const statusCommand = (): Command =>
         ...(report.length ? { total: report.reduce((sum, { total }) => sum + total, 0) } : {}),
         ...(updatedAt === undefined ? {} : { updatedAt }),
       })
-      answerLocally(this, itemOf({ ...progress, folders: report, holders: holders.map(markItem) }))
+      answerLocally(this, outputFor(this), itemOf({ ...progress, folders: report, holders: holders.map(markItem) }))
     })

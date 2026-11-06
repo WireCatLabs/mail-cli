@@ -77,11 +77,11 @@ Claims about our code cite the file. The imapflow notes were read in imapflow 2.
   messages in one run"). `--output` is "the file to write" and `--output-dir` "the folder to write into" (WC-CMD-10).
   The `messages` changes keep `--limit` with `--filter`: it bounds which items the query selects, as a search's does.
 - **A person reads times in their own zone; storage and JSON stay UTC** (owner, 2026-11-05, NEED-2215 A). mail's own
-  answers go through `answerLocally` (`src/commands/times.ts`): in pretty output every UTC time of the item becomes
-  wall time in the zone in use, without an offset, and one line names the zone (WC-TIME-4). JSON, JSONL, compact
-  rows and agents keep UTC (WC-TIME-2); `next` is never rewritten, since its args run. The answers cli-core draws
-  (`search messages`, `conversations`, `messages show`, `review`, `runs list`) still print UTC: that is fixed in
-  cli-core.
+  answers go through cli-core's `answerLocally` (cli-core 0.587.0): in pretty output every UTC time of the item
+  becomes wall time in the zone in use, without an offset, and one line names the zone (WC-TIME-4). JSON, JSONL,
+  compact rows and agents keep UTC (WC-TIME-2); `next` is never rewritten, since its args run. The screens cli-core
+  draws (`search messages`, `conversations`, `messages show`, `review`, `runs list|show`) do the same
+  (`src/times.test.ts`).
 - **Exceptions to the WireCat standard.** Neither rule has a lint check, so `lint/overrides.json` cannot hold them;
   they are kept here.
   - **WC-OUT-4: `rules export` prints the bare rules file, with no `{ item, meta }` envelope** (owner, 2026-11-05,
@@ -93,8 +93,13 @@ Claims about our code cite the file. The imapflow notes were read in imapflow 2.
 - **Each write has its own `operation_id`, not only the run** (owner, 2026-11-05, NEED-2206 B; WC-OUT-10). `Changer`
   (`src/mail/organise.ts`) gives every step one, writes it into the step's line of the change log before the server
   is asked, and lists the step under `writes` in the answer; a restore's step adds `undoes`, the id of the step it
-  reverses. Folder and draft writes answer theirs. A restore of one chosen write would need its own option: the
-  vocabulary's `--operation-id` is the retry of an unknown outcome (WC-CMD-10), so that waits for the owner.
+  reverses. Folder and draft writes answer theirs; so does the draft removal after `drafts send` (`op: "delete"`), and
+  a Gmail restore from Trash lists the relabel on All Mail as a `label` write that undoes the same step.
+- **`messages restore --write <id>` undoes one write of a run** (owner, 2026-11-06, NEED-2226 A). `--write` is the
+  vocabulary's flag for one write by its `operation_id` (cli-base 0.80.0), apart from `--operation-id`, the retry of
+  an unknown outcome (WC-CMD-10). A run logged before writes had ids, or an id the run does not hold, is refused
+  (`mail.write-unknown`). What comes back is recorded per write (`undoes` on the change log's `restore` line), so a
+  later restore of the whole run still undoes the run's other writes of the same message.
 - **Only `sync`, `messages import` and `messages export` finish their current step on a stop** (owner, 2026-11-05,
   NEED-2214 A for sync and import; 2026-11-06, NEED-2225 A for export). All three are `cooperative` (WC-LIFE-10).
   Sync and import hand the signal to cli-core's `syncMail`, which checks it before each read and right after it,

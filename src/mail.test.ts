@@ -1107,5 +1107,13 @@ describe("review", () => {
     expect(acked.code, acked.err).toBe(0)
     const status = JSON.parse((await h.mail(["ya", "status", "--json"])).out).item
     expect(status.holders).toMatchObject([{ holder: "triage", read: 0, held: 0 }])
+    for (const back of [
+      ["--last", "1"],
+      ["--since-time", since],
+    ]) {
+      const reset = await h.mail(["ya", "messages", "reset", "--holder", "triage", ...back, "--dry-run", "--json"])
+      expect(reset.code, reset.err).toBe(0)
+      expect(JSON.parse(reset.out).item).toMatchObject({ dry_run: true })
+    }
   })
 })
