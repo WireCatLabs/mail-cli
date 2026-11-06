@@ -2,15 +2,15 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
-## Unreleased
+## 0.17.0 — 06.11.2026
 
 ### Added
 
 - **mail runs on cli-core 0.587.0 and cli-base 0.80.0.** `messages reset --holder <name> --since-time <time> | --last
   <n>` lets the owner move an agent's mail mark back, so its next `review --holder` gives that mail again
   (`--dry-run` counts first). `review --holder` gives the findings key and leaves out newsletters rather than all bulk
-  mail; `schedule list` gives each agent schedule's cost caps. The shared store moves to version 52 (deals) the first
-  time mail opens it; an older WireCat tool still reads it.
+  mail. `schedule list` gives each agent schedule's cost caps. The shared store moves to version 52 (deals) the first
+  time mail opens it, and an older WireCat tool still reads it.
 - **`messages restore --write <id>` undoes one write of a run and leaves the others.** The id is an `operation_id`
   the run's answer listed under `writes`. A later restore of the whole run undoes the rest. A run logged before writes
   had ids, or an id it does not hold, is refused as `not_found` (`mail.write-unknown`).
@@ -23,47 +23,45 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   (`undoes`). `folders create|rename|delete` and `drafts create|update|delete` give the `operation_id` of their write.
   The same ids are in the send journal.
 - **`account inspect` and `messages import` say which time zone they read `--since-time` in.** The answer gives
-  `meta.timezone` and the window in UTC (`meta.window.since`), as `sync` does; `messages import` also gives
+  `meta.timezone` and the window in UTC (`meta.window.since`), as `sync` does. `messages import` also gives
   `timezone` beside `since`, and `account inspect` adds a line to its table.
 
 ### Changed — may break callers
 
 - **The run a `messages` change made is `run_id` in its answer, as in the other WireCat tools.**
   `messages mark-read|mark-unread|star|unstar|update|move|copy|delete` answered it as `run`. `messages restore` answers
-  `run_id` for the run it made itself (it was `restore_run`; `null` for a preview) and `restored_run_id` for the run
+  `run_id` for the run it made itself (it was `restore_run`, `null` for a preview) and `restored_run_id` for the run
   it undid (it was `run`). The `--run` option keeps its name: it is the shared vocabulary's flag for "the run it is
   about".
 - **`sync`, `messages import` and `messages export` cap a run with `--max-messages`, and `messages export` writes into
-  `--output-dir`.** `--limit` there capped the work of one run, not the rows of the answer; it is now the shared
+  `--output-dir`.** `--limit` there capped the work of one run, not the rows of the answer, and it is now the shared
   vocabulary's work cap for messages. `--output` took a folder, and `--output` is the vocabulary's flag for one file.
   The next step's `args` follow: `max_messages` and `output_dir`. The old flags are gone. `--limit` stays where it
   counts what the answer shows: `account inspect`, `stats`, `drafts list`, `tags list` and the `messages` changes'
   `--filter` selection.
-- **The package no longer ships `dist/index.js`.** It re-exported `run`, `createProgram`, `definition` and `IDENTITY`,
-  but `package.json` never named it, and no WireCat tool imported it. `mail` is a command, not a library.
 - **`attachments download` takes `[attachment...]` instead of `[number...]`.** The argument names the thing it takes,
-  as the other WireCat arguments do; an agent passes the numbers under `attachment` instead of `number`, and a
+  as the other WireCat arguments do. An agent passes the numbers under `attachment` instead of `number`, and a
   refusal names `param: "attachment"`. The values are still the numbers `attachments list` shows.
 
 ### Fixed
 
 - **`status` answers on a store an older WireCat tool left at an older schema.** It opens the store read-only, so
   it answers while a sync runs, and a read-only open refuses a schema older than its own. After an upgrade, `status`
-  failed (`configuration_error`, "needs schema … maintenance") until another command updated the store; it now
+  failed (`configuration_error`, "needs schema … maintenance") until another command updated the store. It now
   updates it once itself.
 - **A stop signal lets `messages import` finish the read in flight and keep what it saved, as `sync` does.** Before,
   Ctrl-C or an MCP cancel cut the import at once, while it was still reading. It now stops before the next read and
   answers `stopped: "cancelled"`. It also gets the deadline of a resumable sync: 15 minutes at a terminal, 45 seconds
   over MCP, instead of 30 seconds.
 - **The iCloud steps say in plain words how to sign in with the short login.** They no longer quote a command line
-  with its flags; `session start --help` still lists `--login`.
+  with its flags, and `session start --help` still lists `--login`.
 - **Every screen shows a person their times in the local time zone:** `status`, `sync`, `messages restore`, and, with
   cli-core 0.587.0, `search messages`, `messages show`, `conversations list|show`, `review` and `runs list|show`. A
-  table read `2025-12-31T14:00:00.000Z`; it now reads `2026-01-01 00:00`, with no offset, and a line `times in <zone>`
+  table read `2025-12-31T14:00:00.000Z`, and it now reads `2026-01-01 00:00`, with no offset, and a line `times in <zone>`
   names the zone (the `TZ` of the computer, or the zone it is set to). JSON and JSONL answers keep UTC.
 - **Commands that talk to the mail server answer only after they closed the connection and the store.** `account
   check`, `account inspect`, `folders`, `sync`, `messages export`, the `messages` changes, `drafts` and the sends
-  printed their answer first; a failing close now ends in an error instead of after a success. JSON answers are
+  printed their answer first. A failing close now ends in an error instead of after a success. JSON answers are
   unchanged.
 - **A send whose store fails to close afterwards says so and names its `operation_id`.** `messages send|forward` and
   `drafts send` then end in `outcome_unknown`: the message was probably sent, and the same command with
@@ -75,12 +73,20 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   says "check the mailbox before running it again", without naming `sync`.
 - **The user pages give example values instead of placeholders, and state each fact once.** Commands in the usage
   guide, the Outlook pages and the overview use example references and ids (`msg:email/me%40example.com/…`) where they
-  had `<ref>` or `<id>`; the provider list is on the "Prepare the mailbox" page only, and the overview links the
+  had `<ref>` or `<id>`. The provider list is on the "Prepare the mailbox" page only, and the overview links the
   search guide instead of repeating it. The usage guide no longer speaks of mail 0.1, and the Microsoft app page no
   longer describes how the maintainers release a client id. No behaviour changes.
 - **Files `mail` reads back are checked field by field instead of trusted.** A rules file whose condition has the
-  wrong type is refused with the rule's number; a damaged export journal header, sign-in record, RDAP answer or
+  wrong type is refused with the rule's number. A damaged export journal header, sign-in record, RDAP answer or
   domain-age cache is treated as missing instead of breaking the command.
+- **The README and `SECURITY.md` say what `sync` sends out to score new senders:** a sender's domain, never an
+  address, to IANA's list of registries and to that domain's own registry. Only the security page said so before. No
+  behaviour changes.
+
+### Removed
+
+- **The package no longer ships `dist/index.js`.** It re-exported `run`, `createProgram`, `definition` and `IDENTITY`,
+  but `package.json` never named it, and no WireCat tool imported it. `mail` is a command, not a library.
 
 ## 0.16.3 — 05.11.2026
 

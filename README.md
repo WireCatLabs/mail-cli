@@ -154,6 +154,9 @@ What comes next is on the
 - Every connection to the mail server uses TLS or STARTTLS; one with no encryption is refused.
 - To find the server of a new address, `session start` sends the domain, never the address, to your DNS resolver,
   `autoconfig.thunderbird.net` and `autoconfig.<domain>`. `--provider` or `--host` skips it.
+- To score new senders, `sync` and `account inspect --domain-age` send a sender's domain, never an address, to IANA's
+  list of registries and to that domain's own registry (RDAP). A big mailbox provider's domain and a sender you
+  replied to are never asked about.
 - `config.json` is readable by you only.
 
 See [security](https://github.com/WireCatLabs/mail-cli/blob/main/docs/security.md), and

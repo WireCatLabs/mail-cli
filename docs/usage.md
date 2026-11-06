@@ -53,13 +53,13 @@ run. `--rescan` lists the whole window again. It saves text and headers, and the
 name and size. `messages show` of an email with such a file reads that email again from the server, every attachment
 whatever its size, and shows the text; `--offline` shows the stored email instead. To keep a file, use
 `attachments download`. The
-account's rules (`mail <profile> rules`, which memo keeps too) hold here too: mail a skip rule names is not read,
+account's rules (`mail personal rules`, which memo keeps too) hold here too: mail a skip rule names is not read,
 and an envelope rule keeps only its sender, date and size.
 
 A big mailbox does not fit in one run. `sync` has a budget of requests to the server, set by its deadline: 15
 minutes at a terminal, 45 seconds over MCP. `--timeout` changes the deadline. `--max-pages` lowers the budget. The
 run saves what it read, then answers `state: partial` and gives the same command in `next`. Run it again to go on.
-`mail <profile> status` shows how far the sync is.
+`mail personal status` shows how far the sync is.
 
 To keep a profile current, put its sync on a timer (systemd, launchd or Task Scheduler):
 `mail personal schedule command mail-personal --every 5m -- sync`. `mail personal schedule list` shows each schedule and how its last
@@ -120,7 +120,7 @@ Every email is shown, mail sent to many too; each item's `email` says `bulk`, `l
 sender's score, so you or an agent can sort. Mail newer than the last finished sync waits for the next review.
 `--new` keeps a point per mailbox and reader: yours, an agent's over MCP, and one per scheduled run, so a schedule
 never moves yours. Without a date, `--unanswered` and `--waiting` look at threads active in the last 30 days.
-`memo tasks agenda --source email:<address>` lists the same owed and waiting threads.
+`memo tasks agenda --source email:me@example.com` lists the same owed and waiting threads.
 
 An agent or a pipeline that processes your mail keeps its own mark of how far it got, in the shared store, by the
 order mail was stored — so mail stored late, with an old date, is not skipped:
