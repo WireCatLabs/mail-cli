@@ -135,7 +135,7 @@ describe("the layers below the commands name no command", () => {
 
   it("keeps command lines and flags out of their strings", () => {
     const named = sourceFiles(SRC)
-      .filter((file) => !/^(commands|bin)\//.test(file.slice(SRC.length)) && !ALLOWED.has(file.slice(SRC.length)))
+      .filter((file) => !/^(commands|bin)[\\/]/.test(file.slice(SRC.length)) && !ALLOWED.has(file.slice(SRC.length)))
       .flatMap((file) =>
         readFileSync(file, "utf8")
           .split("\n")
