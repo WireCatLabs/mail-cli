@@ -2,6 +2,15 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Fixed
+
+- **mail runs on cli-core 0.596.0.** `status` opens the store read-only even when an older WireCat tool left it at an
+  older schema: cli-core now brings it up to date first, so mail no longer does that by itself. The shared store moves
+  to version 53 (CRM pipelines kept apart per account), and an older WireCat tool still reads it. `schedule list` gives
+  each schedule's `notify` setting.
+
 ## 0.17.0 — 06.11.2026
 
 ### Added
