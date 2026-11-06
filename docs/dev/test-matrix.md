@@ -7,7 +7,7 @@ ran it · ⛔ not tested offline, with the reason and where it is checked instea
 Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 [TESTING.md](TESTING.md) for how, and for the states and failures that cut across commands.
 
-**273 ✅ · 28 ⛔ · 0 ❌** — 79 commands, 222 options.
+**279 ✅ · 28 ⛔ · 0 ❌** — 80 commands, 227 options.
 
 | Command | Option | | Note |
 |---|---|---|---|
@@ -93,6 +93,11 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `messages acknowledge` |  | ✅ |  |
 | `messages acknowledge` | `--holder` | ✅ |  |
 | `messages acknowledge` | `--cursor` | ✅ |  |
+| `messages reset` |  | ✅ |  |
+| `messages reset` | `--holder` | ✅ |  |
+| `messages reset` | `--since-time` | ✅ |  |
+| `messages reset` | `--last` | ✅ |  |
+| `messages reset` | `--dry-run` | ✅ |  |
 | `messages export` |  | ✅ |  |
 | `messages export` | `--format` | ✅ |  |
 | `messages export` | `--output-dir` | ✅ |  |
@@ -153,6 +158,7 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `messages delete` | `--since-time` | ✅ |  |
 | `messages restore` |  | ✅ |  |
 | `messages restore` | `--run` | ✅ |  |
+| `messages restore` | `--write` | ✅ |  |
 | `messages restore` | `--yes` | ✅ |  |
 | `messages restore` | `--dry-run` | ✅ |  |
 | `messages send` |  | ✅ |  |
