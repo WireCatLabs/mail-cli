@@ -33,7 +33,7 @@ import {
 import { everyone, fetchOriginal, type Outgoing, othersOf, type Sending, sendOut } from "../mail/send.js"
 import { DEFAULT_SYNC, providerFor } from "../providers.js"
 import { contextOf, repeatable } from "./context.js"
-import { type Opened, organising } from "./organising.js"
+import { type Opened, organising, writeSchema } from "./organising.js"
 import { foldersFor } from "./sync.js"
 
 const OPERATION_ID = /^-?[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/
@@ -69,6 +69,7 @@ export const mailSend = v.looseObject({
   stored: v.optional(v.boolean()),
   marked_original: v.optional(v.nullable(v.boolean())),
   hint: v.optional(v.string()),
+  writes: v.optional(v.array(writeSchema)),
 })
 
 export const operationIdOf = (given: string | undefined) => {
@@ -195,8 +196,17 @@ const answer = (command: Command, opened: Opened, draft: Draft, outcome: Record<
     ),
   )
 
-/** Checks, previews or sends, and answers; the outcome of a send that left, for what the caller does after. */
-export const go = async (command: Command, opened: Opened, outgoing: Outgoing, dryRun: boolean) => {
+/**
+ * Checks, previews or sends, and answers; the outcome of a send that left, for what the caller does after. `after`
+ * runs once the mail went, and what it gives joins the answer.
+ */
+export const go = async (
+  command: Command,
+  opened: Opened,
+  outgoing: Outgoing,
+  dryRun: boolean,
+  after?: () => Promise<Record<string, unknown>>,
+) => {
   const { draft } = outgoing
   if (everyone(draft).length === 0)
     throw new CliError("validation_error", "the message has nobody to go to; give --to", { param: "to" })
@@ -214,6 +224,7 @@ export const go = async (command: Command, opened: Opened, outgoing: Outgoing, d
   showBeforeAsking(command, draft, outgoing.key, sending.owner)
   const sent = await sendOut(sending, outgoing)
   opened.sent(sent.operationId)
+  const more = (await after?.()) ?? {}
   answer(command, opened, draft, {
     sent: !sent.alreadySent,
     already_sent: sent.alreadySent,
@@ -226,6 +237,7 @@ export const go = async (command: Command, opened: Opened, outgoing: Outgoing, d
     ...(sent.alreadySent
       ? { hint: "Sent already holds this message: it went the first time, and nothing was sent again" }
       : {}),
+    ...more,
   })
   return sent
 }

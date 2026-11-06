@@ -57,21 +57,25 @@ export const draftSendCommand = (): Command =>
           files: [],
           parts,
         }
-        const sent = await go(
+        await go(
           this,
           opened,
           { draft, kind: "message", key: "messages.send", operationId, retry: flags.operationId !== undefined },
           flags.dryRun === true,
+          async () => {
+            const removal = newOperationId()
+            try {
+              await guardedWrite(
+                opened.guard,
+                { chatId: null, kind: "account", key: "drafts.send", operationId: removal },
+                () => opened.mailbox.writes.expunge(folder, found.validity, [found.uid]),
+              )
+            } catch {
+              outputFor(this).renderer.warn(`the draft was sent and is still in ${folder}; drafts delete removes it`)
+              return {}
+            }
+            return { writes: [{ operation_id: removal, op: "delete", folder, messages: 1 }] }
+          },
         )
-        if (!sent) return
-        try {
-          await guardedWrite(
-            opened.guard,
-            { chatId: null, kind: "account", key: "drafts.send", operationId: newOperationId() },
-            () => opened.mailbox.writes.expunge(folder, found.validity, [found.uid]),
-          )
-        } catch {
-          outputFor(this).renderer.warn(`the draft was sent and is still in ${folder}; drafts delete removes it`)
-        }
       })
     })

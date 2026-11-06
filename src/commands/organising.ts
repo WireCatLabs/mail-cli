@@ -21,7 +21,7 @@ export const BULK_KEY = "messages.bulk"
 
 export const writeSchema = v.strictObject({
   operation_id: v.string(),
-  op: v.picklist(["flag", "label", "move", "copy", "trash"]),
+  op: v.picklist(["flag", "label", "move", "copy", "trash", "delete"]),
   folder: v.string(),
   to: v.optional(v.string()),
   messages: v.number(),

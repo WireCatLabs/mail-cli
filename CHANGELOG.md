@@ -6,6 +6,12 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Added
 
+- **`messages restore --write <id>` undoes one write of a run and leaves the others.** The id is an `operation_id`
+  the run's answer listed under `writes`. A later restore of the whole run undoes the rest. A run logged before writes
+  had ids, or an id it does not hold, is refused as `not_found` (`mail.write-unknown`).
+- **`drafts send` lists the draft's removal from Drafts under `writes`** (`op: "delete"`), with its own
+  `operation_id` beside the send's. **A Gmail restore from Trash lists putting the labels back** as a `label` write
+  that names the write it undoes, and the change log keeps it. Both writes were made before, but answered no id.
 - **Every write answers with its own `operation_id`, and the change log keeps it.** The `messages` changes, `messages
   delete` and `messages restore` list `writes`: one entry per write to the server, with its `operation_id`, what it did
   (`op`), the folder, `to` for a move and how many messages. A restore's write also names the write it undoes

@@ -960,5 +960,9 @@ describe("drafts send", { timeout: 20_000 }, () => {
     expect(smtp.received[0]?.raw).toContain("Draft text")
     expect(folders.find(({ name }) => name === "Drafts")?.messages).toHaveLength(0)
     expect(journal()).toContain('"key":"messages.send"')
+    const [removal] = item(sent.out).writes
+    expect(removal).toMatchObject({ op: "delete", folder: "Drafts", messages: 1 })
+    expect(removal.operation_id).not.toBe(item(sent.out).operation_id)
+    expect(journal()).toContain(removal.operation_id)
   })
 })

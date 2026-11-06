@@ -16,6 +16,7 @@ const ENTRIES: [reason: string, code: string, message: string][] = [
   ["mail.copy-not-undoable", "provider_unavailable", "the server gave no UIDs for the copies"],
   ["mail.folder-not-empty", "validation_error", "the folder still holds mail"],
   ["mail.run-unknown", "not_found", "no change run has this id for this mailbox"],
+  ["mail.write-unknown", "not_found", "the change run has no write with this operation_id"],
   ["mail.archive-unverified", "validation_error", "no store backup under 8 days old is recorded"],
   ["mail.cleanup-scheduled", "permission_error", "messages delete --rules does not run from a schedule"],
   ["mail.smtp-login-refused", "authentication_error", "the submission server refused the login"],

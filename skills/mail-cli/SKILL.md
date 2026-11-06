@@ -46,7 +46,7 @@ Find your way with the tool itself, not this file:
   <ref…>` (or `--filter '<query>'`) changes the server and the store; a deletion, a `--filter` change or one of more
   than 20 messages answers with a preview (`applied: false`) and the same command with `yes` in `next`. Show the
   owner the preview before you add `--yes`. Every change answers with a `run` id: `mail personal messages restore --run
-  <id> --yes` undoes it. `folders delete <folder> --yes` removes only an empty folder; deleting one that holds mail
+  <id> --yes` undoes it, and `--write <operation_id>`, one of its `writes`, undoes that write alone. `folders delete <folder> --yes` removes only an empty folder; deleting one that holds mail
   loses it for good, so only the owner can, at a terminal.
 - When the owner asks you to write or answer mail, save a draft and tell them: `mail personal drafts create --to <address>
   --subject '<subject>' '<text>' --json`, or `--reply-to <ref> [--reply-all]` to answer in the thread. Nothing is sent;

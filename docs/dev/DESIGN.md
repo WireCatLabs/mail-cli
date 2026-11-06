@@ -93,8 +93,13 @@ Claims about our code cite the file. The imapflow notes were read in imapflow 2.
 - **Each write has its own `operation_id`, not only the run** (owner, 2026-11-05, NEED-2206 B; WC-OUT-10). `Changer`
   (`src/mail/organise.ts`) gives every step one, writes it into the step's line of the change log before the server
   is asked, and lists the step under `writes` in the answer; a restore's step adds `undoes`, the id of the step it
-  reverses. Folder and draft writes answer theirs. A restore of one chosen write would need its own option: the
-  vocabulary's `--operation-id` is the retry of an unknown outcome (WC-CMD-10), so that waits for the owner.
+  reverses. Folder and draft writes answer theirs; so does the draft removal after `drafts send` (`op: "delete"`), and
+  a Gmail restore from Trash lists the relabel on All Mail as a `label` write that undoes the same step.
+- **`messages restore --write <id>` undoes one write of a run** (owner, 2026-11-06, NEED-2226 A). `--write` is the
+  vocabulary's flag for one write by its `operation_id` (cli-base 0.80.0), apart from `--operation-id`, the retry of
+  an unknown outcome (WC-CMD-10). A run logged before writes had ids, or an id the run does not hold, is refused
+  (`mail.write-unknown`). What comes back is recorded per write (`undoes` on the change log's `restore` line), so a
+  later restore of the whole run still undoes the run's other writes of the same message.
 - **Only `sync`, `messages import` and `messages export` finish their current step on a stop** (owner, 2026-11-05,
   NEED-2214 A for sync and import; 2026-11-06, NEED-2225 A for export). All three are `cooperative` (WC-LIFE-10).
   Sync and import hand the signal to cli-core's `syncMail`, which checks it before each read and right after it,

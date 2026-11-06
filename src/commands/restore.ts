@@ -31,6 +31,7 @@ export const restoreCommand = (): Command =>
       examples: [
         `${IDENTITY.command} personal messages restore --run 20261101T101500Z-messages-delete-1a2b3c`,
         `${IDENTITY.command} personal messages restore --run 20261101T101500Z-messages-delete-1a2b3c --yes`,
+        `${IDENTITY.command} personal messages restore --run 20261101T101500Z-messages-delete-1a2b3c --write <id> --yes`,
       ],
     }),
     "mail_restore",
@@ -39,9 +40,10 @@ export const restoreCommand = (): Command =>
     .summary("undo a run of messages delete, move, copy or a flag change")
     .description(
       "undo a change run, last step first, for the messages still where it left them: Trash back to where they were, " +
-        "moves back, copies removed, flags as they were; a preview unless --yes",
+        "moves back, copies removed, flags as they were; --write undoes one write of it alone; a preview unless --yes",
     )
     .requiredOption("--run <id>", "the run id a change answered with (runs list shows recent runs)")
+    .option("--write <id>", "undo only this write of the run: an operation_id its answer listed under writes")
     .option("--yes", "make the change; without it, only say what would come back")
     .option("--dry-run", "only preview, even with --yes")
     .addHelpText(
@@ -50,7 +52,7 @@ export const restoreCommand = (): Command =>
 memo mail delete runs restore here too, by their id. Mail Gmail has emptied from Trash (30 days) cannot come back.
 Envelopes come back to search at once; mail with text is saved again by the next sync.`,
     )
-    .action(async function (this: Command, options: { run: string; dryRun?: boolean }) {
+    .action(async function (this: Command, options: { run: string; write?: string; dryRun?: boolean }) {
       await organising(this, async (opened) => {
         const found = readRun(opened.env, opened.mailbox.key.account, options.run)
         const apply = options.dryRun !== true && yesOf(this)
@@ -63,7 +65,7 @@ Envelopes come back to search at once; mail with text is saved again by the next
           "message-restore",
         )
         try {
-          const plan = await restoreRun(changer, found.run, found.path, apply)
+          const plan = await restoreRun(changer, found.run, found.path, apply, options.write)
           const next: NextStep[] = apply
             ? plan.restored > 0
               ? [
@@ -83,7 +85,7 @@ Envelopes come back to search at once; mail with text is saved again by the next
                     kind: "command",
                     step: "mail.apply",
                     command: "messages restore",
-                    args: { run: options.run, yes: true },
+                    args: { run: options.run, ...(options.write ? { write: options.write } : {}), yes: true },
                     why: "this was a preview; --yes moves them back",
                     safe_to_auto_execute: false,
                   },

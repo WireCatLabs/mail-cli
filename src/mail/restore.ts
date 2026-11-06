@@ -100,7 +100,17 @@ export const restoreRun = async (
   { run, steps, restored: before }: ChangeRun,
   path: string,
   apply: boolean,
+  write?: string,
 ): Promise<RestorePlan> => {
+  const chosen = write === undefined ? steps : steps.filter(({ step }) => step.operation_id === write)
+  if (chosen.length === 0)
+    throw new CliError(
+      "not_found",
+      steps.some(({ step }) => step.operation_id)
+        ? `run ${run.id} has no write ${write}; its answer lists them under writes`
+        : `run ${run.id} was logged before writes had ids, so it is restored whole only`,
+      { reason: "mail.write-unknown" },
+    )
   const { mailbox } = changer
   const now = mailbox.now()
   const until = run.restorable_until ?? null
@@ -115,11 +125,15 @@ export const restoreRun = async (
     missing: 0,
     restored: 0,
   }
-  const restored: string[] = []
+  const restored = new Map<string, string[]>()
+  const cameBack = (step: StepLine, ids: string[]) => {
+    const key = step.operation_id ?? ""
+    restored.set(key, [...(restored.get(key) ?? []), ...ids])
+  }
   // A step can fail after earlier ones changed the mailbox; what came back is recorded, so the next restore skips it.
   try {
-    for (const { step, done } of [...steps].reverse()) {
-      const items = step.items.filter(({ id }) => !before.has(id))
+    for (const { step, done } of [...chosen].reverse()) {
+      const items = step.items.filter(({ id }) => !before(step, id))
       plan.logged += step.items.length
       if (items.length === 0) continue
       const folder = step.folder || (step.op === "trash" ? await allMailOf(mailbox) : step.folder)
@@ -157,7 +171,7 @@ export const restoreRun = async (
             if (Object.keys(flags).length)
               await mailbox.store.mail.setFlags(mailbox.accountId, new Map(ids.map((id) => [id, flags])), mailbox.now())
           } else await relabel(mailbox, ids, back.add, back.remove)
-          for (const id of ids) restored.push(id)
+          cameBack(step, ids)
         }
         continue
       }
@@ -187,7 +201,10 @@ export const restoreRun = async (
           new Map(here.map(({ id }) => [id, []])),
           mailbox.now(),
         )
-        for (const { id } of here) restored.push(id)
+        cameBack(
+          step,
+          here.map(({ id }) => id),
+        )
         continue
       }
       const gmailTrash = step.op === "trash" && mailbox.organise.labels === true
@@ -210,7 +227,7 @@ export const restoreRun = async (
             new Map(ids.map((id) => [id, [back]])),
             mailbox.now(),
           )
-        for (const id of ids) restored.push(id)
+        cameBack(step, ids)
       }
       if (gmailTrash) {
         const all = await allMailOf(mailbox)
@@ -223,14 +240,26 @@ export const restoreRun = async (
             const labels = (group[0].labels ?? []).filter((label) => label !== "\\Inbox")
             const placed = group.filter(({ id }) => inAll.has(id))
             if (placed.length === 0) continue
-            await mailbox.writes.label(
-              all,
-              allValidity,
-              valuesOf(
-                inAll,
-                placed.map(({ id }) => id),
-              ),
-              { add: labels.filter((label) => !SYSTEM.has(label) || label === "\\Starred" || label === "\\Important") },
+            const change = {
+              add: labels.filter((label) => !SYSTEM.has(label) || label === "\\Starred" || label === "\\Important"),
+            }
+            const uids = valuesOf(
+              inAll,
+              placed.map(({ id }) => id),
+            )
+            // Its own write, so it has an id, a line in the log and a place in the answer's writes.
+            await changer.step(
+              {
+                op: "label",
+                folder: all,
+                validity: allValidity,
+                ...undoing(step),
+                change,
+                items: placed.flatMap(({ id, mid }) =>
+                  valuesOf(inAll, [id]).map((uid) => ({ id, uid, had: [], ...(mid ? { mid } : {}) })),
+                ),
+              },
+              () => mailbox.writes.label(all, allValidity, uids, change),
             )
           }
         }
@@ -246,8 +275,8 @@ export const restoreRun = async (
       }
     }
   } finally {
-    if (restored.length) appendRestore(path, restored, mailbox.now())
+    for (const [undoes, ids] of restored) appendRestore(path, ids, mailbox.now(), undoes || undefined)
   }
-  plan.restored = restored.length
+  plan.restored = [...restored.values()].reduce((sum, ids) => sum + ids.length, 0)
   return plan
 }
