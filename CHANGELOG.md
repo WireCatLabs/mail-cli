@@ -47,6 +47,10 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Fixed
 
+- **`status` answers on a store an older WireCat tool left at an older schema.** It opens the store read-only, so
+  it answers while a sync runs, and a read-only open refuses a schema older than its own. After an upgrade, `status`
+  failed (`configuration_error`, "needs schema … maintenance") until another command updated the store; it now
+  updates it once itself.
 - **A stop signal lets `messages import` finish the read in flight and keep what it saved, as `sync` does.** Before,
   Ctrl-C or an MCP cancel cut the import at once, while it was still reading. It now stops before the next read and
   answers `stopped: "cancelled"`. It also gets the deadline of a resumable sync: 15 minutes at a terminal, 45 seconds
