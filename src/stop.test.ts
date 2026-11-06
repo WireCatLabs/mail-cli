@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs"
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it, vi } from "vitest"
@@ -116,5 +116,35 @@ describe("a stop signal", { timeout: 30_000 }, () => {
     const rest = await box.mail(["ya", "messages", "import", file, "--json"])
     expect(rest.code, rest.err).toBe(0)
     expect(await count()).toBe(60)
+  })
+
+  it("lets messages export finish the batch in flight, keep what it wrote, and stop before the next", async () => {
+    const folders = inbox()
+    const box = await harness({ folders })
+    for (let uid = 1; uid <= 110; uid++)
+      folders[0]?.messages.push({ uid, raw: raw(`m${uid}`, `Note ${uid}`, "text"), flags: [], date: OLD })
+    const synced = await box.mail(["ya", "sync", "--since-time", "2026-01-01", "--json"])
+    expect(synced.code, synced.err).toBe(0)
+    const run = stopping()
+    const backend = (endpoint: MailEndpoint, secret: MailCredential, bounds: RunBounds = {}) =>
+      run.wrap(
+        imapBackend({ ...endpoint, host: "127.0.0.1", port: box.port, security: "plain" }, secret, {
+          sleep: async () => {},
+          ...bounds,
+        }),
+      )
+    const out = mkdtempSync(join(tmpdir(), "export-"))
+    const exporting = ["ya", "messages", "export", "--folder", "INBOX", "--output-dir", out, "--json"]
+    const written = () => readFileSync(join(out, "INBOX.mbox"), "latin1").match(/^From MAILER-DAEMON/gm)?.length
+    const started = Date.now()
+    const stopped = await box.mail(exporting, { backend, signal: run.signal })
+    expect(Date.now() - started).toBeLessThan(10_000)
+    expect(run.seen).toEqual({ fetches: 2, secondDone: true })
+    expect(JSON.parse(stopped.out).item).toMatchObject({ exported: 100, stopped: "cancelled", complete: false })
+    expect(written()).toBe(100)
+
+    const rest = await box.mail([...exporting, "--resume"])
+    expect(rest.code, rest.err).toBe(0)
+    expect(written()).toBe(110)
   })
 })

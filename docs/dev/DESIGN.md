@@ -95,17 +95,13 @@ Claims about our code cite the file. The imapflow notes were read in imapflow 2.
   is asked, and lists the step under `writes` in the answer; a restore's step adds `undoes`, the id of the step it
   reverses. Folder and draft writes answer theirs. A restore of one chosen write would need its own option: the
   vocabulary's `--operation-id` is the retry of an unknown outcome (WC-CMD-10), so that waits for the owner.
-- **Only `sync` and `messages import` finish their current step on a stop** (owner, 2026-11-05, NEED-2214 A). Both
-  are `cooperative` (WC-LIFE-10) and hand the signal to cli-core's `syncMail`, which checks it before each read and
-  right after it, saving what was stored before it throws: the read in flight completes, its mail is stored by the
-  next run, and nothing after it starts (`src/stop.test.ts`). `messages export` is cooperative too and stops the same
-  way; whether it keeps that is an open question below.
+- **Only `sync`, `messages import` and `messages export` finish their current step on a stop** (owner, 2026-11-05,
+  NEED-2214 A for sync and import; 2026-11-06, NEED-2225 A for export). All three are `cooperative` (WC-LIFE-10).
+  Sync and import hand the signal to cli-core's `syncMail`, which checks it before each read and right after it,
+  saving what was stored before it throws: the read in flight completes, its mail is stored by the next run, and
+  nothing after it starts. Export checks it before each batch: the batch in flight is read and written, the answer
+  says `stopped: "cancelled"`, and `--resume` goes on (`src/stop.test.ts`). Every other long command stops at once.
 
 ## Open questions for the owner
 
-- **Should `messages export` keep finishing its current read on a stop?** NEED-2214 A allows it to `sync` and
-  `messages import` only, but export is `cooperative` as well, and a test run showed it finish the batch in flight,
-  write it, and answer `stopped: "cancelled"` within about a second, with no read after. In cli-core the same switch
-  also sets the deadline (WC-LIFE-5): without it, a stop cuts export at once, and each run ends after 30 seconds
-  instead of 15 minutes at a terminal (45 seconds over MCP). Either drop `cooperative` and accept short runs, or keep
-  it and record export as a third command allowed to finish its step.
+None at the moment.

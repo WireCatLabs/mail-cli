@@ -86,14 +86,16 @@ describe("secretToolLookup", () => {
   })
 })
 
-describe("sync and messages import", () => {
+describe("sync, messages import and messages export", () => {
   it("are cooperative, so the 30 s command default does not cut them and a stop keeps their work", () => {
     const program = createProgram()
     const sync = program.commands.find((command) => command.name() === "sync")
     const messages = program.commands.find((command) => command.name() === "messages")
     const importing = messages?.commands.find((command) => command.name() === "import")
+    const exporting = messages?.commands.find((command) => command.name() === "export")
     expect(sync && metaOf(sync).cooperative).toBe(true)
     expect(importing && metaOf(importing).cooperative).toBe(true)
+    expect(exporting && metaOf(exporting).cooperative).toBe(true)
   })
 })
 
