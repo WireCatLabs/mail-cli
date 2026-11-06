@@ -13,7 +13,10 @@ What `mail` keeps on your computer: the [shared security page](https://wirecat.d
 
 What leaves your computer besides the login to your mail server: `session start` on a new profile sends the domain of
 the address, never the address itself, to your DNS resolver, to `autoconfig.thunderbird.net` and to
-`autoconfig.<domain>`, to find the server. `--provider` or `--host` skips those lookups.
+`autoconfig.<domain>`, to find the server. `--provider` or `--host` skips those lookups. `sync` and
+`account inspect --domain-age` ask when a sender's domain was registered: IANA's list of registries
+(`data.iana.org`, once a month), then that domain's own registry over RDAP. They send the domain, never an address,
+and never ask about a big mailbox provider's domain or a sender you replied to.
 
 Security audits of `mail` follow the shared
 [security method](https://github.com/WireCatLabs/cli-testing/tree/main/docs/security) in cli-testing.
