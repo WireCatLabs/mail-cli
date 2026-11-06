@@ -21,6 +21,7 @@
   "review": "read",
   "messages show": "read",
   "messages acknowledge": "write",
+  "messages reset": "write",
   "messages export": "write",
   "messages import": "write",
   "messages mark-read": "write",

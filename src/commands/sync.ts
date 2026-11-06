@@ -4,10 +4,12 @@ import { timezoneOf, zonedMoment } from "@wirecat/cli-base/query"
 import type { NextStep } from "@wirecat/cli-base/standards"
 import {
   answerEntity,
+  answerLocally,
   baseContext,
   environmentOf,
   FETCH,
   itemOf,
+  outputFor,
   positiveCount,
   runBudgetOf,
 } from "@wirecat/cli-core/cli"
@@ -28,7 +30,6 @@ import { rethreadStored } from "../mail/rethread.js"
 import { DEFAULT_SYNC, providerFor, type SyncFolders } from "../providers.js"
 import { openMailStore } from "../store.js"
 import { closing, contextOf, openMail, refuseOffline, repeatable } from "./context.js"
-import { answerLocally } from "./times.js"
 
 const DAY_MS = 86_400_000
 const DEFAULT_DAYS = 30
@@ -296,6 +297,7 @@ export const syncCommand = (): Command =>
               : "this run moved nothing on: raise --timeout or --max-pages, then run sync again"
       answerLocally(
         this,
+        outputFor(this),
         itemOf(
           {
             address: report.account,

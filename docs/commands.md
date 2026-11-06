@@ -447,7 +447,7 @@ mail review [query] [options]
 |---|---|
 | `--unanswered [duration]` | only threads whose newest email came to you, in To or Cc, with no answer for this long — 4h, 1d; 24h if not given. |
 | `--waiting [duration]` | only threads where you wrote last and nobody answered for this long — 3d; 7d if not given. |
-| `--holder <name>` | read for this holder — an agent or a pipeline — what is stored past its processing mark, by store order; bulk, envelopes, drafts, suspicious senders and partial mail left out; each text without quoted earlier mail or the signature; `messages acknowledge` moves the mark. |
+| `--holder <name>` | read for this holder — an agent or a pipeline — what is stored past its processing mark, by store order; newsletters, envelopes, drafts, suspicious senders and partial mail left out; other bulk mail after the rest, as its subject and first lines (excerpt_only); each text without quoted earlier mail or the signature; `messages acknowledge` moves the mark. |
 | `--new` | what changed since the last `review --new` of this mailbox, a point per thread — for scheduled runs. |
 
 **Returns:** message summary — ref, chat_id, timestamp, sender_name, sender_is_me, outgoing, text, attachments, and 4 more; every field: mail commands info review
@@ -501,6 +501,27 @@ mail messages acknowledge [options]
 **Returns:** mail mark — holder, through_id, through_received_at, held, read, skipped, updated_at; every field: mail commands info messages acknowledge
 
 **Example:** `mail personal messages acknowledge --holder mail-triage --cursor 9123.1762090000000`
+
+### `mail messages reset`
+
+the owner moves a holder's mark back past the mail received since --since-time, or past the last --last emails it was given; its next reviews give that mail again. The answer says how many emails it reads again. Every reset counts, even one that leaves the mark where it is, so the holder's next findings key is new. An agent cannot: a holder only moves its own mark forward, with `messages acknowledge`
+
+**Changes something on this computer only.**
+
+```sh
+mail messages reset [options]
+```
+
+| Option | What it does |
+|---|---|
+| `--holder <name>` | whose mark: lower-case letters, digits and dashes, such as mail-triage. |
+| `--since-time <time>` | read again what was received since this ISO 8601 time, or 2d ago. |
+| `--last <n>` | read again the last n emails the holder was given. |
+| `--dry-run` | count what would be read again, and move nothing. |
+
+**Returns:** mail mark reset — mark, from_id, again, bulk, skipped, resets, dry_run; every field: mail commands info messages reset
+
+**Example:** `mail personal messages reset --holder mail-triage --last 8 --dry-run`, `mail personal messages reset --holder mail-triage --since-time 2026-11-04T00:00:00Z`
 
 ### `mail messages export`
 
@@ -762,7 +783,7 @@ mail messages delete [message] [options]
 
 ### `mail messages restore`
 
-undo a change run, last step first, for the messages still where it left them: Trash back to where they were, moves back, copies removed, flags as they were; a preview unless --yes
+undo a change run, last step first, for the messages still where it left them: Trash back to where they were, moves back, copies removed, flags as they were; --write undoes one write of it alone; a preview unless --yes
 
 **Changes something in the service.**
 
@@ -773,12 +794,13 @@ mail messages restore [options]
 | Option | What it does |
 |---|---|
 | `--run <id>` | the run id a change answered with (runs list shows recent runs). |
+| `--write <id>` | undo only this write of the run: an operation_id its answer listed under writes. |
 | `--yes` | make the change; without it, only say what would come back. |
 | `--dry-run` | only preview, even with --yes. |
 
 **Returns:** mail restore — run_id, restored_run_id, applied, command, logged, restorable, missing, restored, and 3 more; every field: mail commands info messages restore
 
-**Example:** `mail personal messages restore --run 20261101T101500Z-messages-delete-1a2b3c`, `mail personal messages restore --run 20261101T101500Z-messages-delete-1a2b3c --yes`
+**Example:** `mail personal messages restore --run 20261101T101500Z-messages-delete-1a2b3c`, `mail personal messages restore --run 20261101T101500Z-messages-delete-1a2b3c --yes`, `mail personal messages restore --run 20261101T101500Z-messages-delete-1a2b3c --write <id> --yes`
 
 ### `mail messages send`
 
@@ -808,7 +830,7 @@ mail messages send [text] [options]
 | `--reply-to <message>` | answer this msg:email/… reference: In-Reply-To, References, Re: and the quote. |
 | `--reply-all` | with --reply-to, also to everyone the original went to, except you. |
 
-**Returns:** mail send — sent, operation_id, message_id, from, to, cc, bcc, subject, and 9 more; every field: mail commands info messages send
+**Returns:** mail send — sent, operation_id, message_id, from, to, cc, bcc, subject, and 10 more; every field: mail commands info messages send
 
 **Example:** `mail personal messages send --to ann@example.com --subject "Lunch" "See you at noon."`, `mail personal messages send --reply-to 'msg:email/me%40example.com/thread-1/1001' "Thanks, done."`, `mail personal messages send --to ann@example.com --subject Report --file ./report.pdf "The report."`
 
@@ -839,7 +861,7 @@ mail messages forward <message> [text] [options]
 | `--dry-run` | build the message and show what would go; send nothing. |
 | `--subject <text>` | the subject instead of the original's with Fwd:. |
 
-**Returns:** mail send — sent, operation_id, message_id, from, to, cc, bcc, subject, and 9 more; every field: mail commands info messages forward
+**Returns:** mail send — sent, operation_id, message_id, from, to, cc, bcc, subject, and 10 more; every field: mail commands info messages forward
 
 **Example:** `mail personal messages forward 'msg:email/me%40example.com/thread-1/1001' --to bob@example.com`, `mail personal messages forward 'msg:email/me%40example.com/thread-1/1001' --to bob@example.com "FYI"`
 
@@ -1091,7 +1113,7 @@ mail drafts send <draft> [options]
 | `--yes` | answer the question before sending to anyone but you. |
 | `--dry-run` | show what would go; send nothing. |
 
-**Returns:** mail send — sent, operation_id, message_id, from, to, cc, bcc, subject, and 9 more; every field: mail commands info drafts send
+**Returns:** mail send — sent, operation_id, message_id, from, to, cc, bcc, subject, and 10 more; every field: mail commands info drafts send
 
 **Example:** `mail personal drafts send 5b0e1c2a@example.com`
 
@@ -1632,7 +1654,7 @@ mail schedule list [query]
 |---|---|---|
 | `query` | optional | field:value terms that narrow the list — the fields are below. |
 
-**Returns:** scheduled job — name, kind, when, last; every field: mail commands info schedule list
+**Returns:** scheduled job — name, kind, when, last, spent_today_usd, max_cost_usd, max_cost_per_day_usd; every field: mail commands info schedule list
 
 **Example:** `mail personal schedule list`, `mail personal schedule list kind:agent`
 

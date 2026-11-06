@@ -6,6 +6,11 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Added
 
+- **mail runs on cli-core 0.587.0 and cli-base 0.80.0.** `messages reset --holder <name> --since-time <time> | --last
+  <n>` lets the owner move an agent's mail mark back, so its next `review --holder` gives that mail again
+  (`--dry-run` counts first). `review --holder` gives the findings key and leaves out newsletters rather than all bulk
+  mail; `schedule list` gives each agent schedule's cost caps. The shared store moves to version 52 (deals) the first
+  time mail opens it; an older WireCat tool still reads it.
 - **`messages restore --write <id>` undoes one write of a run and leaves the others.** The id is an `operation_id`
   the run's answer listed under `writes`. A later restore of the whole run undoes the rest. A run logged before writes
   had ids, or an id it does not hold, is refused as `not_found` (`mail.write-unknown`).
@@ -48,9 +53,10 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   over MCP, instead of 30 seconds.
 - **The iCloud steps say in plain words how to sign in with the short login.** They no longer quote a command line
   with its flags; `session start --help` still lists `--login`.
-- **`status`, `sync` and `messages restore` show a person their times in the local time zone.** A table read
-  `2025-12-31T14:00:00.000Z`; it now reads `2026-01-01 00:00`, with no offset, and a line `times in <zone>` names the
-  zone (the `TZ` of the computer, or the zone it is set to). JSON and JSONL answers keep UTC.
+- **Every screen shows a person their times in the local time zone:** `status`, `sync`, `messages restore`, and, with
+  cli-core 0.587.0, `search messages`, `messages show`, `conversations list|show`, `review` and `runs list|show`. A
+  table read `2025-12-31T14:00:00.000Z`; it now reads `2026-01-01 00:00`, with no offset, and a line `times in <zone>`
+  names the zone (the `TZ` of the computer, or the zone it is set to). JSON and JSONL answers keep UTC.
 - **Commands that talk to the mail server answer only after they closed the connection and the store.** `account
   check`, `account inspect`, `folders`, `sync`, `messages export`, the `messages` changes, `drafts` and the sends
   printed their answer first; a failing close now ends in an error instead of after a success. JSON answers are

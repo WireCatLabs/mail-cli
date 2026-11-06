@@ -1,6 +1,6 @@
 import { annotate } from "@wirecat/cli-base/commands"
 import type { NextStep } from "@wirecat/cli-base/standards"
-import { answerEntity, itemOf, REMOTE_WRITE } from "@wirecat/cli-core/cli"
+import { answerEntity, answerLocally, itemOf, outputFor, REMOTE_WRITE } from "@wirecat/cli-core/cli"
 import { Command } from "commander"
 import * as v from "valibot"
 import { IDENTITY } from "../identity.js"
@@ -8,7 +8,6 @@ import { readRun } from "../mail/changes.js"
 import { Changer } from "../mail/organise.js"
 import { restoreRun } from "../mail/restore.js"
 import { organising, writeSchema, yesOf } from "./organising.js"
-import { answerLocally } from "./times.js"
 
 const mailRestore = v.looseObject({
   run_id: v.nullable(v.string()),
@@ -94,6 +93,7 @@ Envelopes come back to search at once; mail with text is saved again by the next
           opened.answer(() =>
             answerLocally(
               this,
+              outputFor(this),
               itemOf(
                 {
                   run_id: log?.run.id ?? null,
