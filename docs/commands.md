@@ -1609,7 +1609,7 @@ mail schedule command <name> <args> [options]
 | `--at <HH:MM>` | every day at this local time. |
 | `--at-time <time>` | one run: 30m, 2d from now, or an ISO time; the schedule removes itself after it. |
 | `--notify-on <when>` | desktop notice after a run (default failures for an agent that repeats with --every, else always). One of: `always`, `failures`, `never`. |
-| `--to <route>` | also send the result, when --notify-on says so, by the owner's own tg or mail: telegram-bot:<profile>/<chat id or user:id>, or email:<profile>/<address>; repeat it for more. |
+| `--deliver-to <route>` | also send the result, when --notify-on says so, by the owner's own tg or mail: telegram-bot:<profile>/<chat id or user:id>, or email:<profile>/<address>; repeat it for more. |
 
 **Returns:** run mail <args…> on a timer — reads save what they read, so this is how a…
 
@@ -1640,7 +1640,7 @@ mail schedule agent <name> <harness> <prompt> [options]
 | `--at <HH:MM>` | every day at this local time. |
 | `--at-time <time>` | one run: 30m, 2d from now, or an ISO time; the schedule removes itself after it. |
 | `--notify-on <when>` | desktop notice after a run (default failures for an agent that repeats with --every, else always). One of: `always`, `failures`, `never`. |
-| `--to <route>` | also send the result, when --notify-on says so, by the owner's own tg or mail: telegram-bot:<profile>/<chat id or user:id>, or email:<profile>/<address>; repeat it for more. |
+| `--deliver-to <route>` | also send the result, when --notify-on says so, by the owner's own tg or mail: telegram-bot:<profile>/<chat id or user:id>, or email:<profile>/<address>; repeat it for more. |
 
 **Returns:** start an agent (claude or codex) with a prompt on a timer; it runs with…
 
@@ -1658,7 +1658,7 @@ mail schedule list [query]
 |---|---|---|
 | `query` | optional | field:value terms that narrow the list — the fields are below. |
 
-**Returns:** scheduled job — name, kind, when, last, notify, to, spent_today_usd, max_cost_usd, and 1 more; every field: mail commands info schedule list
+**Returns:** scheduled job — name, kind, when, last, notify, deliver_to, spent_today_usd, max_cost_usd, and 1 more; every field: mail commands info schedule list
 
 **Example:** `mail personal schedule list`, `mail personal schedule list kind:agent`
 

@@ -6,10 +6,13 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Fixed
 
-- **mail runs on cli-core 0.596.0.** `status` opens the store read-only even when an older WireCat tool left it at an
+- **mail runs on cli-core 0.600.0.** `status` opens the store read-only even when an older WireCat tool left it at an
   older schema: cli-core now brings it up to date first, so mail no longer does that by itself. The shared store moves
-  to version 53 (CRM pipelines kept apart per account), and an older WireCat tool still reads it. `schedule list` gives
-  each schedule's `notify` setting.
+  to version 54 (CRM pipelines kept apart per account, CRM field definitions), and an older WireCat tool still reads
+  it. `schedule list` gives each schedule's `notify` setting.
+- **`schedule agent` and `schedule command` send a run's result with `--deliver-to <route>`**
+  (`telegram-bot:<profile>/<chat>` or `email:<profile>/<address>`, repeated for more), and `schedule list` shows the
+  routes as `deliver_to`. `--to` keeps one meaning in mail: the address a message goes to.
 
 ## 0.17.0 — 06.11.2026
 
