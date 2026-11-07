@@ -30,7 +30,7 @@ export const restoreCommand = (): Command =>
       examples: [
         `${IDENTITY.command} personal messages restore --run 20261101T101500Z-messages-delete-1a2b3c`,
         `${IDENTITY.command} personal messages restore --run 20261101T101500Z-messages-delete-1a2b3c --yes`,
-        `${IDENTITY.command} personal messages restore --run 20261101T101500Z-messages-delete-1a2b3c --write <id> --yes`,
+        `${IDENTITY.command} personal messages restore --run 20261101T101500Z-messages-delete-1a2b3c --write 4823901783465112048 --yes`,
       ],
     }),
     "mail_restore",

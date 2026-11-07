@@ -6,6 +6,8 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
 ### Fixed
 
+- **Undo docs name the real field.** A change answers with `run_id`, and the `messages restore --write` example shows a
+  real operation id.
 - **mail runs on cli-core 0.600.0.** `status` opens the store read-only even when an older WireCat tool left it at an
   older schema: cli-core now brings it up to date first, so mail no longer does that by itself. The shared store moves
   to version 54 (CRM pipelines kept apart per account, CRM field definitions), and an older WireCat tool still reads

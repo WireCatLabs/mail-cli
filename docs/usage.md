@@ -249,7 +249,7 @@ mail personal folders create Receipts                                  # also fo
 - **A preview first.** A deletion, a change chosen by `--filter`, and a change of more than 20 messages answer with
   what would change and the same command with `--yes` in `next`; nothing changes until then. `--dry-run` always only
   previews. One message's flag or move goes ahead at once.
-- **Undo.** Each change answers with a `run` id. Before it asks the server, the run records each message's place,
+- **Undo.** Each change answers with a `run_id`. Before it asks the server, the run records each message's place,
   flags and Gmail labels; `messages restore --run <id>` puts back what is still where the run left it: Trash back to
   its folder, a move moved back, a copy removed, flags as they were. Each write of a run is listed under `writes`
   with its `operation_id`; `--write <id>` undoes that write alone. The runs of `memo mail delete` restore here
