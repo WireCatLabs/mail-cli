@@ -800,7 +800,7 @@ mail messages restore [options]
 
 **Returns:** mail restore — run_id, restored_run_id, applied, command, logged, restorable, missing, restored, and 3 more; every field: mail commands info messages restore
 
-**Example:** `mail personal messages restore --run 20261101T101500Z-messages-delete-1a2b3c`, `mail personal messages restore --run 20261101T101500Z-messages-delete-1a2b3c --yes`, `mail personal messages restore --run 20261101T101500Z-messages-delete-1a2b3c --write <id> --yes`
+**Example:** `mail personal messages restore --run 20261101T101500Z-messages-delete-1a2b3c`, `mail personal messages restore --run 20261101T101500Z-messages-delete-1a2b3c --yes`, `mail personal messages restore --run 20261101T101500Z-messages-delete-1a2b3c --write 4823901783465112048 --yes`
 
 ### `mail messages send`
 
