@@ -8,6 +8,18 @@ const SHARED_SCHEDULE =
 
 export const UNTESTED: { command: string; option?: string; reason: string }[] = [
   {
+    command: "schedule command",
+    option: "--notify-on",
+    reason:
+      "cli-core src/cli/messenger/schedule.test.ts drives the shared handler the CLI mounts; schedule list shows the option's value (cli-core 0.599.0)",
+  },
+  {
+    command: "schedule command",
+    option: "--to",
+    reason:
+      "cli-core src/cli/messenger/schedule.test.ts drives the shared handler the CLI mounts; schedule list shows the option's value (cli-core 0.599.0)",
+  },
+  {
     command: "",
     option: "--help-all",
     reason: "Commander answers before any command runs, so the trace never sees it; contracts/help.snap covers help",
