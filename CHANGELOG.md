@@ -2,7 +2,7 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
-## 0.18.0 — 07.11.2026
+## Unreleased
 
 ### Added
 
@@ -13,6 +13,8 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   Gmail over OAuth send an `open_url` line. A refused or failed check carries a reason: `mail.login-refused`,
   `mail.app-password-required` and `mail.imap-disabled` (both from Gmail's own words), `mail.host-unreachable`.
   Nothing changes at a terminal.
+
+## 0.18.0 — 07.11.2026
 
 ### Fixed
 
