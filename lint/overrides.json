@@ -28,6 +28,13 @@
     "review_after": "2027-01-28"
   },
   {
+    "rule": "option-role",
+    "target": "session start --answer-stdin",
+    "reason": "Lets a window answer each sign-in question on stdin while --json is on; it comes from cli-core's answerStdinOption and no vocabulary role names it yet. Review when cli-base's vocabulary names one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-01-28"
+  },
+  {
     "rule": "list-without-query",
     "target": "folders list",
     "reason": "Lists the server's short fixed set of folders, which has nothing to filter; the query arrives with `messages list`. Review when messages list ships.",
