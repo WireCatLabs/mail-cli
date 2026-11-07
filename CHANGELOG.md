@@ -2,7 +2,7 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
-## Unreleased
+## 0.18.0 — 07.11.2026
 
 ### Fixed
 
