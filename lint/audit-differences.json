@@ -2,9 +2,9 @@
   {
     "group": "all",
     "rule": "same-flag-meaning",
-    "target": "mail+max+tg+wa --to",
-    "expected": "mail: <address>, tg: <chat>, max: <chat>, wa: <chat>",
-    "reason": "A mail recipient is an e-mail address, a messenger's a chat. The owner ruled both meanings belong to --to (cli-base 0.71 lists <address> beside <chat>, and the command lint accepts it); the cross-CLI audit does not read that list yet, so it still sees two meanings."
+    "target": "mail+max+memo+tg+wa --to",
+    "expected": "mail: <address>, tg: <chat>, max: <chat>, wa: <chat>, memo: <route>",
+    "reason": "A mail recipient is an e-mail address, a messenger's a chat. The owner ruled both meanings belong to --to (cli-base 0.71 lists <address> beside <chat>, and the command lint accepts it); the cross-CLI audit does not read that list yet, so it still sees two meanings. memo's published release still has cli-core 0.599's schedule --to <route>; cli-core 0.600.0 renamed it --deliver-to, so this entry goes stale when memo publishes on 0.600 and returns to mail+max+tg+wa."
   },
   {
     "group": "all",
@@ -12,5 +12,12 @@
     "target": "mail+memo --subject",
     "expected": "mail: <text>, memo: <ref>",
     "reason": "A mail subject line is text, memo's --subject a reference to what a note is about. The owner ruled both meanings belong to --subject (cli-base 0.71 lists <text> beside <ref>, and the command lint accepts it); the cross-CLI audit does not read that list yet, so it still sees two meanings."
+  },
+  {
+    "group": "all",
+    "rule": "same-path-contract",
+    "target": "drive+mail+max+memo+tg+wa+zm doctor --deep",
+    "expected": "drive: absent, mail: absent, max: absent, memo: switch, tg: absent, wa: absent, zm: absent",
+    "reason": "cli-core 0.599.0 added doctor --deep (cli-core #2578); of the published CLIs only memo has adopted it so far. mail's own doctor does not take it yet; the entry changes as the others publish on 0.599+."
   }
 ]
