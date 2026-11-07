@@ -1,7 +1,7 @@
 import { chmodSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { Readable } from "node:stream"
+import { PassThrough, Readable } from "node:stream"
 import { memoryKeyring } from "@wirecat/cli-base"
 import { constants } from "@wirecat/cli-core/constants"
 import { afterEach, describe, expect, it } from "vitest"
@@ -115,7 +115,7 @@ const harness = async (
     const link = /sign-in: (\S+)/.exec(text)?.[1]
     if (link) void consent(link)
   }
-  const mail = async (argv: string[], more: NodeJS.ProcessEnv = {}) => {
+  const mail = async (argv: string[], more: NodeJS.ProcessEnv = {}, extra: Partial<MailEnvironment> = {}) => {
     const out: string[] = []
     const err: string[] = []
     const code = await run(argv, {
@@ -146,6 +146,7 @@ const harness = async (
           credential,
           { sleep: async () => {}, ...bounds },
         ),
+      ...extra,
     } satisfies MailEnvironment)
     streams.push(...out, ...err)
     return { code, out: out.join("\n"), err: err.join("\n") }
@@ -207,6 +208,32 @@ describe("Microsoft sign-in", { timeout: 20_000 }, () => {
     expect(started.code, started.err).toBe(0)
     expect(started.err).toContain("Open Microsoft sign-in: https://login.microsoftonline.com/common/oauth2/v2.0/")
     expect(browser.opened).toBe(0)
+  })
+
+  it("tells a window the sign-in link and the login check as JSON lines with --answer-stdin", async () => {
+    const { mail, leaked } = await harness()
+    await ownApp(mail)
+    const started = await mail(
+      ["work", "session", "start", "--address", "me@outlook.com", "--json", "--answer-stdin"],
+      {},
+      { stdin: new PassThrough() },
+    )
+    expect(started.code, started.err).toBe(0)
+    const events = started.err
+      .split("\n")
+      .filter((line) => line.startsWith("{"))
+      .map((line) => JSON.parse(line))
+    const link = events.find((event) => event.event === "open_url")
+    expect(link).toMatchObject({ purpose: "Sign in to Microsoft and allow access" })
+    expect(link.url).toMatch(/^https:\/\/login\.microsoftonline\.com\//)
+    expect(events).toContainEqual({
+      event: "progress",
+      step: "login",
+      message: "checking the sign-in with outlook.office365.com",
+    })
+    expect(started.err).not.toContain("Open Microsoft sign-in:")
+    expect(item(started.out)).toMatchObject({ signed_in: true, auth: "oauth" })
+    expect(leaked()).toBeNull()
   })
 
   it("saves neither the sign-in nor the profile when the server refuses the new token", async () => {

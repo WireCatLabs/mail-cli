@@ -77,6 +77,7 @@ mail session start [options]
 | `--login <login>` | the login name, when it is not the full address. |
 | `--folder <folder>` | sync only this folder; repeat it for more. Default: ``. |
 | `--no-browser` | OAuth: print the sign-in link instead of opening the browser. |
+| `--answer-stdin` | with --json and no terminal: print each question as a `needs` line on stderr and read its answer, one line, from stdin. |
 | `--client-file <file>` | Gmail over OAuth: your own Google Desktop app client JSON (chmod 600). |
 | `--credential-storage <storage>` | where the password is kept: keyring (the default, which falls back to a private file by itself when no keyring works), or file, not recommended. Default: `keyring`. |
 
