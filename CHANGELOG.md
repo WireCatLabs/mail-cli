@@ -2,6 +2,18 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Added
+
+- **`session start --json --answer-stdin` signs in from WireCat Desktop's window.** Each question is a `needs` line
+  on stderr and its answer one line on stdin: the address (unless `--address` gives it), the IMAP and SMTP servers
+  only when discovery finds none, and the app password as a secret, with a hint naming the provider's own page on
+  making one. `progress` lines say when the server is looked up and the login checked; Outlook, Microsoft 365 and
+  Gmail over OAuth send an `open_url` line. A refused or failed check carries a reason: `mail.login-refused`,
+  `mail.app-password-required` and `mail.imap-disabled` (both from Gmail's own words), `mail.host-unreachable`.
+  Nothing changes at a terminal.
+
 ## 0.18.0 — 07.11.2026
 
 ### Fixed

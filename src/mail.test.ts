@@ -2,6 +2,7 @@ import { EventEmitter } from "node:events"
 import { mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { PassThrough } from "node:stream"
 import {
   brokenKeyring,
   isMovedRun,
@@ -157,6 +158,130 @@ describe("discovery", () => {
 
   it("says Outlook needs OAuth", async () => {
     expect(await discover("me@outlook.com")).toMatchObject({ auth: "oauth" })
+  })
+})
+
+describe("session start answered from a window (--json --answer-stdin)", () => {
+  const NOWHERE = { mx: async () => [], fetch: (async () => new Response("", { status: 404 })) as typeof fetch }
+  const window = (...answers: string[]) => {
+    const stdin = new PassThrough()
+    stdin.end(answers.map((answer) => `${answer}\n`).join(""))
+    return { stdin }
+  }
+  const eventsOf = (err: string) =>
+    err
+      .split("\n")
+      .filter((line) => line.startsWith("{"))
+      .map((line) => JSON.parse(line))
+  const reasonOf = (err: string) => eventsOf(err).at(-1)?.error?.reason
+  const START = ["ya", "session", "start", "--json", "--answer-stdin"]
+
+  it("asks the address, finds the server, asks the password as a secret with the provider's page, then checks it", async () => {
+    const { mail, keyring, everything } = await harness()
+    const done = await mail(START, window(ADDRESS, PASSWORD))
+    expect(done.code, done.err).toBe(0)
+    const events = eventsOf(done.err)
+    expect(events.filter((event) => event.event)).toEqual([
+      { event: "needs", field: "address", secret: false, prompt: "Mail address", hint: null },
+      { event: "progress", step: "discover", message: "finding the mail server for example.com" },
+      {
+        event: "needs",
+        field: "password",
+        secret: true,
+        prompt: `App password for ${ADDRESS}`,
+        hint: "Yandex takes an app password, not your account password. How to make one: https://yandex.ru/support/id/ru/authorization/app-passwords",
+      },
+      { event: "progress", step: "login", message: "checking the password with imap.yandex.com" },
+    ])
+    expect(item(done.out)).toMatchObject({ profile: "ya", signed_in: true, created: true })
+    expect(keyring.entries.size).toBe(1)
+    expect(everything([done])).not.toContain(PASSWORD)
+  })
+
+  it("does not ask the address given with --address", async () => {
+    const { mail } = await harness()
+    const done = await mail([...START, "--address", ADDRESS], window(PASSWORD))
+    expect(done.code, done.err).toBe(0)
+    expect(
+      eventsOf(done.err)
+        .filter((event) => event.event === "needs")
+        .map((event) => event.field),
+    ).toEqual(["password"])
+  })
+
+  it("asks the IMAP and SMTP servers only when discovery finds nothing, and keeps them in the profile", async () => {
+    const { mail, env } = await harness()
+    const done = await mail(START, {
+      discovery: NOWHERE,
+      ...window(ADDRESS, "mail.own.test", "", "smtp.own.test", "587", PASSWORD),
+    })
+    expect(done.code, done.err).toBe(0)
+    const asked = eventsOf(done.err).filter((event) => event.event === "needs")
+    expect(asked.map((event) => event.field)).toEqual([
+      "address",
+      "imap_host",
+      "imap_port",
+      "smtp_host",
+      "smtp_port",
+      "password",
+    ])
+    expect(asked.at(-1)?.hint).toContain("If your mail provider offers app passwords")
+    expect(JSON.parse(readFileSync(join(env.MAIL_CONFIG_DIR ?? "", "config.json"), "utf8")).profiles.ya).toEqual({
+      address: ADDRESS,
+      imap_host: "mail.own.test",
+      imap_port: 993,
+      imap_security: "tls",
+      smtp_host: "smtp.own.test",
+      smtp_port: 587,
+      smtp_security: "starttls",
+      auth: "app-password",
+    })
+  })
+
+  it("names the refusal by a stable reason and stores nothing", async () => {
+    const cases: [string | undefined, string][] = [
+      [undefined, "mail.login-refused"],
+      [
+        "[ALERT] Application-specific password required: https://support.google.com/accounts/answer/185833 (Failure)",
+        "mail.app-password-required",
+      ],
+      ["[ALERT] IMAP access is disabled for your domain.", "mail.imap-disabled"],
+    ]
+    for (const [loginRefusal, reason] of cases) {
+      await fake?.close()
+      const { mail, keyring, everything } = await harness(loginRefusal ? { fake: { loginRefusal } } : {})
+      const refused = await mail([...START, "--address", ADDRESS], window("wrong-password-1"))
+      expect(refused.code).not.toBe(0)
+      expect(reasonOf(refused.err)).toBe(reason)
+      expect(keyring.entries.size).toBe(0)
+      expect(everything([refused])).not.toContain("wrong-password-1")
+    }
+  })
+
+  it("says the host is unreachable when nothing answers on the server's port", async () => {
+    const { mail, keyring } = await harness()
+    const refused = await mail([...START, "--address", ADDRESS], {
+      ...window(PASSWORD),
+      backend: (endpoint: MailEndpoint, password: MailCredential, bounds: RunBounds = {}) =>
+        imapBackend({ ...endpoint, host: "127.0.0.1", port: 1, security: "plain" }, password, {
+          sleep: async () => {},
+          ...bounds,
+        }),
+    })
+    expect(refused.code).not.toBe(0)
+    expect(eventsOf(refused.err).at(-1)?.error).toMatchObject({
+      code: "network_error",
+      reason: "mail.host-unreachable",
+    })
+    expect(keyring.entries.size).toBe(0)
+  })
+
+  it("is cancelled when the window closes stdin before answering", async () => {
+    const { mail, keyring } = await harness()
+    const closed = await mail(START, window())
+    expect(closed.code).not.toBe(0)
+    expect(eventsOf(closed.err).at(-1)?.error).toMatchObject({ code: "cancelled" })
+    expect(keyring.entries.size).toBe(0)
   })
 })
 

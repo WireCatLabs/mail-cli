@@ -24,6 +24,8 @@ export interface FakeFolder {
 export interface FakeOptions {
   login: string
   password: string
+  /** The text after `NO` when LOGIN is refused, for the refusals a provider words its own way. */
+  loginRefusal?: string
   /**
    * OAuth access tokens the server takes, as Microsoft and Gmail do: AUTHENTICATE XOAUTH2 with SASL-IR, plus
    * OAUTHBEARER with `oauthBearer`. The test may change the list while the server runs, as a revocation does.
@@ -277,7 +279,7 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
         return send(
           ok
             ? `${tag} OK [CAPABILITY ${capabilities.join(" ")}] logged in`
-            : `${tag} NO [AUTHENTICATIONFAILED] Invalid credentials`,
+            : `${tag} NO ${options.loginRefusal ?? "[AUTHENTICATIONFAILED] Invalid credentials"}`,
         )
       }
       if (command === "AUTHENTICATE") {
