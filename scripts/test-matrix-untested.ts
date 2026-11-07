@@ -42,6 +42,8 @@ export const UNTESTED: { command: string; option?: string; reason: string }[] = 
   ...[
     { command: "schedule command", option: "--at" },
     { command: "schedule command", option: "--at-time" },
+    { command: "schedule command", option: "--notify-on" },
+    { command: "schedule command", option: "--deliver-to" },
     { command: "schedule agent" },
     { command: "schedule agent", option: "--max-cost" },
     { command: "schedule agent", option: "--every" },
