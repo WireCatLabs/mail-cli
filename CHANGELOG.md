@@ -14,7 +14,7 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   `mail.app-password-required` and `mail.imap-disabled` (both from Gmail's own words), `mail.host-unreachable`.
   Nothing changes at a terminal.
 
-### Changed
+### Fixed
 
 - Updated cli-core to 0.604.0.
 
