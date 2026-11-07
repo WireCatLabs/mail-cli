@@ -19,6 +19,8 @@ export interface Prepare {
   refused: string
   /** The official help pages the steps were read from. */
   sources: string[]
+  /** The official page on making the app password, one of `sources`; absent where no app password is used. */
+  passwordPage?: string
 }
 
 /** Which folders `sync` reads when neither the profile nor `--folder` names any: by role, else the named one. */
@@ -120,6 +122,7 @@ const TABLE = {
         "https://yandex.ru/support/yandex-360/customers/mail/ru/mail-clients/others",
         "https://yandex.ru/support/id/ru/authorization/app-passwords",
       ],
+      passwordPage: "https://yandex.ru/support/id/ru/authorization/app-passwords",
     },
   },
   gmail: {
@@ -161,6 +164,7 @@ const TABLE = {
       refused:
         "2-Step Verification may be off, the password may be the account password instead of an app password, or the account type may not offer app passwords.",
       sources: ["https://support.google.com/mail/answer/7126229", "https://support.google.com/accounts/answer/185833"],
+      passwordPage: "https://support.google.com/accounts/answer/185833",
     },
   },
   icloud: {
@@ -189,6 +193,7 @@ const TABLE = {
       refused:
         "the password may be the Apple Account password instead of an app specific password, or the login may need to be the name before @icloud.com instead of the full address.",
       sources: ["https://support.apple.com/en-us/102654", "https://support.apple.com/en-us/102525"],
+      passwordPage: "https://support.apple.com/en-us/102654",
     },
   },
   mailru: {
@@ -212,6 +217,7 @@ const TABLE = {
       ],
       refused: "the password may not be one made under «Пароли для внешних приложений» with «Полный доступ к Почте».",
       sources: ["https://help.mail.ru/mail/login/mailer/"],
+      passwordPage: "https://help.mail.ru/mail/login/mailer/",
     },
   },
   fastmail: {
@@ -236,6 +242,7 @@ const TABLE = {
       refused:
         "the password may be the account password instead of an app password, or the plan may not allow app passwords.",
       sources: ["https://www.fastmail.help/hc/en-us/articles/360058752854-App-passwords"],
+      passwordPage: "https://www.fastmail.help/hc/en-us/articles/360058752854-App-passwords",
     },
   },
   // Before outlook: a custom domain on outlook.office365.com is a Microsoft 365 tenant, and providerFor takes the first.

@@ -1,6 +1,7 @@
 import { CliError } from "@wirecat/cli-base"
 import { annotate } from "@wirecat/cli-base/commands"
 import {
+  answerStdinOption,
   baseContext,
   commandWords,
   FETCH,
@@ -12,11 +13,13 @@ import {
   refuseUnderReadOnly,
   renderAnswer,
   rootOf,
+  type SignInSteps,
   secretInputOf,
+  signInSteps,
 } from "@wirecat/cli-core/cli"
 import { Command } from "commander"
 import { configuration } from "../config.js"
-import { PROVIDER_NAMES } from "../discovery.js"
+import { type Discovery, domainOf, PROVIDER_NAMES } from "../discovery.js"
 import { IDENTITY } from "../identity.js"
 import { type MailEndpoint, passwordCredential } from "../mail/backend.js"
 import {
@@ -45,7 +48,7 @@ import {
   repeatable,
 } from "./context.js"
 import { checkLogin } from "./login.js"
-import { chosen, type MailboxFlags, type Pick, securityOf } from "./mailbox.js"
+import { chosen, type MailboxFlags, type Pick, portOf, securityOf } from "./mailbox.js"
 import { inWords, signInWords, worded } from "./words.js"
 
 const answer = (command: Command, item: unknown) => renderAnswer(command, outputFor(command), itemOf(item))
@@ -60,6 +63,45 @@ const mayAsk = (command: Command, environment: MailEnvironment, env: NodeJS.Proc
   !env.CI
 
 type Auth = "app-password" | "oauth"
+
+/** The window's hint under the password field: why an account password fails, and the provider's own page. */
+const passwordHint = (provider: string, prepare: Prepare): string =>
+  prepare.passwordPage
+    ? `${provider} takes an app password, not your account password. How to make one: ${prepare.passwordPage}`
+    : `If your mail provider offers app passwords, use one: the account password is often refused. Providers: ${PROVIDERS_URL}`
+
+/** RFC 8314's ports: the STARTTLS ones say so, any other is taken as TLS from the start. */
+const securityByPort = (port: number, starttls: number[]) => (starttls.includes(port) ? "starttls" : "tls")
+
+/**
+ * The window's way when discovery finds nothing: the servers asked one by one, as the terminal asks for a provider.
+ * The SMTP server may be left empty, and the profile then reads mail only until `config set` names one.
+ */
+const serverByHand = async (
+  steps: SignInSteps,
+  address: string,
+  flags: MailboxFlags,
+  environment: MailEnvironment,
+): Promise<{ found: Discovery; smtp: Record<string, unknown> }> => {
+  const ask = (field: string, prompt: string, hint: string) => steps.ask({ field, secret: false, prompt, hint })
+  const host = await ask("imap_host", "IMAP server", "from your provider's help page, such as imap.example.com")
+  if (!host) throw new CliError("validation_error", "no IMAP server was given", { param: "host" })
+  const imapPort = portOf((await ask("imap_port", "IMAP port", "empty for 993")) || "993")
+  const smtpHost = await ask("smtp_host", "SMTP server", "such as smtp.example.com; empty to only read mail")
+  const smtpPort = smtpHost ? portOf((await ask("smtp_port", "SMTP port", "empty for 465")) || "465") : undefined
+  const found = await chosen(
+    address,
+    { ...flags, host, port: String(imapPort), security: securityByPort(imapPort, [143]) },
+    environment,
+  )
+  return {
+    found,
+    smtp:
+      smtpHost && smtpPort
+        ? { smtp_host: smtpHost, smtp_port: smtpPort, smtp_security: securityByPort(smtpPort, [25, 587]) }
+        : {},
+  }
+}
 
 interface OAuthSignIn {
   provider: string
@@ -77,7 +119,12 @@ interface OAuthSignIn {
  * The browser sign-in of cli-core's keeper. `accept` logs in to IMAP with the new token before anything is saved
  * (WC-SECR-5): a refused login saves neither the sign-in nor the profile.
  */
-const signInWithOAuth = async (command: Command, context: ReturnType<typeof contextOf>, given: OAuthSignIn) => {
+const signInWithOAuth = async (
+  command: Command,
+  context: ReturnType<typeof contextOf>,
+  given: OAuthSignIn,
+  steps: SignInSteps,
+) => {
   const { env, environment } = context
   const output = outputFor(command)
   const name = OAUTH_NAMES[given.kind]
@@ -112,8 +159,29 @@ const signInWithOAuth = async (command: Command, context: ReturnType<typeof cont
     keeper.signIn({
       scopes: scopesAsked,
       openBrowser: given.browser ? (environment.openBrowser ?? openBrowser) : async () => {},
-      showUrl: (url) => output.streams.diagnostic(`Open ${name} sign-in: ${url}\n`),
+      showUrl: (url) =>
+        steps.answers
+          ? steps.openUrl(url, `Sign in to ${name} and allow access`)
+          : output.streams.diagnostic(`Open ${name} sign-in: ${url}\n`),
+      ...(steps.answers
+        ? {
+            readPaste: (stop: AbortSignal) =>
+              steps
+                .ask(
+                  {
+                    field: "redirect",
+                    secret: true,
+                    prompt: "The address the browser shows after you allow access",
+                    hint: "only if the browser could not come back to this computer by itself",
+                  },
+                  stop,
+                )
+                // The browser's callback won the race; the question is withdrawn, not failed.
+                .catch((error: unknown) => (stop.aborted ? new Promise<string>(() => {}) : Promise.reject(error))),
+          }
+        : {}),
       accept: async (tokens) => {
+        steps.progress("login", `checking the sign-in with ${given.endpoint.host}`)
         if (!tokens.accessToken) throw new CliError("authentication_error", `${name} returned no access token`)
         if (given.kind === "google") {
           const signedIn = await googleAddress(
@@ -187,6 +255,7 @@ export const sessionStartCommand = () =>
     .option("--login <login>", "the login name, when it is not the full address")
     .addOption(repeatable("--folder <folder>", "sync only this folder; repeat it for more"))
     .option("--no-browser", "OAuth: print the sign-in link instead of opening the browser")
+    .addOption(answerStdinOption())
     .option("--client-file <file>", "Gmail over OAuth: your own Google Desktop app client JSON (chmod 600)")
     .option(
       "--credential-storage <storage>",
@@ -201,6 +270,7 @@ export const sessionStartCommand = () =>
         credentialStorage: string
         browser: boolean
         clientFile?: string
+        answerStdin?: boolean
       },
     ) {
       const context = contextOf(this)
@@ -215,6 +285,12 @@ export const sessionStartCommand = () =>
       refuseUnderReadOnly(this, "session start")
       const output = outputFor(this)
       const asking = mayAsk(this, environment, env)
+      const steps = signInSteps({
+        diagnostic: (line) => output.streams.diagnostic(`${line}\n`),
+        json: output.format !== "pretty",
+        answers: flags.answerStdin === true,
+        ...(environment.stdin ? { input: environment.stdin } : {}),
+      })
       const ask = async (prompt: string, options: { echo?: boolean } = {}) => {
         const { readSecret } = await import("@wirecat/cli-core")
         return readSecret(prompt, { ...secretInputOf(this), ...options })
@@ -227,6 +303,7 @@ export const sessionStartCommand = () =>
       let prepare: Prepare
       let auth: Auth
       let created: (() => string) | undefined
+      let smtp: Record<string, unknown> = {}
       if (known) {
         const same = flags.address?.trim().toLowerCase() === context.settings.mailbox.address?.toLowerCase()
         const given = SERVER_FLAGS.filter(
@@ -254,7 +331,13 @@ export const sessionStartCommand = () =>
             { param: "client-file" },
           )
       } else {
-        const typedAddress = flags.address ?? (asking ? (await ask("Mail address: ", { echo: true })).trim() : "")
+        const typedAddress =
+          flags.address ??
+          (steps.answers
+            ? await steps.ask({ field: "address", secret: false, prompt: "Mail address" })
+            : asking
+              ? (await ask("Mail address: ", { echo: true })).trim()
+              : "")
         if (!typedAddress)
           throw new CliError(
             "validation_error",
@@ -270,14 +353,22 @@ export const sessionStartCommand = () =>
               )
             }
           : undefined
-        const found = await worded(context.profile, () => chosen(address, flags, environment, pick))
+        steps.progress("discover", `finding the mail server for ${domainOf(address)}`)
+        let found: Discovery
+        try {
+          found = await worded(context.profile, () => chosen(address, flags, environment, pick))
+        } catch (error) {
+          const lost = error instanceof CliError && error.details.reason === "mail.server-unknown"
+          if (!(steps.answers && lost && !flags.provider)) throw error
+          ;({ found, smtp } = await serverByHand(steps, address, flags, environment))
+        }
         auth = flags.clientFile ? "oauth" : found.auth
         endpoint = { ...found.imap, login: found.login }
         provider = found.provider
         prepare = found.prepare
         created = () => {
           try {
-            return writeProfile(env, context.profile, { ...profileOf(found, flags.folder), auth }, false).path
+            return writeProfile(env, context.profile, { ...profileOf(found, flags.folder), ...smtp, auth }, false).path
           } catch (error) {
             throw inWords(error, context.profile)
           }
@@ -292,17 +383,22 @@ export const sessionStartCommand = () =>
             `${provider} has no OAuth sign-in in ${IDENTITY.command}; it works for Outlook, Microsoft 365 and Gmail`,
             { param: flags.clientFile ? "client-file" : "address" },
           )
-        return signInWithOAuth(this, context, {
-          provider,
-          endpoint,
-          address,
-          kind,
-          prepare,
-          storage,
-          browser: flags.browser,
-          clientFile: flags.clientFile,
-          created,
-        })
+        return signInWithOAuth(
+          this,
+          context,
+          {
+            provider,
+            endpoint,
+            address,
+            kind,
+            prepare,
+            storage,
+            browser: flags.browser,
+            clientFile: flags.clientFile,
+            created,
+          },
+          steps,
+        )
       }
 
       output.renderer.note(`Server: ${endpoint.host}:${endpoint.port} (${endpoint.security}), login ${endpoint.login}`)
@@ -310,15 +406,25 @@ export const sessionStartCommand = () =>
       const passwordVariable = `${IDENTITY.envPrefix}_PASSWORD`
       const typed =
         env[passwordVariable]?.trim() ||
-        (asking ? await ask(`App password for ${endpoint.login} (hidden): `) : undefined)
+        (steps.answers
+          ? await steps.ask({
+              field: "password",
+              secret: true,
+              prompt: `App password for ${endpoint.login}`,
+              hint: passwordHint(provider, prepare),
+            })
+          : asking
+            ? await ask(`App password for ${endpoint.login} (hidden): `)
+            : undefined)
       if (!typed)
         throw new CliError(
           "validation_error",
-          asking
+          asking || steps.answers
             ? "no password was given; nothing was stored"
             : `there is no terminal to ask for the app password; set ${passwordVariable}`,
           { param: passwordVariable },
         )
+      steps.progress("login", `checking the password with ${endpoint.host}`)
       const { backend } = await openMail(context, { endpoint, credential: passwordCredential(typed) })
       const result = await baseContext(this, configuration.resolveSettings).run(() => checkLogin(backend, prepare))
       // Stored only after the server accepted it (WC-SECR-5), the profile with it.

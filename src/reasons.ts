@@ -2,6 +2,9 @@ import { defineReasons } from "@wirecat/cli-base/standards"
 
 const ENTRIES: [reason: string, code: string, message: string][] = [
   ["mail.login-refused", "authentication_error", "the mail server refused the login"],
+  ["mail.app-password-required", "authentication_error", "the server takes an app password, not the account password"],
+  ["mail.imap-disabled", "authentication_error", "IMAP is turned off for the mailbox"],
+  ["mail.host-unreachable", "network_error", "the mail server cannot be reached"],
   ["mail.no-password", "authentication_error", "no app password is stored for this profile"],
   ["mail.oauth-refused", "authentication_error", "the mail server refused the OAuth token even after a refresh"],
   ["mail.smtp-auth-disabled", "authentication_error", "Microsoft refused the OAuth login for sending"],

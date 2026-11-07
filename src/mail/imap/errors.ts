@@ -22,18 +22,35 @@ export const responseCodeOf = (error: unknown): string => {
   return e.serverResponseCode ?? String(e.response?.attributes?.[0]?.section?.[0]?.value ?? "").toUpperCase()
 }
 
+/**
+ * Gmail's [ALERT] texts are the only refusals that tell the cause apart (seen in user logs, not documented); Yandex
+ * and Microsoft send one text for a wrong password and IMAP off alike, so those stay `mail.login-refused`.
+ */
+const refusedLoginOf = (text: string): CliError => {
+  if (/application-specific password required/i.test(text))
+    return new CliError(
+      "authentication_error",
+      "the mail server takes an app password here, not the account password",
+      {
+        reason: "mail.app-password-required",
+      },
+    )
+  if (/IMAP access is disabled/i.test(text))
+    return new CliError("authentication_error", "IMAP is turned off for this mailbox", { reason: "mail.imap-disabled" })
+  return new CliError(
+    "authentication_error",
+    "the mail server refused the login; check the app password and that IMAP and app passwords are on in the account settings",
+    { reason: "mail.login-refused" },
+  )
+}
+
 /** The server's error text can quote mail or names, so only its codes reach the caller. */
 export const mapImapError = (error: unknown): CliError => {
   if (error instanceof CliError) return error
   // imapflow throws plain Errors with extra fields it does not type, and tests hand in bare objects.
   const e = (error ?? {}) as ImapErrorFields // imapflow does not type the fields it adds to its errors
   const responseCode = responseCodeOf(error)
-  if (e.authenticationFailed)
-    return new CliError(
-      "authentication_error",
-      "the mail server refused the login; check the app password and that IMAP and app passwords are on in the account settings",
-      { reason: "mail.login-refused" },
-    )
+  if (e.authenticationFailed) return refusedLoginOf(e.responseText ?? "")
   const throttled = e.code === "ETHROTTLE" || responseCode === "THROTTLED" || /throttl/i.test(e.responseText ?? "")
   if (throttled)
     return new CliError("rate_limited", "the mail server is limiting this account; wait and run the command again", {
