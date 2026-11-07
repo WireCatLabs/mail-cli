@@ -2,6 +2,13 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Fixed
+
+- **Opening the store no longer drops SQLite's file locks.** It used to open the file with truncate, which released the
+  POSIX locks other processes held, so two writers could overlap (cli-core 0.599.0).
+
 ## 0.17.0 — 06.11.2026
 
 ### Added

@@ -235,7 +235,9 @@ it("schedules a profile's sync on a timer and lists it", async () => {
   expect(calls.length).toBeGreaterThan(0)
   out.length = 0
   expect(await run(["ya", "schedule", "list", "--json"], options)).toBe(0)
-  expect(JSON.parse(out.join("")).items).toEqual([{ name: "mail-ya", kind: "command", when: "every 5m", last: null }])
+  expect(JSON.parse(out.join("")).items).toEqual([
+    { name: "mail-ya", kind: "command", when: "every 5m", last: null, notify: "always" },
+  ])
 })
 
 it.runIf(process.platform !== "win32")("runs the argv of a generated unit with no profile named", async () => {
