@@ -16,6 +16,13 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   deletes its stored mail and its change logs. `--keep-data` leaves the mail searchable. The old Himalaya keyring
   entry is not touched, and other profiles stay as they are.
 
+### Fixed
+
+- **`account remove` no longer revokes a Gmail grant that another profile uses.** Google ends a grant for the whole
+  Google account and app, so when another profile signs in to the same address (any letter case) with Google OAuth,
+  the revoke is skipped: the answer gives `revoked: false` and says "Google access kept: profile <name> uses the same
+  address".
+
 ## 0.21.0 — 08.11.2026
 
 ### Added

@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { memoryKeyring, resolvePaths } from "@wirecat/cli-base"
@@ -109,6 +109,22 @@ describe("mail account remove", () => {
     expect((await passwordStore({ env: t.env, profile: "home", keyring: t.keyring }).read())?.secret).toBe(
       "synthetic-password",
     )
+  })
+
+  it("keeps the Google grant when another profile signs in to the same address", async () => {
+    const t = await setup()
+    const path = join(t.paths.config, "config.json")
+    const config = JSON.parse(readFileSync(path, "utf8"))
+    config.profiles.twin = { address: "Me@Gmail.com", auth: "oauth", imap_host: "imap.gmail.com" }
+    writeFileSync(path, JSON.stringify(config))
+
+    const removed = await t.remove("work", "--keep-data")
+
+    expect(removed.code, removed.err).toBe(0)
+    expect(item(removed.out).revoked).toBe(false)
+    expect(JSON.stringify(item(removed.out))).toContain("Google access kept: profile twin uses the same address")
+    expect(t.revoked).not.toHaveBeenCalled()
+    expect(t.has("google", "work")).toBe(false)
   })
 
   it("deletes the change logs with --delete-data", async () => {
