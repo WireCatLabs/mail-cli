@@ -403,6 +403,38 @@ describe("Gmail with your own Google app", { timeout: 20_000 }, () => {
   })
 })
 
+describe("Gmail with WireCat's Google app", { timeout: 20_000 }, () => {
+  const gmail = () => harness("me@gmail.com", "aspmx.l.google.com", `openid email ${GOOGLE_MAIL_SCOPE}`)
+  const start = ["work", "session", "start", "--address", "me@gmail.com", "--json"]
+
+  it("starts a new Gmail profile over OAuth with --method oauth, and no client of the owner's", async () => {
+    const { mail, authorizeUrls, config, entry, leaked } = await gmail()
+    const started = await mail([...start, "--method", "oauth"])
+    expect(started.code, started.err).toBe(0)
+    expect(item(started.out)).toMatchObject({ provider: "google", client: "wirecat", source: "constants" })
+    expect(authorizeUrls.at(-1)?.searchParams.get("client_id")).toBe(constants().google.app.client_id)
+    expect(config().profiles.work).toMatchObject({ imap_host: "imap.gmail.com", auth: "oauth" })
+    expect(JSON.parse(entry("google") ?? "{}")).toMatchObject({ clientId: constants().google.app.client_id })
+    expect(leaked()).toBeNull()
+  })
+
+  it("refuses a --method that is unknown, contradicts the client file, or differs from the profile's", async () => {
+    const { mail } = await gmail()
+    for (const words of [
+      ["--method", "browser"],
+      ["--method", "app-password", "--client-file", "/nowhere/client.json"],
+    ])
+      expect(failure((await mail([...start, ...words])).err), words.join(" ")).toMatchObject({
+        code: "validation_error",
+        param: "method",
+      })
+    expect((await mail([...start, "--method", "oauth"])).code).toBe(0)
+    const switched = await mail(["work", "session", "start", "--method", "app-password", "--json"])
+    expect(failure(switched.err)).toMatchObject({ code: "validation_error", param: "method" })
+    expect(failure(switched.err).message).toContain("config set auth app-password")
+  })
+})
+
 describe("Google sign-in edges", { timeout: 20_000 }, () => {
   const gmail = () => harness("me@gmail.com", "aspmx.l.google.com", `openid email ${GOOGLE_MAIL_SCOPE}`)
   const file = () => {

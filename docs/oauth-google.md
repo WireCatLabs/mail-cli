@@ -1,15 +1,33 @@
-# Gmail with your own Google app
+# Gmail with Google sign-in
 
-Signing in with Google (OAuth) is the recommended way into Gmail. An app password is the other way: it needs 2-Step
-Verification on the account, and a Google Workspace admin can turn app passwords off. While Google has not verified
-WireCat's app, the app password is the fastest way in, so `mail` still uses one by default for a new Gmail profile.
+Signing in with Google (OAuth) is the recommended way into Gmail. A new profile signs in with WireCat's Google app,
+with nothing to make first:
+
+```sh
+mail gm session start --address me@gmail.com --method oauth
+```
+
+The browser opens Google's page. Choose the account and allow access; `mail` checks the address and logs in to IMAP
+before it saves anything.
+
+- **Google may show an "unverified app" screen.** Google has not finished its review of WireCat's app. Use the link on
+  that screen that goes on to the app, or stop and use your own app (below). See
+  [Google's page on unverified apps](https://support.google.com/cloud/answer/7454865).
+- **Google lets 100 new users in, in total, until the review ends.** `mail`, `gcal` and `drive` share WireCat's app,
+  so they share that limit. When it is reached, new users cannot sign in with WireCat's app; your own app has its
+  own limits.
+- **A Google Workspace admin can block the app** for the domain. Then use your own app, made in that domain, or an
+  app password.
+
+An app password is the other way: it needs 2-Step Verification on the account, and a Google Workspace admin can turn
+app passwords off. It skips Google's screens, so `mail` still uses one by default for a new Gmail profile without
+`--method oauth`.
 
 A Gmail OAuth sign-in uses WireCat's Google app unless you name your own. The first match wins:
 `--client-file <Desktop client JSON>`, then `MAIL_GOOGLE_CLIENT_ID` (with `MAIL_GOOGLE_CLIENT_SECRET`), then the
 profile's `google_client_id` setting (its secret still comes from `MAIL_GOOGLE_CLIENT_SECRET`), then WireCat's app.
-`mail doctor` shows which one a profile uses under `oauth_client`. Making a shared Google app public for mail is
-complex, so Google may refuse the sign-in with WireCat's app. If it does, make your own app as below (it takes about
-20 minutes and costs nothing), or use an app password.
+`mail doctor` shows which one a profile uses under `oauth_client`. To make your own app (about 20 minutes, no cost),
+follow the steps below.
 
 ## 1. A Google Cloud project just for mail
 
