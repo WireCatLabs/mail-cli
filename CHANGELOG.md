@@ -2,6 +2,15 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Fixed
+
+- **A `sync --rescan` that stops at its request cap now says so and says how to go on.** `--timeout` sets the cap (about
+  85 requests at the default) and `--max-pages` can only lower it, so a high `--max-pages` looked ignored. Running the
+  same `--rescan` again starts over from the newest mail and never reaches the oldest; the hint and the next step now
+  name the cap and tell you to run `sync` without `--rescan`, which continues from where the run stopped.
+
 ## 0.22.0 — 08.11.2026
 
 ### Added

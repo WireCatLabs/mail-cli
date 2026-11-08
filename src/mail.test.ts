@@ -960,6 +960,31 @@ describe("account check, folders and sync", () => {
     }
   })
 
+  it("tells a stopped --rescan to go on without --rescan, which would start over, and says the cap", async () => {
+    const messages = [1, 2, 3, 4, 5, 6].map((uid) => ({
+      uid,
+      raw: raw(`m${uid}`, `Subject ${uid}`, "body"),
+      flags: [] as string[],
+      date: `${10 + uid}-Oct-2026 11:00:00 +0000`,
+    }))
+    const { mail } = await ready({
+      tuning: { listSize: 1, fetchSize: 1, connections: 1 },
+      fake: { folders: [{ name: "INBOX", messages }] },
+    })
+    const rescan = ["ya", "sync", "--since-time", "2026-10-01", "--folder", "INBOX", "--rescan", "--json"]
+    const first = JSON.parse((await mail([...rescan, "--max-pages", "4"])).out)
+    expect(first.item).toMatchObject({ state: "partial", stopped: "requests", saved: 2, remaining: 4 })
+    expect(first.item.hint).toContain("stopped at its cap of 4 requests")
+    expect(first.item.hint).toContain("WITHOUT --rescan")
+    expect(first.next[0].args.rescan).toBeUndefined()
+    expect(first.next[0].why).toContain("without --rescan")
+
+    const goOn = ["ya", "sync", "--since-time", "2026-10-01", "--folder", "INBOX", "--max-pages", "4", "--json"]
+    let saved = first.item.saved
+    for (let run = 0; run < 3; run++) saved += item((await mail(goOn)).out).saved
+    expect(saved).toBe(6)
+  })
+
   it("says how far the sync is, from the saved resume points and without asking the server", async () => {
     const { mail } = await ready({ tuning: { listSize: 1, fetchSize: 1, connections: 1 } })
     expect(item((await mail(["ya", "status", "--json"])).out)).toMatchObject({ state: "partial", done: 0, total: null })

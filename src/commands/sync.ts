@@ -47,6 +47,12 @@ interface SyncFlags {
 const MB = 1024 * 1024
 
 /** A time without a zone is read in `zone`, and a date alone starts at its local midnight (WC-TIME-3, WC-TIME-5). */
+/** --timeout sets the request cap and --max-pages can only lower it, so a high --max-pages can look ignored. */
+const stoppedText = (stopped: string | undefined, budget: { limit: number | null }) =>
+  (stopped === "requests" || stopped === "deadline") && budget.limit !== null
+    ? `the run stopped at its cap of ${budget.limit} requests (--timeout sets it, --max-pages only lowers it); `
+    : ""
+
 export const sinceOf = (value: string | undefined, zone: string, now: number): Date => {
   if (value === undefined) return new Date(now - DEFAULT_DAYS * DAY_MS)
   const refuse = () =>
@@ -281,7 +287,9 @@ export const syncCommand = (): Command =>
                   ? `the run saved the ${args.maxMessages} new emails --max-messages allows and left ${report.remaining ?? 0}; running it again saves the next ones`
                   : unthreaded
                     ? "the run stopped while it moved stored replies into their threads; --rescan again goes on"
-                    : "the sync stopped before its end to answer in time; running it again goes on from where it stopped",
+                    : args.rescan
+                      ? "the rescan stopped before its end; this command without --rescan goes on from where it stopped"
+                      : "the sync stopped before its end to answer in time; running it again goes on from where it stopped",
                 safe_to_auto_execute: true,
               },
             ]
@@ -293,7 +301,7 @@ export const syncCommand = (): Command =>
           : limited
             ? `${report.remaining ?? 0} new emails are left; run sync again to save the next ${args.maxMessages}`
             : moved
-              ? `run sync again to continue; ${IDENTITY.command} ${context.profile} status shows how far it is`
+              ? `${stoppedText(stopped, budget)}${args.rescan ? "run sync again WITHOUT --rescan to continue: --rescan starts over from the newest mail" : "run sync again to continue"}; ${IDENTITY.command} ${context.profile} status shows how far it is`
               : "this run moved nothing on: raise --timeout or --max-pages, then run sync again"
       answerLocally(
         this,
