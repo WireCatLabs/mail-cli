@@ -349,10 +349,9 @@ export const sendCommand = (): Command =>
         annotate(new Command("send"), {
           effects: REMOTE_WRITE,
           examples: [
-            `${IDENTITY.command} personal messages send --to ann@example.com --subject "Lunch" "See you at noon."`,
+            `${IDENTITY.command} personal messages send --to ann@example.com --subject "Lunch" --html "<p>See you at <b>noon</b>.</p>"`,
             `${IDENTITY.command} personal messages send --reply-to 'msg:email/me%40example.com/thread-1/1001' "Thanks, done."`,
             `${IDENTITY.command} personal messages send --to ann@example.com --subject Report --file ./report.pdf "The report."`,
-            `${IDENTITY.command} personal messages send --to me@example.com --subject Digest --html < digest.html`,
           ],
         }),
       ),

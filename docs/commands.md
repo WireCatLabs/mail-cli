@@ -834,7 +834,7 @@ mail messages send [text] [options]
 
 **Returns:** mail send — sent, operation_id, message_id, from, to, cc, bcc, subject, and 11 more; every field: mail commands info messages send
 
-**Example:** `mail personal messages send --to ann@example.com --subject "Lunch" "See you at noon."`, `mail personal messages send --reply-to 'msg:email/me%40example.com/thread-1/1001' "Thanks, done."`, `mail personal messages send --to ann@example.com --subject Report --file ./report.pdf "The report."`, `mail personal messages send --to me@example.com --subject Digest --html < digest.html`
+**Example:** `mail personal messages send --to ann@example.com --subject "Lunch" --html "<p>See you at <b>noon</b>.</p>"`, `mail personal messages send --reply-to 'msg:email/me%40example.com/thread-1/1001' "Thanks, done."`, `mail personal messages send --to ann@example.com --subject Report --file ./report.pdf "The report."`
 
 ### `mail messages forward`
 
