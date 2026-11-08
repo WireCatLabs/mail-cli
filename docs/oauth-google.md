@@ -1,7 +1,8 @@
 # Gmail with your own Google app
 
-Gmail works with an app password, and `mail` uses one by default. Use OAuth instead when you cannot make an app
-password: no 2-Step Verification on the account, or a Google Workspace domain that turns app passwords off.
+Signing in with Google (OAuth) is the recommended way into Gmail. An app password is the other way: it needs 2-Step
+Verification on the account, and a Google Workspace admin can turn app passwords off. While Google has not verified
+WireCat's app, the app password is the fastest way in, so `mail` still uses one by default for a new Gmail profile.
 
 A Gmail OAuth sign-in uses WireCat's Google app unless you name your own. The first match wins:
 `--client-file <Desktop client JSON>`, then `MAIL_GOOGLE_CLIENT_ID` (with `MAIL_GOOGLE_CLIENT_SECRET`), then the
