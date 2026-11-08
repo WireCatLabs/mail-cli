@@ -105,6 +105,8 @@ export interface Draft {
   bcc: Person[]
   subject: string
   text: string
+  /** With `text` as its plain alternative: `multipart/alternative`. */
+  html?: string
   messageId: string
   date: Date
   inReplyTo?: string
@@ -130,6 +132,7 @@ export const build = async (draft: Draft): Promise<{ raw: Uint8Array; copy: Uint
     ...(draft.bcc.length ? { bcc: draft.bcc.map(header) } : {}),
     subject: draft.subject,
     text: draft.text,
+    ...(draft.html === undefined ? {} : { html: draft.html }),
     messageId: draft.messageId,
     date: draft.date,
     ...(draft.inReplyTo ? { inReplyTo: draft.inReplyTo } : {}),

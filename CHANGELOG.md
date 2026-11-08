@@ -13,6 +13,9 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   Gmail over OAuth send an `open_url` line. A refused or failed check carries a reason: `mail.login-refused`,
   `mail.app-password-required` and `mail.imap-disabled` (both from Gmail's own words), `mail.host-unreachable`.
   Nothing changes at a terminal.
+- **`messages send --html` sends an HTML message.** The text (argument or stdin) is HTML; the plain-text alternative
+  is made from it, and the mail goes as `multipart/alternative`. The answer gives `html_chars`. A reply keeps plain
+  text: `--html` with `--reply-to` is refused.
 
 ### Fixed
 
