@@ -830,10 +830,11 @@ mail messages send [text] [options]
 | `--subject <text>` | the subject; a reply takes the original's with Re:. |
 | `--reply-to <message>` | answer this msg:email/… reference: In-Reply-To, References, Re: and the quote. |
 | `--reply-all` | with --reply-to, also to everyone the original went to, except you. |
+| `--html` | the text is HTML; the plain-text alternative is made from it. |
 
-**Returns:** mail send — sent, operation_id, message_id, from, to, cc, bcc, subject, and 10 more; every field: mail commands info messages send
+**Returns:** mail send — sent, operation_id, message_id, from, to, cc, bcc, subject, and 11 more; every field: mail commands info messages send
 
-**Example:** `mail personal messages send --to ann@example.com --subject "Lunch" "See you at noon."`, `mail personal messages send --reply-to 'msg:email/me%40example.com/thread-1/1001' "Thanks, done."`, `mail personal messages send --to ann@example.com --subject Report --file ./report.pdf "The report."`
+**Example:** `mail personal messages send --to ann@example.com --subject "Lunch" --html "<p>See you at <b>noon</b>.</p>"`, `mail personal messages send --reply-to 'msg:email/me%40example.com/thread-1/1001' "Thanks, done."`, `mail personal messages send --to ann@example.com --subject Report --file ./report.pdf "The report."`
 
 ### `mail messages forward`
 
@@ -862,7 +863,7 @@ mail messages forward <message> [text] [options]
 | `--dry-run` | build the message and show what would go; send nothing. |
 | `--subject <text>` | the subject instead of the original's with Fwd:. |
 
-**Returns:** mail send — sent, operation_id, message_id, from, to, cc, bcc, subject, and 10 more; every field: mail commands info messages forward
+**Returns:** mail send — sent, operation_id, message_id, from, to, cc, bcc, subject, and 11 more; every field: mail commands info messages forward
 
 **Example:** `mail personal messages forward 'msg:email/me%40example.com/thread-1/1001' --to bob@example.com`, `mail personal messages forward 'msg:email/me%40example.com/thread-1/1001' --to bob@example.com "FYI"`
 
@@ -1114,7 +1115,7 @@ mail drafts send <draft> [options]
 | `--yes` | answer the question before sending to anyone but you. |
 | `--dry-run` | show what would go; send nothing. |
 
-**Returns:** mail send — sent, operation_id, message_id, from, to, cc, bcc, subject, and 10 more; every field: mail commands info drafts send
+**Returns:** mail send — sent, operation_id, message_id, from, to, cc, bcc, subject, and 11 more; every field: mail commands info drafts send
 
 **Example:** `mail personal drafts send 5b0e1c2a@example.com`
 

@@ -11,6 +11,7 @@ import {
   REMOTE_WRITE,
   renderAnswer,
 } from "@wirecat/cli-core/cli"
+import { htmlToText } from "@wirecat/cli-core/mail"
 import { levelFor, newOperationId, readUpload } from "@wirecat/cli-core/sends"
 import { Command } from "commander"
 import * as v from "valibot"
@@ -46,6 +47,7 @@ interface SendFlags {
   file?: string[]
   replyTo?: string
   replyAll?: boolean
+  html?: boolean
   operationId?: string
   allowAnyFile?: boolean
   dryRun?: boolean
@@ -63,6 +65,7 @@ export const mailSend = v.looseObject({
   subject: v.string(),
   attachments: v.array(v.strictObject({ name: v.string(), bytes: v.number() })),
   text_chars: v.number(),
+  html_chars: v.optional(v.number()),
   accepted: v.optional(v.number()),
   rejected: v.optional(v.number()),
   sent_copy: v.optional(v.nullable(v.string())),
@@ -150,6 +153,7 @@ const summaryOf = (draft: Draft) => ({
     ...(draft.message ? [{ name: draft.message.name, bytes: draft.message.raw.byteLength }] : []),
   ],
   text_chars: draft.text.length,
+  ...(draft.html === undefined ? {} : { html_chars: draft.html.length }),
 })
 
 /** What the y/N question shows: everything that leaves, and the start of the text, so a yes is a yes to this mail. */
@@ -247,6 +251,10 @@ const sendAction = async function (this: Command, text: string | undefined, flag
     throw new CliError("validation_error", "--reply-all answers the message --reply-to names", { param: "reply-all" })
   if (flags.replyTo === undefined && flags.subject === undefined)
     throw new CliError("validation_error", "a new message needs --subject", { param: "subject" })
+  if (flags.html && flags.replyTo !== undefined)
+    throw new CliError("validation_error", "--html sends a new message; a reply quotes its original as plain text", {
+      param: "html",
+    })
   const operationId = operationIdOf(flags.operationId)
   const body = text ?? (await readText(this))
   if (!body.trim() && !flags.file?.length)
@@ -285,7 +293,7 @@ const sendAction = async function (this: Command, text: string | undefined, flag
         from,
         ...given,
         subject: flags.subject ?? "",
-        text: body,
+        ...(flags.html ? { text: htmlToText(body), html: body } : { text: body }),
         messageId: messageIdFor(operationId, from.address),
         date: new Date(),
         files,
@@ -341,7 +349,7 @@ export const sendCommand = (): Command =>
         annotate(new Command("send"), {
           effects: REMOTE_WRITE,
           examples: [
-            `${IDENTITY.command} personal messages send --to ann@example.com --subject "Lunch" "See you at noon."`,
+            `${IDENTITY.command} personal messages send --to ann@example.com --subject "Lunch" --html "<p>See you at <b>noon</b>.</p>"`,
             `${IDENTITY.command} personal messages send --reply-to 'msg:email/me%40example.com/thread-1/1001' "Thanks, done."`,
             `${IDENTITY.command} personal messages send --to ann@example.com --subject Report --file ./report.pdf "The report."`,
           ],
@@ -361,6 +369,7 @@ export const sendCommand = (): Command =>
     .option("--subject <text>", "the subject; a reply takes the original's with Re:")
     .option("--reply-to <message>", "answer this msg:email/… reference: In-Reply-To, References, Re: and the quote")
     .option("--reply-all", "with --reply-to, also to everyone the original went to, except you")
+    .option("--html", "the text is HTML; the plain-text alternative is made from it")
     .action(sendAction)
 
 const forwardAction = async function (this: Command, reference: string, text: string | undefined, flags: SendFlags) {

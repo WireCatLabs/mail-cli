@@ -2,6 +2,14 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Added
+
+- **`messages send --html` sends an HTML message.** The text (argument or stdin) is HTML; the plain-text alternative
+  is made from it, and the mail goes as `multipart/alternative`. The answer gives `html_chars`. A reply keeps plain
+  text: `--html` with `--reply-to` is refused.
+
 ## 0.20.0 — 08.11.2026
 
 ### Changed — may break callers

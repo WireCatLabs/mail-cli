@@ -324,6 +324,7 @@ mail personal messages send --reply-to 'msg:email/me%40example.com/thread-1/%3Ci
 mail personal messages send --reply-to 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E' --reply-all "Thanks, all."   # also to the original's To and Cc, not you
 mail personal messages forward 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E' --to bob@example.com "FYI"           # the original attached whole
 mail personal messages send --to ann@example.com --subject Hi "Hello" --dry-run   # build it, send nothing
+mail personal messages send --to me@example.com --subject Digest --html < digest.html   # HTML, with a plain-text alternative made from it
 mail personal drafts send 5b0e1c2a@example.com                                     # send a saved draft, then remove it
 ```
 

@@ -431,6 +431,26 @@ describe("messages send over SMTP", { timeout: 20_000 }, () => {
     expect(smtp.received[0]?.raw).toContain("from a pipe")
   })
 
+  it("sends --html with a plain-text alternative made from it, and refuses it on a reply", async () => {
+    const { mail, smtp, refOf } = await harness()
+    const html = "<p>Morning &amp; <b>three</b> items</p><p>Second line</p>"
+    const sent = await mail(["ya", "messages", "send", "--to", ADDRESS, "--subject", "Digest", "--html", "--json"], {
+      stdin: Readable.from([html]),
+    })
+    expect(sent.code, sent.err).toBe(0)
+    expect(item(sent.out)).toMatchObject({ sent: true, html_chars: html.length })
+    const raw = smtp.received[0]?.raw ?? ""
+    expect(raw).toMatch(/Content-Type: multipart\/alternative/i)
+    expect(raw).toMatch(/Content-Type: text\/plain[\s\S]*Morning & three items\r?\nSecond line/i)
+    expect(raw).toMatch(/Content-Type: text\/html[\s\S]*<b>three<\/b>/i)
+
+    const parent = await refOf("subject:October")
+    const reply = await mail(["ya", "messages", "send", "--reply-to", parent, "--html", "<p>x</p>"])
+    expect(reply.code).not.toBe(0)
+    expect(reply.err).toContain("--html sends a new message")
+    expect(smtp.received).toHaveLength(1)
+  })
+
   it("leaves the copy to Gmail, which files sent mail itself", async () => {
     const folders: FakeFolder[] = [
       { name: "INBOX", uidValidity: 21, messages: [] },
