@@ -10,6 +10,21 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   your own is needed; `--client-file` still names yours. Google may show an "unverified app" screen until it finishes
   its review. `--method app-password` asks for the app password, the default for Gmail. `--method` sets only a new
   profile's way; an existing one is switched with `config set auth`.
+- **`mail <profile> account remove --keep-data|--delete-data`** removes a profile from this computer: it signs out
+  (a Gmail OAuth sign-in is also revoked at Google, which can end other sign-ins of the same Google app, as
+  `session end --revoke` does), deletes the app password or sign-in from the keyring, forgets the profile in the settings and its sign-in record, and, with `--delete-data`,
+  deletes its stored mail and its change logs. `--keep-data` leaves the mail searchable. The old Himalaya keyring
+  entry is not touched, and other profiles stay as they are.
+
+### Fixed
+
+- **`account remove` no longer revokes a Gmail grant that another profile uses.** Google ends a grant for the whole
+  Google account and app, so when another profile signs in to the same address (any letter case) with Google OAuth,
+  the revoke is skipped: the answer gives `revoked: false` and says "Google access kept: profile <name> uses the same
+  address".
+- **The Gmail hints point to the app-password page and call the password 16 letters.** `session start` now links
+  <https://myaccount.google.com/apppasswords> instead of the help article (kept under "Sources"), and says
+  "16-letter password", since Gmail app passwords are letters.
 
 ## 0.21.0 — 08.11.2026
 

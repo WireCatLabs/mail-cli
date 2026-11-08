@@ -7,7 +7,7 @@ ran it · ⛔ not tested offline, with the reason and where it is checked instea
 Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 [TESTING.md](TESTING.md) for how, and for the states and failures that cut across commands.
 
-**282 ✅ · 32 ⛔ · 0 ❌** — 80 commands, 234 options.
+**286 ✅ · 32 ⛔ · 0 ❌** — 81 commands, 237 options.
 
 | Command | Option | | Note |
 |---|---|---|---|
@@ -37,6 +37,10 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `account inspect` | `--limit` | ✅ |  |
 | `account inspect` | `--folder` | ✅ |  |
 | `account inspect` | `--domain-age` | ✅ |  |
+| `account remove` |  | ✅ |  |
+| `account remove` | `--keep-data` | ✅ |  |
+| `account remove` | `--delete-data` | ✅ |  |
+| `account remove` | `--dry-run` | ✅ |  |
 | `folders list` |  | ✅ |  |
 | `folders create` |  | ✅ |  |
 | `folders rename` |  | ✅ |  |

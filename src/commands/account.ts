@@ -27,6 +27,7 @@ import { IDENTITY } from "../identity.js"
 import { knownAges, lookUpAges, rdapDeps } from "../mail/domain-age.js"
 import { DEFAULT_SYNC, providerFor } from "../providers.js"
 import { PASSWORD_SOURCES } from "../secret.js"
+import { removeCommand } from "./account-remove.js"
 import { closing, contextOf, openMail, refuseOffline, repeatable } from "./context.js"
 import { foldersFor, sinceOf } from "./sync.js"
 
@@ -267,3 +268,4 @@ export const accountCommand = (): Command =>
     .description("the mailbox behind this profile")
     .addCommand(checkCommand())
     .addCommand(inspectCommand())
+    .addCommand(removeCommand())
