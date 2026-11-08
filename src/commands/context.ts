@@ -81,7 +81,12 @@ export const oauthKindOf = (mailbox: ReturnType<typeof contextOf>["settings"]["m
   mailbox.address ? providerFor(mailbox.address, mailbox.host)?.oauth : undefined
 
 /** A profile's OAuth sign-in, refreshed as each connect asks; nothing is read until a login needs a token. */
-export const oauthKeeperOf = (context: ReturnType<typeof contextOf>, kind: OAuthKind) => {
+export const oauthKeeperOf = (
+  context: Pick<ReturnType<typeof contextOf>, "env" | "profile" | "settings"> & {
+    environment: Pick<MailEnvironment, "keyring" | "fetch" | "signal">
+  },
+  kind: OAuthKind,
+) => {
   const { mailbox } = context.settings
   let client: OAuthClient
   try {

@@ -167,6 +167,26 @@ mail account inspect [options]
 
 **Example:** `mail gm account inspect`, `mail gm account inspect --since-time 2025-01-01 --limit 20 --domain-age`
 
+### `mail account remove`
+
+sign the profile out, then forget it on this computer: its settings, its saved sign-in and its files; --keep-data leaves its messages in the store, where search still finds them, --delete-data deletes them; asks first, or --yes
+
+**Changes something in the service.**
+
+```sh
+mail account remove [options]
+```
+
+| Option | What it does |
+|---|---|
+| `--keep-data` | leave what the store holds of this account, still searchable. |
+| `--delete-data` | delete what the store and the tool's own files hold of this account. |
+| `--dry-run` | list what it would remove and keep, and change nothing. |
+
+**Returns:** account removal — profile, data, dry_run, account, revoked, config_file, removed, kept; every field: mail commands info account remove
+
+**Example:** `mail personal account remove --keep-data --dry-run`, `mail personal account remove --delete-data --yes`
+
 ## `mail folders`
 
 the folders of this profile's mailbox

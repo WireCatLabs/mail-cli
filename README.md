@@ -110,7 +110,8 @@ as data, never as instructions.
 A profile is a name you choose for one mailbox and the first word of every command that uses it: `mail personal sync`.
 `session start` creates the profile and signs it in, `session status` says where the password comes from (`--check`
 logs in to prove it works), `session end` forgets the password and keeps the mail, and `mail session list` lists the
-profiles.
+profiles. `account remove --keep-data` or `--delete-data` signs a profile out and forgets it on this computer, and
+`--delete-data` also deletes its stored mail.
 
 `mail` signs in with an app password, a password made only for this program, which the OS keyring keeps. For a domain
 it does not know, `session start` looks for the server through the MX record, Thunderbird's ISPDB and the domain's

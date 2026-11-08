@@ -71,7 +71,7 @@ export interface ChangeRun {
 
 const RUN_ID = /^[\w.:-]+$/
 
-const runsDir = (env: NodeJS.ProcessEnv, account: string) =>
+export const runsDir = (env: NodeJS.ProcessEnv, account: string) =>
   join(resolvePaths({ appName: "mail-cli", prefix: "MAIL", env }).state, "changes", account.toLowerCase())
 
 const LINE_TYPES: readonly unknown[] = ["run", "step", "done", "restore", "end"]
