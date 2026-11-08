@@ -2,6 +2,15 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Changed — may break callers
+
+- **mail runs on cli-core 0.608.0, and the shared store moves to version 57.** A WireCat tool on a cli-core older
+  than 0.606.0 then refuses the store and asks to be upgraded, so update every WireCat CLI together. A CRM's deal and
+  lead people are stored as reported, not confirmed by the owner, and `config set` takes
+  `crm.<provider>:<account>.links` and `crm.<provider>:<account>.company-types`.
+
 ## 0.19.0 — 08.11.2026
 
 ### Added
