@@ -5,6 +5,7 @@
       "!**/node_modules",
       "!**/dist",
       "!.worktrees",
+      "!.claude",
       "!**/pnpm-lock.yaml",
       "!config/wirecat",
       "!lint/baseline"
