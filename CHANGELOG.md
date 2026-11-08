@@ -2,6 +2,15 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## Unreleased
+
+### Added
+
+- **`session start --method oauth` signs a new Gmail profile in with WireCat's Google app.** No Google Cloud client of
+  your own is needed; `--client-file` still names yours. Google may show an "unverified app" screen until it finishes
+  its review. `--method app-password` asks for the app password, the default for Gmail. `--method` sets only a new
+  profile's way; an existing one is switched with `config set auth`.
+
 ## 0.21.0 — 08.11.2026
 
 ### Added
