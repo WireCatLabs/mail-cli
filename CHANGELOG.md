@@ -22,6 +22,9 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   Google account and app, so when another profile signs in to the same address (any letter case) with Google OAuth,
   the revoke is skipped: the answer gives `revoked: false` and says "Google access kept: profile <name> uses the same
   address".
+- **The Gmail hints point to the app-password page and call the password 16 letters.** `session start` now links
+  <https://myaccount.google.com/apppasswords> instead of the help article (kept under "Sources"), and says
+  "16-letter password", since Gmail app passwords are letters.
 
 ## 0.21.0 — 08.11.2026
 

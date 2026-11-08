@@ -15,7 +15,7 @@ its screens; the help page is the source of truth.
 1. Personal Google Account: IMAP is always on, nothing to switch. Google Workspace: the administrator controls it, and the "Forwarding and POP/IMAP" tab in Gmail Settings, "See all settings", may be missing.
 2. Turn on 2-Step Verification for the Google Account.
 3. Open <https://myaccount.google.com/apppasswords> and create an app password. Google's help page does not list the labels of that screen, so none are quoted here.
-4. Copy the 16 digit password and use it instead of the account password.
+4. Copy the 16-letter password and use it instead of the account password.
 
 - App passwords are not offered if 2-Step Verification is set up only for security keys, on a work or school account, or with Advanced Protection on.
 

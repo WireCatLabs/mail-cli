@@ -156,7 +156,7 @@ const TABLE = {
         'Personal Google Account: IMAP is always on, nothing to switch. Google Workspace: the administrator controls it, and the "Forwarding and POP/IMAP" tab in Gmail Settings, "See all settings", may be missing.',
         "Turn on 2-Step Verification for the Google Account.",
         "Open https://myaccount.google.com/apppasswords and create an app password. Google's help page does not list the labels of that screen, so none are quoted here.",
-        "Copy the 16 digit password and use it instead of the account password.",
+        "Copy the 16-letter password and use it instead of the account password.",
       ],
       notes: [
         "App passwords are not offered if 2-Step Verification is set up only for security keys, on a work or school account, or with Advanced Protection on.",
@@ -164,7 +164,7 @@ const TABLE = {
       refused:
         "2-Step Verification may be off, the password may be the account password instead of an app password, or the account type may not offer app passwords.",
       sources: ["https://support.google.com/mail/answer/7126229", "https://support.google.com/accounts/answer/185833"],
-      passwordPage: "https://support.google.com/accounts/answer/185833",
+      passwordPage: "https://myaccount.google.com/apppasswords",
     },
   },
   icloud: {
