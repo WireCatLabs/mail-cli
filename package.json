@@ -40,7 +40,7 @@
     "smoke:bun": "bun scripts/smoke.ts && bun scripts/smoke-bundle.ts",
     "smoke:node": "node --experimental-strip-types scripts/smoke-bundle.ts",
     "package:check": "pnpm smoke",
-    "docs:check": "cli-dev docs-check --rules scripts/docs-rules.ts --pages && pnpm docs:spell && rumdl check --config config/wirecat/rumdl.toml README.md SECURITY.md CHANGELOG.md CLAUDE.md AGENTS.md docs/*.md docs/dev/*.md && pnpm docs:lint",
+    "docs:check": "cli-dev docs-check --rules scripts/docs-rules.ts --pages && node --experimental-strip-types scripts/changelog-fragments.ts --rules scripts/docs-rules.ts && pnpm docs:spell && rumdl check --config config/wirecat/rumdl.toml README.md SECURITY.md CHANGELOG.md CLAUDE.md AGENTS.md docs/*.md docs/dev/*.md && pnpm docs:lint",
     "docs:lint": "markdownlint-cli2",
     "contracts:check": "cli-contract contracts/plan.json",
     "contracts:upgrade": "pnpm --dir contracts/previous install --frozen-lockfile --ignore-scripts && cli-contract contracts/upgrade.json",
