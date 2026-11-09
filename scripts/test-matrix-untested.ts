@@ -7,6 +7,10 @@ const SHARED_SCHEDULE =
   "cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule"
 
 export const UNTESTED: { command: string; option?: string; reason: string }[] = [
+  ...[{ command: "schedule pause" }, { command: "schedule resume" }].map((entry) => ({
+    ...entry,
+    reason: "cli-core src/cli/schedule/schedule.test.ts drives it through the shared schedule commands the CLI mounts",
+  })),
   {
     command: "",
     option: "--help-all",
