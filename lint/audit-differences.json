@@ -2,9 +2,9 @@
   {
     "group": "all",
     "rule": "same-flag-meaning",
-    "target": "mail+max+tg+wa --to",
-    "expected": "mail: <address>, tg: <chat>, max: <chat>, wa: <chat>",
-    "reason": "A mail recipient is an e-mail address, a messenger's a chat. The owner ruled both meanings belong to --to (cli-base 0.71 lists <address> beside <chat>, and the command lint accepts it); the cross-CLI audit does not read that list yet, so it still sees two meanings."
+    "target": "mail+max+memo+tg+wa --to",
+    "expected": "mail: <address>, tg: <chat>, max: <chat>, wa: <chat>, memo: <route>",
+    "reason": "A mail recipient is an e-mail address, a messenger's a chat, and memo's --to a delivery route for a scheduled note. cli-base's vocabulary does not list <route> yet, so the cross-CLI audit sees a third meaning. Pending cli-base vocabulary (DEBT-260)."
   },
   {
     "group": "all",
