@@ -7,7 +7,7 @@ ran it · ⛔ not tested offline, with the reason and where it is checked instea
 Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 [TESTING.md](TESTING.md) for how, and for the states and failures that cut across commands.
 
-**286 ✅ · 32 ⛔ · 0 ❌** — 81 commands, 237 options.
+**286 ✅ · 36 ⛔ · 0 ❌** — 83 commands, 239 options.
 
 | Command | Option | | Note |
 |---|---|---|---|
@@ -306,7 +306,11 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `schedule agent` | `--deliver-to` | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |
 | `schedule list` |  | ✅ |  |
 | `schedule run` |  | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |
+| `schedule run` | `--no-notify` | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |
+| `schedule run` | `--deliver-to` | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |
 | `schedule remove` |  | ⛔ | cli-core's scheduleCommandFor; its schedule.test.ts drives it, schedules.os.test.ts runs the timers on macOS and Windows CI, and src/program.test.ts adds and lists a mail schedule |
+| `schedule pause` |  | ⛔ | cli-core src/cli/schedule/schedule.test.ts drives it through the shared schedule commands the CLI mounts |
+| `schedule resume` |  | ⛔ | cli-core src/cli/schedule/schedule.test.ts drives it through the shared schedule commands the CLI mounts |
 | `schedule exec` |  | ✅ |  |
 | `help` |  | ✅ |  |
 | *global* | `--version` | ⛔ | Commander answers before any command runs, so the trace never sees it; `pnpm version:check` checks it |
