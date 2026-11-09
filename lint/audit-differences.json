@@ -2,9 +2,9 @@
   {
     "group": "all",
     "rule": "same-flag-meaning",
-    "target": "mail+max+tg+wa --to",
-    "expected": "mail: <address>, tg: <chat>, max: <chat>, wa: <chat>",
-    "reason": "A mail recipient is an e-mail address, a messenger's a chat. memo no longer has --to."
+    "target": "mail+max+memo+tg+wa --to",
+    "expected": "mail: <address>, tg: <chat>, max: <chat>, wa: <chat>, memo: <date>",
+    "reason": "A mail recipient is an e-mail address, a messenger's a chat. memo's --to is the last day of `digest backfill --from <date> --to <date>` (memo #763): WireCat Desktop runs exactly that (owner, 08.11.2026), and memo holds a flag-two-meanings override until cli-base names a date range pair; then memo renames it with Desktop and this entry goes back to mail+max+tg+wa."
   },
   {
     "group": "all",
