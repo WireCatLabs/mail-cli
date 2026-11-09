@@ -17,6 +17,9 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   85 requests at the default) and `--max-pages` can only lower it, so a high `--max-pages` looked ignored. Running the
   same `--rescan` again starts over from the newest mail and never reaches the oldest; the hint and the next step now
   name the cap and tell you to run `sync` without `--rescan`, which continues from where the run stopped.
+- **cli-core 0.618.0 (was 0.614.0).** After `store recover run` (from memo, tg, max or wa) the recovered store makes
+  each mail folder forget the UIDs it listed past its last stored email from a day before the last deep check that
+  passed, so the next ordinary `mail sync` reads that mail again; `--rescan` is no longer needed for it.
 
 ## 0.22.0 — 08.11.2026
 
