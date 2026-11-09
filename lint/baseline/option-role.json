@@ -1,1 +1,4 @@
-["account remove --delete-data", "account remove --keep-data"]
+[
+  "account remove --delete-data",
+  "account remove --keep-data"
+]
