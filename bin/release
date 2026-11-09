@@ -115,6 +115,7 @@ rerun_if_changed "$@"
 latest=$(npm view "$package" version --prefer-online 2>/dev/null || true)
 versions=$(npm view "$package" versions --json --prefer-online 2>/dev/null || true)
 next=$(pnpm exec cli-dev next-version "$version" "$latest" "$versions")
+fragments=$(find changes -maxdepth 1 -type f -name '*.md' ! -name README.md 2>/dev/null | wc -l)
 if [ "$next" != "$version" ]; then
   taken=""
   if published; then taken=1; why="$version is already on npm"; else why="$version is not above npm's latest $latest"; fi
@@ -132,10 +133,18 @@ if [ "$next" != "$version" ]; then
     const today = new Date().toLocaleDateString("en-GB").replaceAll("/", ".")
     if (taken) swap("CHANGELOG.md", "\n## Unreleased\n", `\n## ${n} — ${today}\n`)
     else swap("CHANGELOG.md", `\n## ${o} — `, `\n## ${n} — `)' "$version" "$next" "$taken"
-  body="bin/release: $why. Only the number changes: package.json, src/version.ts, the CHANGELOG heading."
+  node --experimental-strip-types scripts/changelog-fragments.ts --rules scripts/docs-rules.ts "$next"
+  body="bin/release: $why. Only the number changes: package.json, src/version.ts, the CHANGELOG heading, and the
+changes/ fragments collected under it."
   land "release/$next" "chore(release): $next" "$body"
   rerun_if_changed "$@"
   version=$next
+elif [ "$fragments" -gt 0 ]; then
+  # The version was dated by hand; fragments merged since then still belong to it.
+  node --experimental-strip-types scripts/changelog-fragments.ts --rules scripts/docs-rules.ts "$version"
+  land "release/$version-changes" "chore(changelog): collect changes/ into $version" \
+    "bin/release: the changes/ fragments merged since $version was dated, collected into its section."
+  rerun_if_changed "$@"
 fi
 top=$(sed -n '/^## /{p;q;}' CHANGELOG.md)
 case "$top" in

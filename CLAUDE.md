@@ -11,6 +11,11 @@ permissions. A gap in cli-core is fixed in cli-core.
 - **Before `1.0.0`, `Added` raises the minor too.** This narrows the handbook's
   [WC-REL-7](node_modules/@wirecat/cli-base/docs/standards/releases.md): the levels are in step 6 of the
   [release skill](docs/dev/skills/release/SKILL.md), and `pnpm version:check` refuses a version raised too little.
+- **A pull request's changelog entries go in a fragment, not under `## Unreleased`.** A new file
+  `changes/<branch>.md` (lower case, `/` as `-`) with one or more of the changelog's `###` headings and the entries
+  under them, links relative to `changes/`. Every open pull request edits the same lines under `## Unreleased` and
+  conflicts at each merge. `pnpm docs:check` checks the fragments; `bin/release` collects them into the version's
+  section, so a fragment with `Added` needs a minor release.
 
 Add a rule here only when it holds for `mail` alone, and link the handbook rule it narrows.
 
