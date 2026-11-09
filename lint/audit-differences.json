@@ -1,20 +1,6 @@
 [
   {
     "group": "all",
-    "rule": "same-flag-meaning",
-    "target": "mail+max+memo+tg+wa --to",
-    "expected": "mail: <address>, tg: <chat>, max: <chat>, wa: <chat>, memo: <date>",
-    "reason": "A mail recipient is an e-mail address, a messenger's a chat. memo's --to is the last day of `digest backfill --from <date> --to <date>` (memo #763): WireCat Desktop runs exactly that (owner, 08.11.2026), and memo holds a flag-two-meanings override until cli-base names a date range pair; then memo renames it with Desktop and this entry goes back to mail+max+tg+wa."
-  },
-  {
-    "group": "all",
-    "rule": "same-flag-meaning",
-    "target": "mail+memo --subject",
-    "expected": "mail: <text>, memo: <ref>",
-    "reason": "A mail subject line is text, memo's --subject a reference to what a note is about. The owner ruled both meanings belong to --subject (cli-base 0.71 lists <text> beside <ref>, and the command lint accepts it); the cross-CLI audit does not read that list yet, so it still sees two meanings."
-  },
-  {
-    "group": "all",
     "rule": "same-path-contract",
     "target": "drive+mail+max+memo+tg+wa+zm doctor --deep",
     "expected": "drive: absent, mail: absent, max: absent, memo: switch, tg: absent, wa: absent, zm: absent",
