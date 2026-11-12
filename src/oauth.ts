@@ -272,6 +272,7 @@ const lockRecords = async (env: NodeJS.ProcessEnv): Promise<FileLock> => {
 }
 
 export const recordSignIn = async (env: NodeJS.ProcessEnv, profile: string, record: SignInRecord | undefined) => {
+  if (!record && !(profile in signInRecords(env))) return
   const lock = await lockRecords(env)
   try {
     const records = signInRecords(env)
