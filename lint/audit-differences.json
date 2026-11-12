@@ -5,5 +5,19 @@
     "target": "drive+mail+max+memo+tg+wa+zm doctor --deep",
     "expected": "drive: absent, mail: absent, max: absent, memo: switch, tg: absent, wa: absent, zm: absent",
     "reason": "cli-core 0.599.0 added doctor --deep (cli-core #2578); of the published CLIs only memo has adopted it so far. mail's own doctor does not take it yet; the entry changes as the others publish on 0.599+."
+  },
+  {
+    "group": "all",
+    "rule": "same-path-contract",
+    "target": "mail+max+tg+wa doctor reports create: summary",
+    "expected": "mail: \"the report file written: its path, the run it is about, and where to send it\", max: \"write a problem report to a file, and print how to send it\", tg: \"write a problem report to a file, and say where to send it\", wa: \"write a problem report to a file, and say where to send it\"",
+    "reason": "cli-core 0.647.0 (#2894) gave doctor reports show/create a summary that says what they return; max, tg and wa on npm still carry the older wording. The entry goes once they publish on 0.647.0+."
+  },
+  {
+    "group": "all",
+    "rule": "same-path-contract",
+    "target": "mail+max+tg+wa doctor reports show: summary",
+    "expected": "mail: \"what a report holds and never holds, and where to send it; writes nothing\", max: \"what a problem report holds and where it goes; writes nothing\", tg: \"what a problem report holds; writes nothing\", wa: \"what a problem report holds; writes nothing\"",
+    "reason": "cli-core 0.647.0 (#2894) gave doctor reports show/create a summary that says what they return; max, tg and wa on npm still carry the older wording. The entry goes once they publish on 0.647.0+."
   }
 ]
