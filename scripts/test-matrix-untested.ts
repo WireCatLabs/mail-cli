@@ -55,5 +55,15 @@ export const UNTESTED: { command: string; option?: string; reason: string }[] = 
     { command: "schedule agent", option: "--at-time" },
     { command: "schedule run" },
     { command: "schedule remove" },
+    { command: "schedule agents list" },
   ].map((entry) => ({ ...entry, reason: SHARED_SCHEDULE })),
+  ...[
+    { command: "doctor reports show" },
+    { command: "doctor reports create" },
+    { command: "doctor reports create", option: "--run" },
+    { command: "doctor reports create", option: "--output" },
+  ].map((entry) => ({
+    ...entry,
+    reason: "cli-core's appDoctorCommand; its app-mcp-command test creates and shows a report",
+  })),
 ]
