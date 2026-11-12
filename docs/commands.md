@@ -1226,6 +1226,41 @@ mail doctor [options]
 
 **Example:** `mail doctor`, `mail doctor --json`
 
+### `mail doctor reports`
+
+problem reports
+
+#### `mail doctor reports show`
+
+what a problem report holds; writes nothing
+
+```sh
+mail doctor reports show
+```
+
+**Returns:** what a report holds and never holds, and where to send it; writes nothing
+
+**Example:** `mail doctor reports show`
+
+#### `mail doctor reports create`
+
+write a problem report to a file, and say where to send it
+
+**Changes something on this computer only.**
+
+```sh
+mail doctor reports create [options]
+```
+
+| Option | What it does |
+|---|---|
+| `--run <id>` | the run the report is about; the newest failed one if not given. |
+| `--output <file>` | where to write it; a new file in this directory if not given. |
+
+**Returns:** the report file written: its path, the run it is about, and where to send it
+
+**Example:** `mail doctor reports create --output ./problem-report.json`
+
 ## `mail skill`
 
 the instructions an agent is given for this tool
@@ -1481,7 +1516,7 @@ mail config set <setting> <value> [options]
 
 | Argument | | What it is |
 |---|---|---|
-| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, keep_store_runs_for_days, runs_size_limit_mb, permissions, sends_per_hour, requests_per_minute, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, smtp_host, smtp_port, smtp_security, auth, google_client_id, microsoft_client_id, folders, read_attachments, max_attachment_mb, update_check, skill_hint, schedule_max_cost_per_day, schedule_model_claude, schedule_model_codex, schedule_lean_start, search_stemmers.cyrillic, search_stemmers.latin, owner_languages, crm.<provider>:<account>.links, crm.<provider>:<account>.company-types, crm.<provider>:<account>.scope, crm.<provider>:<account>.unassigned, crm.<provider>:<account>.self, crm.<provider>:<account>.stage-tasks. |
+| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, keep_store_runs_for_days, runs_size_limit_mb, permissions, sends_per_hour, requests_per_minute, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, smtp_host, smtp_port, smtp_security, auth, google_client_id, microsoft_client_id, folders, read_attachments, max_attachment_mb, update_check, skill_hint, schedule_max_cost_per_day, schedule_model_claude, schedule_model_codex, schedule_lean_start, search_stemmers.cyrillic, search_stemmers.latin, owner_languages, crm.<provider>:<account>.links, crm.<provider>:<account>.company-types, crm.<provider>:<account>.scope, crm.<provider>:<account>.unassigned, crm.<provider>:<account>.self, crm.<provider>:<account>.stage-tasks, crm.<provider>:<account>.activities. |
 | `value` | required | a number, true or false; for a group tg:work,max:Alice,email:me@x. |
 
 | Option | What it does |
@@ -1504,7 +1539,7 @@ mail config unset <setting> [options]
 
 | Argument | | What it is |
 |---|---|---|
-| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, keep_store_runs_for_days, runs_size_limit_mb, permissions, sends_per_hour, requests_per_minute, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, smtp_host, smtp_port, smtp_security, auth, google_client_id, microsoft_client_id, folders, read_attachments, max_attachment_mb, update_check, skill_hint, schedule_max_cost_per_day, schedule_model_claude, schedule_model_codex, schedule_lean_start, search_stemmers.cyrillic, search_stemmers.latin, owner_languages, crm.<provider>:<account>.links, crm.<provider>:<account>.company-types, crm.<provider>:<account>.scope, crm.<provider>:<account>.unassigned, crm.<provider>:<account>.self, crm.<provider>:<account>.stage-tasks. |
+| `setting` | required | one of: limit, timeout_ms, color, record, record_input, keep_runs_for_days, keep_successful_runs_for_days, keep_store_runs_for_days, runs_size_limit_mb, permissions, sends_per_hour, requests_per_minute, search_reranker, embedding_provider, embedding_model, embedding_base_url, embedding_dims, models, address, login, imap_host, imap_port, imap_security, smtp_host, smtp_port, smtp_security, auth, google_client_id, microsoft_client_id, folders, read_attachments, max_attachment_mb, update_check, skill_hint, schedule_max_cost_per_day, schedule_model_claude, schedule_model_codex, schedule_lean_start, search_stemmers.cyrillic, search_stemmers.latin, owner_languages, crm.<provider>:<account>.links, crm.<provider>:<account>.company-types, crm.<provider>:<account>.scope, crm.<provider>:<account>.unassigned, crm.<provider>:<account>.self, crm.<provider>:<account>.stage-tasks, crm.<provider>:<account>.activities. |
 
 | Option | What it does |
 |---|---|
