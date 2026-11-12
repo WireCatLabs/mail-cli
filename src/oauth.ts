@@ -1,8 +1,9 @@
 import { mkdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
-import { CliError, isMovedRun, type KeyringStore, resolvePaths, systemKeyring } from "@wirecat/cli-base"
+import { CliError, isCliError, isMovedRun, type KeyringStore, resolvePaths, systemKeyring } from "@wirecat/cli-base"
+import { hostFetch } from "@wirecat/cli-base/http"
 import { type AppSource, googleApp, microsoftApp } from "@wirecat/cli-core/constants"
-import { writeFileAtomic } from "@wirecat/cli-core/files"
+import { acquireLock, type FileLock, writeFileAtomic } from "@wirecat/cli-core/files"
 import {
   credentialStorage,
   type OAuthClient,
@@ -16,7 +17,7 @@ import {
 } from "@wirecat/cli-core/oauth"
 import * as v from "valibot"
 import type { Mailbox } from "./config.js"
-import { IDENTITY } from "./identity.js"
+import { DESKTOP, IDENTITY } from "./identity.js"
 import type { MailCredential } from "./mail/backend.js"
 
 export type OAuthKind = "microsoft" | "google"
@@ -114,16 +115,19 @@ const googleCodec: TokenCodec = {
 export const googleClient = (env: NodeJS.ProcessEnv, mailbox: Mailbox, file?: string, platform = process.platform) =>
   googleApp({ env, prefix: "MAIL", clientFile: file, configClientId: mailbox.googleClientId, platform })
 
+/** The sign-in hosts only, through the network or the fetch a test hands in. */
+export const signInFetch = (fetcher?: typeof fetch): typeof fetch =>
+  hostFetch({ hosts: DESKTOP.hosts ?? [], ...(fetcher ? { fetch: fetcher } : {}) }) as typeof fetch
+
 const UserInfo = v.object({ email: v.optional(v.string()), email_verified: v.optional(v.boolean()) })
 
 /** The address Google signed in, from OpenID userinfo; the token goes in a header, so no failure prints it. */
-export const googleAddress = async (accessToken: string, fetcher: typeof fetch, signal?: AbortSignal) => {
-  const timeout = AbortSignal.timeout(30_000)
+export const googleAddress = async (accessToken: string, fetcher?: typeof fetch, signal?: AbortSignal) => {
   let response: Response
   try {
-    response = await fetcher("https://openidconnect.googleapis.com/v1/userinfo", {
+    response = await signInFetch(fetcher)("https://openidconnect.googleapis.com/v1/userinfo", {
       headers: { authorization: `Bearer ${accessToken}`, accept: "application/json" },
-      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+      ...(signal ? { signal } : {}),
       redirect: "error",
     })
   } catch {
@@ -194,7 +198,7 @@ export const oauthKeeper = (options: KeeperOptions): TokenKeeper =>
         : microsoftProvider(options.client, options.address),
     storage: oauthStorage(options),
     lockDir: paths(options.env).config,
-    fetch: options.fetch ?? globalThis.fetch,
+    fetch: signInFetch(options.fetch),
     signInCommand: options.signInCommand,
     ...(options.signal ? { signal: options.signal } : {}),
   })
@@ -251,11 +255,32 @@ export const signInRecords = (env: NodeJS.ProcessEnv): Record<string, SignInReco
   }
 }
 
+const LOCK_WAIT_MS = 10_000
+
+/** The records' lock; another sign-in holds it for a moment only, so this waits for it. */
+const lockRecords = async (env: NodeJS.ProcessEnv): Promise<FileLock> => {
+  const started = Date.now()
+  for (;;) {
+    try {
+      return await acquireLock(`${recordsPath(env)}.lock`)
+    } catch (error) {
+      if (!isCliError(error) || error.details.reason !== "file.locked" || Date.now() - started > LOCK_WAIT_MS)
+        throw error
+      await new Promise((done) => setTimeout(done, 25))
+    }
+  }
+}
+
 export const recordSignIn = async (env: NodeJS.ProcessEnv, profile: string, record: SignInRecord | undefined) => {
-  const records = signInRecords(env)
-  if (record) records[profile] = record
-  else if (profile in records) delete records[profile]
-  else return
-  mkdirSync(paths(env).state, { recursive: true, mode: 0o700 })
-  await writeFileAtomic(recordsPath(env), `${JSON.stringify(records, null, 2)}\n`, { mode: 0o600 })
+  const lock = await lockRecords(env)
+  try {
+    const records = signInRecords(env)
+    if (record) records[profile] = record
+    else if (profile in records) delete records[profile]
+    else return
+    mkdirSync(paths(env).state, { recursive: true, mode: 0o700 })
+    await writeFileAtomic(recordsPath(env), `${JSON.stringify(records, null, 2)}\n`, { mode: 0o600 })
+  } finally {
+    await lock.release()
+  }
 }

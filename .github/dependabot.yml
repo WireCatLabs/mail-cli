@@ -5,6 +5,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      actions:
+        patterns:
+          - "*"
   # The shared packages, at most a day after they ship, so `new` always copies a template on the latest ones.
   - package-ecosystem: npm
     directory: /

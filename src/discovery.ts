@@ -1,5 +1,6 @@
 import { resolveMx } from "node:dns/promises"
 import { CliError } from "@wirecat/cli-base"
+import { hostFetch } from "@wirecat/cli-base/http"
 import {
   type Endpoint,
   GENERIC_PREPARE,
@@ -99,11 +100,15 @@ export const parseAutoconfig = (
   return undefined
 }
 
+// Each lookup may reach only the host it asks: ISPDB, or the autoconfig host of the person's own domain.
 const ask = async (url: string, deps: DiscoveryDeps): Promise<string | undefined> => {
   try {
-    const response = await (deps.fetch ?? fetch)(url, {
-      signal: AbortSignal.any([AbortSignal.timeout(8000), ...(deps.signal ? [deps.signal] : [])]),
+    const only = hostFetch({
+      hosts: [new URL(url).hostname],
+      timeoutMs: 8000,
+      ...(deps.fetch ? { fetch: deps.fetch } : {}),
     })
+    const response = await only(url, deps.signal ? { signal: deps.signal } : {})
     return response.ok ? await response.text() : undefined
   } catch {
     return undefined

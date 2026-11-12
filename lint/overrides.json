@@ -28,13 +28,6 @@
     "review_after": "2027-01-28"
   },
   {
-    "rule": "option-role",
-    "target": "session start --answer-stdin",
-    "reason": "Lets a window answer each sign-in question on stdin while --json is on; it comes from cli-core's answerStdinOption and no vocabulary role names it yet. Review when cli-base's vocabulary names one.",
-    "owner": "@WireCatLabs",
-    "review_after": "2027-01-28"
-  },
-  {
     "rule": "list-without-query",
     "target": "folders list",
     "reason": "Lists the server's short fixed set of folders, which has nothing to filter; the query arrives with `messages list`. Review when messages list ships.",
@@ -78,13 +71,6 @@
   },
   {
     "rule": "option-role",
-    "target": "session start --client-file",
-    "reason": "Names the owner's own Google OAuth Desktop client file for Gmail over OAuth; mail bundles no Google app (no CASA review). gcal-cli and drive-cli have the same option. Review when the vocabulary names an app-credential file: https://github.com/WireCatLabs/cli-base/issues/424",
-    "owner": "@WireCatLabs",
-    "review_after": "2027-01-28"
-  },
-  {
-    "rule": "option-role",
     "target": "sync --attachments",
     "reason": "Reads attachments on one sync over the profile's read_attachments (NEED-223). cli-base's vocabulary has no flag for it yet; it goes there with --no-attachments and --max-attachment-mb, and these three exceptions go.",
     "owner": "@leemour",
@@ -103,5 +89,124 @@
     "reason": "The largest attachment one sync reads, over the profile's max_attachment_mb (NEED-223). cli-base's vocabulary has no flag for it yet; see sync --attachments.",
     "owner": "@leemour",
     "review_after": "2026-12-05"
+  },
+  {
+    "rule": "undeclared-host",
+    "target": "account.apple.com",
+    "reason": "A help page in src/providers.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-05-13"
+  },
+  {
+    "rule": "undeclared-host",
+    "target": "e.mail.ru",
+    "reason": "A help page in src/providers.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-05-13"
+  },
+  {
+    "rule": "undeclared-host",
+    "target": "help.mail.ru",
+    "reason": "A help page in src/providers.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-05-13"
+  },
+  {
+    "rule": "undeclared-host",
+    "target": "id.yandex.ru",
+    "reason": "A help page in src/providers.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-05-13"
+  },
+  {
+    "rule": "undeclared-host",
+    "target": "knowledge.workspace.google.com",
+    "reason": "A help page in src/providers.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-05-13"
+  },
+  {
+    "rule": "undeclared-host",
+    "target": "learn.microsoft.com",
+    "reason": "A help page in src/providers.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-05-13"
+  },
+  {
+    "rule": "undeclared-host",
+    "target": "mail.yandex.ru",
+    "reason": "A help page in src/providers.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-05-13"
+  },
+  {
+    "rule": "undeclared-host",
+    "target": "myaccount.google.com",
+    "reason": "A help page in src/providers.ts and src/commands/session.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-05-13"
+  },
+  {
+    "rule": "undeclared-host",
+    "target": "myapps.microsoft.com",
+    "reason": "A help page in src/commands/session.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-05-13"
+  },
+  {
+    "rule": "undeclared-host",
+    "target": "support.apple.com",
+    "reason": "A help page in src/providers.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-05-13"
+  },
+  {
+    "rule": "undeclared-host",
+    "target": "support.google.com",
+    "reason": "A help page in src/providers.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-05-13"
+  },
+  {
+    "rule": "undeclared-host",
+    "target": "support.microsoft.com",
+    "reason": "A help page in src/providers.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-05-13"
+  },
+  {
+    "rule": "undeclared-host",
+    "target": "www.fastmail.help",
+    "reason": "A help page in src/providers.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-05-13"
+  },
+  {
+    "rule": "undeclared-host",
+    "target": "www.microsoft.com",
+    "reason": "A help page in src/commands/session.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-05-13"
+  },
+  {
+    "rule": "undeclared-host",
+    "target": "yandex.ru",
+    "reason": "A help page in src/providers.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-05-13"
+  },
+  {
+    "rule": "undeclared-host",
+    "target": "mail.google.com",
+    "reason": "An OAuth scope name in src/oauth.ts, which is written as a URL; mail never sends a request there, and hostFetch would refuse one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-05-13"
+  },
+  {
+    "rule": "undeclared-host",
+    "target": "outlook.office.com",
+    "reason": "An OAuth scope name in src/oauth.ts, which is written as a URL; mail never sends a request there, and hostFetch would refuse one.",
+    "owner": "@WireCatLabs",
+    "review_after": "2027-05-13"
   }
 ]

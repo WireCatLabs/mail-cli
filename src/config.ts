@@ -72,19 +72,21 @@ export interface Mailbox {
 /** mail mounts `schedule agent` without `--on-new-mail`, so only the settings every agent schedule reads. */
 const AGENT_SCHEDULE_SETTINGS = SCHEDULE_SETTINGS.filter(({ key }) => !key.startsWith("schedule_mail_"))
 
+// An ordinary change goes ahead, as tg's and drive's do; a deletion or a change of many asks (WC-PERM-22, NEED-2067 A).
+// Mail to anyone but the owner asks, and the owner may allow it (NEED-1898); WC-PERM-22 would make it deny.
+export const permissions = commandPermissions({
+  extra: ["messages.bulk", "messages.server-search", SEND_OTHERS_KEY],
+  defaults: {
+    "messages.delete": "ask",
+    "folders.delete": "ask",
+    "messages.bulk": "ask",
+    "drafts.delete": "ask",
+    [SEND_OTHERS_KEY]: "ask",
+  },
+})
+
 export const configuration = settingsFor<{ mailbox: Mailbox; schedule: ScheduleLimits }>(IDENTITY, {
-  // An ordinary change goes ahead, as tg's and drive's do; a deletion or a change of many asks (WC-PERM-22, NEED-2067 A).
-  // Mail to anyone but the owner asks, and the owner may allow it (NEED-1898); WC-PERM-22 would make it deny.
-  permissions: commandPermissions({
-    extra: ["messages.bulk", "messages.server-search", SEND_OTHERS_KEY],
-    defaults: {
-      "messages.delete": "ask",
-      "folders.delete": "ask",
-      "messages.bulk": "ask",
-      "drafts.delete": "ask",
-      [SEND_OTHERS_KEY]: "ask",
-    },
-  }),
+  permissions,
   profile: PROFILE_ENTRIES,
   defaults: {
     schedule_max_cost_per_day: v.optional(v.pipe(v.number(), v.minValue(0))),

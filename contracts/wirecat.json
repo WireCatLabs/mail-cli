@@ -1,0 +1,1317 @@
+{
+  "wcat_manifest": 2,
+  "name": "mail",
+  "description": "read mail over IMAP into the shared store and search it, with app passwords kept in the OS keyring",
+  "docs_url": "https://github.com/WireCatLabs/mail-cli#readme",
+  "package": "@wirecat/mail-cli",
+  "bin": "wcat-mail",
+  "commands": [
+    {
+      "path": [
+        "commands"
+      ],
+      "summary": "every command by section; --json prints its contract, one path per call",
+      "effects": {
+        "remote": "none",
+        "local": "none"
+      }
+    },
+    {
+      "path": [
+        "commands",
+        "info"
+      ],
+      "summary": "one command contract, or all schemas, error reasons and explicit overrides",
+      "effects": {
+        "remote": "none",
+        "local": "none"
+      }
+    },
+    {
+      "path": [
+        "session",
+        "start"
+      ],
+      "summary": "sign in; a new profile is created first",
+      "effects": {
+        "remote": "read",
+        "local": "write"
+      }
+    },
+    {
+      "path": [
+        "session",
+        "status"
+      ],
+      "summary": "show how this profile signs in; no secret is printed",
+      "effects": {
+        "remote": "read",
+        "local": "read"
+      },
+      "entity": "mail_session_status"
+    },
+    {
+      "path": [
+        "session",
+        "end"
+      ],
+      "summary": "forget this profile's password or sign-in; synced mail stays",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      }
+    },
+    {
+      "path": [
+        "session",
+        "list"
+      ],
+      "summary": "list the profiles here and whether each has an app password",
+      "effects": {
+        "remote": "none",
+        "local": "read"
+      },
+      "entity": "mail_profile"
+    },
+    {
+      "path": [
+        "account",
+        "check"
+      ],
+      "summary": "log in and list what the server supports",
+      "effects": {
+        "remote": "read",
+        "local": "read"
+      },
+      "permission": "account.check",
+      "entity": "mail_account_check"
+    },
+    {
+      "path": [
+        "account",
+        "inspect"
+      ],
+      "summary": "group the mailbox's mail by sender and list, to decide what to keep",
+      "effects": {
+        "remote": "read",
+        "local": "read"
+      },
+      "permission": "account.inspect",
+      "entity": "mail_account_inspect"
+    },
+    {
+      "path": [
+        "account",
+        "remove"
+      ],
+      "summary": "sign this profile out and forget it, keeping or deleting its data",
+      "effects": {
+        "remote": "write",
+        "local": "write"
+      },
+      "permission": "account.remove",
+      "entity": "account_removal"
+    },
+    {
+      "path": [
+        "folders",
+        "list"
+      ],
+      "summary": "the folders with their role and message counts",
+      "effects": {
+        "remote": "read",
+        "local": "read"
+      },
+      "permission": "folders.list",
+      "entity": "mail_folder"
+    },
+    {
+      "path": [
+        "folders",
+        "create"
+      ],
+      "summary": "make a folder",
+      "effects": {
+        "remote": "write",
+        "local": "write"
+      },
+      "permission": "folders.create",
+      "entity": "mail_folder_change"
+    },
+    {
+      "path": [
+        "folders",
+        "rename"
+      ],
+      "summary": "rename a folder",
+      "effects": {
+        "remote": "write",
+        "local": "write"
+      },
+      "permission": "folders.rename",
+      "entity": "mail_folder_change"
+    },
+    {
+      "path": [
+        "folders",
+        "delete"
+      ],
+      "summary": "delete an empty folder",
+      "effects": {
+        "remote": "write",
+        "local": "write"
+      },
+      "permission": "folders.delete",
+      "entity": "mail_folder_change"
+    },
+    {
+      "path": [
+        "sync"
+      ],
+      "summary": "read mail from the server into the shared store; mail already stored is skipped",
+      "effects": {
+        "remote": "read",
+        "local": "write"
+      },
+      "permission": "sync",
+      "entity": "mail_sync"
+    },
+    {
+      "path": [
+        "rules",
+        "list"
+      ],
+      "summary": "this mailbox's rules, protected ones first",
+      "effects": {
+        "remote": "none",
+        "local": "read"
+      },
+      "permission": "rules.list",
+      "entity": "mail_rule"
+    },
+    {
+      "path": [
+        "rules",
+        "add"
+      ],
+      "summary": "decide mail by sender, list, subject, age, size, label or kind; repeats replace",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      },
+      "permission": "rules.add",
+      "entity": "mail_rule"
+    },
+    {
+      "path": [
+        "rules",
+        "remove"
+      ],
+      "summary": "drop the rule with exactly these conditions",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      },
+      "permission": "rules.remove",
+      "entity": "mail_rule_change"
+    },
+    {
+      "path": [
+        "rules",
+        "apply"
+      ],
+      "summary": "cut stored mail an envelope rule matches to its envelope; dry run unless --yes",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      },
+      "permission": "rules.apply",
+      "entity": "mail_rules_apply"
+    },
+    {
+      "path": [
+        "rules",
+        "export"
+      ],
+      "summary": "print this mailbox's rules as JSON, to review, keep or move elsewhere",
+      "effects": {
+        "remote": "none",
+        "local": "read"
+      },
+      "permission": "rules.export"
+    },
+    {
+      "path": [
+        "rules",
+        "import"
+      ],
+      "summary": "import saved rules, or preview Gmail filters",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      },
+      "permission": "rules.import",
+      "entity": "mail_rule_import"
+    },
+    {
+      "path": [
+        "status"
+      ],
+      "summary": "how far the sync is, and how far each agent processed the mail",
+      "effects": {
+        "remote": "none",
+        "local": "read"
+      },
+      "permission": "status",
+      "entity": "mail_sync_status"
+    },
+    {
+      "path": [
+        "search",
+        "messages"
+      ],
+      "summary": "find emails by words and fields",
+      "effects": {
+        "remote": "read",
+        "local": "read"
+      },
+      "permission": "search.messages",
+      "entity": "message"
+    },
+    {
+      "path": [
+        "review"
+      ],
+      "summary": "threads with new mail, mail you owe an answer, mail waiting for one",
+      "effects": {
+        "remote": "none",
+        "local": "read"
+      },
+      "permission": "review",
+      "entity": "message"
+    },
+    {
+      "path": [
+        "messages",
+        "show"
+      ],
+      "summary": "one stored email whole, with the text of its attachments",
+      "effects": {
+        "remote": "read",
+        "local": "write"
+      },
+      "permission": "messages.show"
+    },
+    {
+      "path": [
+        "messages",
+        "acknowledge"
+      ],
+      "summary": "move a holder's processing mark to what it has read",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      },
+      "permission": "messages.acknowledge",
+      "entity": "mail_mark"
+    },
+    {
+      "path": [
+        "messages",
+        "reset"
+      ],
+      "summary": "move a holder's processing mark back, so it reads that mail again (owner only)",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      },
+      "permission": "messages.reset",
+      "entity": "mail_mark_reset"
+    },
+    {
+      "path": [
+        "messages",
+        "export"
+      ],
+      "summary": "write stored mail to mbox or Maildir files",
+      "effects": {
+        "remote": "read",
+        "local": "write"
+      },
+      "permission": "messages.export",
+      "entity": "mail_export"
+    },
+    {
+      "path": [
+        "messages",
+        "import"
+      ],
+      "summary": "add the mail of a Google Takeout mbox file to the store",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      },
+      "permission": "messages.import",
+      "entity": "mail_import"
+    },
+    {
+      "path": [
+        "messages",
+        "mark-read"
+      ],
+      "summary": "mark messages read",
+      "effects": {
+        "remote": "write",
+        "local": "write"
+      },
+      "permission": "messages.mark-read",
+      "entity": "mail_change"
+    },
+    {
+      "path": [
+        "messages",
+        "mark-unread"
+      ],
+      "summary": "mark messages unread",
+      "effects": {
+        "remote": "write",
+        "local": "write"
+      },
+      "permission": "messages.mark-unread",
+      "entity": "mail_change"
+    },
+    {
+      "path": [
+        "messages",
+        "star"
+      ],
+      "summary": "star messages (the \\Flagged flag)",
+      "effects": {
+        "remote": "write",
+        "local": "write"
+      },
+      "permission": "messages.star",
+      "entity": "mail_change"
+    },
+    {
+      "path": [
+        "messages",
+        "unstar"
+      ],
+      "summary": "take the star away",
+      "effects": {
+        "remote": "write",
+        "local": "write"
+      },
+      "permission": "messages.unstar",
+      "entity": "mail_change"
+    },
+    {
+      "path": [
+        "messages",
+        "update"
+      ],
+      "summary": "set, unset or replace flags and keywords",
+      "effects": {
+        "remote": "write",
+        "local": "write"
+      },
+      "permission": "messages.update",
+      "entity": "mail_change"
+    },
+    {
+      "path": [
+        "messages",
+        "move"
+      ],
+      "summary": "move messages to another folder",
+      "effects": {
+        "remote": "write",
+        "local": "write"
+      },
+      "permission": "messages.move",
+      "entity": "mail_change"
+    },
+    {
+      "path": [
+        "messages",
+        "copy"
+      ],
+      "summary": "copy messages to another folder",
+      "effects": {
+        "remote": "write",
+        "local": "write"
+      },
+      "permission": "messages.copy",
+      "entity": "mail_change"
+    },
+    {
+      "path": [
+        "messages",
+        "delete"
+      ],
+      "summary": "move messages to Trash; messages restore brings them back",
+      "effects": {
+        "remote": "write",
+        "local": "write"
+      },
+      "permission": "messages.delete",
+      "entity": "mail_change"
+    },
+    {
+      "path": [
+        "messages",
+        "restore"
+      ],
+      "summary": "undo a run of messages delete, move, copy or a flag change",
+      "effects": {
+        "remote": "write",
+        "local": "write"
+      },
+      "permission": "messages.restore",
+      "entity": "mail_restore"
+    },
+    {
+      "path": [
+        "messages",
+        "send"
+      ],
+      "summary": "send an email, or reply to one, over SMTP",
+      "effects": {
+        "remote": "write",
+        "local": "write"
+      },
+      "permission": "messages.send",
+      "entity": "mail_send"
+    },
+    {
+      "path": [
+        "messages",
+        "forward"
+      ],
+      "summary": "forward an email, attached whole, over SMTP",
+      "effects": {
+        "remote": "write",
+        "local": "write"
+      },
+      "permission": "messages.forward",
+      "entity": "mail_send"
+    },
+    {
+      "path": [
+        "conversations",
+        "list"
+      ],
+      "summary": "stored email threads, newest first",
+      "effects": {
+        "remote": "none",
+        "local": "read"
+      },
+      "permission": "conversations.list",
+      "entity": "mail_thread"
+    },
+    {
+      "path": [
+        "conversations",
+        "show"
+      ],
+      "summary": "one email thread, every email oldest first",
+      "effects": {
+        "remote": "none",
+        "local": "read"
+      },
+      "permission": "conversations.show"
+    },
+    {
+      "path": [
+        "attachments",
+        "list"
+      ],
+      "summary": "the files attached to one email, read from the server",
+      "effects": {
+        "remote": "read",
+        "local": "read"
+      },
+      "permission": "attachments.list",
+      "entity": "mail_attachment"
+    },
+    {
+      "path": [
+        "attachments",
+        "download"
+      ],
+      "summary": "save the files attached to one email",
+      "effects": {
+        "remote": "read",
+        "local": "write"
+      },
+      "permission": "attachments.download",
+      "entity": "mail_attachments_saved"
+    },
+    {
+      "path": [
+        "stats",
+        "messages",
+        "show"
+      ],
+      "summary": "count stored mail received and sent by day, week or sender",
+      "effects": {
+        "remote": "none",
+        "local": "read"
+      },
+      "permission": "stats.messages.show",
+      "entity": "mail_counts"
+    },
+    {
+      "path": [
+        "stats",
+        "messages",
+        "top"
+      ],
+      "summary": "senders, lists or domains with the most stored mail",
+      "effects": {
+        "remote": "none",
+        "local": "read"
+      },
+      "permission": "stats.messages.top",
+      "entity": "mail_group"
+    },
+    {
+      "path": [
+        "drafts",
+        "list"
+      ],
+      "summary": "the drafts on the server, newest first",
+      "effects": {
+        "remote": "read",
+        "local": "read"
+      },
+      "permission": "drafts.list",
+      "entity": "mail_draft"
+    },
+    {
+      "path": [
+        "drafts",
+        "create"
+      ],
+      "summary": "save a new draft for the owner to check and send",
+      "effects": {
+        "remote": "write",
+        "local": "write"
+      },
+      "permission": "drafts.create",
+      "entity": "mail_draft_change"
+    },
+    {
+      "path": [
+        "drafts",
+        "update"
+      ],
+      "summary": "change a draft: what is given replaces it, the rest stays",
+      "effects": {
+        "remote": "write",
+        "local": "write"
+      },
+      "permission": "drafts.update",
+      "entity": "mail_draft_change"
+    },
+    {
+      "path": [
+        "drafts",
+        "delete"
+      ],
+      "summary": "delete a draft for good",
+      "effects": {
+        "remote": "write",
+        "local": "write"
+      },
+      "permission": "drafts.delete",
+      "entity": "mail_draft_change"
+    },
+    {
+      "path": [
+        "drafts",
+        "send"
+      ],
+      "summary": "send a saved draft, then remove it from Drafts",
+      "effects": {
+        "remote": "write",
+        "local": "write"
+      },
+      "permission": "drafts.send",
+      "entity": "mail_send"
+    },
+    {
+      "path": [
+        "tags",
+        "add"
+      ],
+      "summary": "tag one stored email or conversation",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      },
+      "permission": "tags.add",
+      "entity": "mail_tag_change"
+    },
+    {
+      "path": [
+        "tags",
+        "remove"
+      ],
+      "summary": "untag one stored email or conversation",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      },
+      "permission": "tags.remove",
+      "entity": "mail_tag_change"
+    },
+    {
+      "path": [
+        "tags",
+        "list"
+      ],
+      "summary": "your tagged emails and conversations",
+      "effects": {
+        "remote": "none",
+        "local": "read"
+      },
+      "permission": "tags.list",
+      "entity": "mail_tag"
+    },
+    {
+      "path": [
+        "doctor"
+      ],
+      "summary": "the state this installation is in, without connecting unless --online",
+      "effects": {
+        "remote": "read",
+        "local": "read"
+      }
+    },
+    {
+      "path": [
+        "doctor",
+        "reports",
+        "show"
+      ],
+      "summary": "what a report holds and never holds, and where to send it; writes nothing",
+      "effects": {
+        "remote": "none",
+        "local": "none"
+      }
+    },
+    {
+      "path": [
+        "doctor",
+        "reports",
+        "create"
+      ],
+      "summary": "the report file written: its path, the run it is about, and where to send it",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      }
+    },
+    {
+      "path": [
+        "skill",
+        "show"
+      ],
+      "summary": "print the tool's instructions for AI agents",
+      "effects": {
+        "remote": "none",
+        "local": "read"
+      }
+    },
+    {
+      "path": [
+        "skill",
+        "install"
+      ],
+      "summary": "install the tool's instructions for AI agents",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      }
+    },
+    {
+      "path": [
+        "skill",
+        "status"
+      ],
+      "summary": "whether the installed instructions for AI agents match this version",
+      "effects": {
+        "remote": "none",
+        "local": "read"
+      }
+    },
+    {
+      "path": [
+        "mcp",
+        "serve"
+      ],
+      "summary": "serve this profile's commands to an AI agent",
+      "effects": {
+        "remote": "write",
+        "local": "write"
+      }
+    },
+    {
+      "path": [
+        "mcp",
+        "revoke"
+      ],
+      "summary": "forget every login given to a browser app",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      }
+    },
+    {
+      "path": [
+        "mcp",
+        "server",
+        "start"
+      ],
+      "summary": "start the HTTP MCP server in the background",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      }
+    },
+    {
+      "path": [
+        "mcp",
+        "server",
+        "stop"
+      ],
+      "summary": "stop the background HTTP MCP server",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      }
+    },
+    {
+      "path": [
+        "mcp",
+        "server",
+        "status"
+      ],
+      "summary": "whether the HTTP MCP server runs, its login code and the apps logged in",
+      "effects": {
+        "remote": "none",
+        "local": "read"
+      }
+    },
+    {
+      "path": [
+        "mcp",
+        "config"
+      ],
+      "summary": "print the local MCP configuration of this profile, or of those --profiles names",
+      "effects": {
+        "remote": "none",
+        "local": "read"
+      }
+    },
+    {
+      "path": [
+        "mcp",
+        "add"
+      ],
+      "summary": "add this profile's local MCP server to Codex or Claude Code",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      }
+    },
+    {
+      "path": [
+        "mcp",
+        "check"
+      ],
+      "summary": "check this profile's local MCP handshake and tool list",
+      "effects": {
+        "remote": "none",
+        "local": "read"
+      }
+    },
+    {
+      "path": [
+        "upgrade"
+      ],
+      "summary": "upgrade mail with the package manager that installed it; --check only looks",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      }
+    },
+    {
+      "path": [
+        "config",
+        "show"
+      ],
+      "summary": "the profile, the profiles that exist, and each setting with where it came from",
+      "effects": {
+        "remote": "none",
+        "local": "read"
+      }
+    },
+    {
+      "path": [
+        "config",
+        "set"
+      ],
+      "summary": "save a setting to the configuration file",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      }
+    },
+    {
+      "path": [
+        "config",
+        "unset"
+      ],
+      "summary": "remove a setting from the configuration file",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      }
+    },
+    {
+      "path": [
+        "config",
+        "migrate"
+      ],
+      "summary": "write each setting the file lacks at its default, keeping yours",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      }
+    },
+    {
+      "path": [
+        "config",
+        "repair"
+      ],
+      "summary": "fix the settings file's JSON syntax, keeping every value",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      }
+    },
+    {
+      "path": [
+        "runs",
+        "list"
+      ],
+      "summary": "recorded runs, newest first",
+      "effects": {
+        "remote": "none",
+        "local": "read"
+      },
+      "entity": "run"
+    },
+    {
+      "path": [
+        "runs",
+        "show"
+      ],
+      "summary": "one run: what it was, how it ended, and every event it logged",
+      "effects": {
+        "remote": "none",
+        "local": "read"
+      },
+      "entity": "run"
+    },
+    {
+      "path": [
+        "runs",
+        "path"
+      ],
+      "summary": "the directory holding one run",
+      "effects": {
+        "remote": "none",
+        "local": "none"
+      },
+      "entity": "run_location"
+    },
+    {
+      "path": [
+        "schedule",
+        "command"
+      ],
+      "summary": "run mail <args…> on a timer — reads save what they read, so this is how a…",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      },
+      "permission": "schedule.command"
+    },
+    {
+      "path": [
+        "schedule",
+        "agent"
+      ],
+      "summary": "start an agent (claude, codex, gemini, cursor, opencode, openclaw, hermes,…",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      },
+      "permission": "schedule.agent"
+    },
+    {
+      "path": [
+        "schedule",
+        "list"
+      ],
+      "summary": "the schedules, when they run and how their last run went",
+      "effects": {
+        "remote": "none",
+        "local": "read"
+      },
+      "permission": "schedule.list",
+      "entity": "scheduled_job"
+    },
+    {
+      "path": [
+        "schedule",
+        "agents",
+        "list"
+      ],
+      "summary": "the agents a schedule may start, and which are on PATH here",
+      "effects": {
+        "remote": "none",
+        "local": "read"
+      },
+      "permission": "schedule.agents.list",
+      "entity": "schedule_harness"
+    },
+    {
+      "path": [
+        "schedule",
+        "run"
+      ],
+      "summary": "run a schedule now, as its timer would, and wait for it; a paused one runs too",
+      "effects": {
+        "remote": "write",
+        "local": "write"
+      },
+      "permission": "schedule.run"
+    },
+    {
+      "path": [
+        "schedule",
+        "remove"
+      ],
+      "summary": "stop a schedule and remove its timer; its past output stays",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      },
+      "permission": "schedule.remove"
+    },
+    {
+      "path": [
+        "schedule",
+        "pause"
+      ],
+      "summary": "take a schedule off its timer and keep it; run runs it, resume puts it back",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      },
+      "permission": "schedule.pause"
+    },
+    {
+      "path": [
+        "schedule",
+        "resume"
+      ],
+      "summary": "put a paused schedule back on its timer",
+      "effects": {
+        "remote": "none",
+        "local": "write"
+      },
+      "permission": "schedule.resume"
+    },
+    {
+      "path": [
+        "schedule",
+        "exec"
+      ],
+      "summary": "what a timer runs, given the schedule's file; to run one by hand, use run",
+      "effects": {
+        "remote": "write",
+        "local": "write"
+      },
+      "permission": "schedule.exec"
+    }
+  ],
+  "entities": {
+    "mail_rule": {
+      "fields": [
+        "id",
+        "action",
+        "tags",
+        "reason",
+        "protected",
+        "source",
+        "decided_at"
+      ]
+    },
+    "message": {
+      "fields": [
+        "date",
+        "bulk"
+      ]
+    },
+    "mail_thread": {
+      "fields": [
+        "subject",
+        "emails_count",
+        "last_email_at"
+      ]
+    },
+    "mail_tag": {
+      "fields": [
+        "tag",
+        "type"
+      ]
+    },
+    "run": {
+      "fields": [
+        "run_id",
+        "command",
+        "profile",
+        "started_at",
+        "completed_at",
+        "status",
+        "requests",
+        "duration_ms",
+        "cli_version",
+        "runtime",
+        "platform",
+        "arch",
+        "error_code",
+        "provider_error",
+        "kept_because_failed",
+        "operations",
+        "codes",
+        "trace_id",
+        "cli_command",
+        "argv",
+        "unknown_command",
+        "via",
+        "events_dropped",
+        "directory",
+        "event_count",
+        "events_truncated"
+      ]
+    },
+    "scheduled_job": {
+      "fields": [
+        "name",
+        "kind",
+        "when",
+        "notify",
+        "deliver_to",
+        "harness",
+        "reports_cost",
+        "spent_today_usd",
+        "max_cost_usd",
+        "max_cost_per_day_usd"
+      ]
+    },
+    "schedule_harness": {
+      "fields": [
+        "id",
+        "name",
+        "programs",
+        "reports_cost",
+        "restricted",
+        "restricted_reason",
+        "allowed_with_ack",
+        "installed",
+        "path"
+      ]
+    }
+  },
+  "network": {
+    "hosts": [
+      "login.microsoftonline.com",
+      "accounts.google.com",
+      "oauth2.googleapis.com",
+      "openidconnect.googleapis.com",
+      "autoconfig.thunderbird.net",
+      "data.iana.org",
+      "imap.yandex.com",
+      "smtp.yandex.ru",
+      "imap.gmail.com",
+      "smtp.gmail.com",
+      "imap.mail.me.com",
+      "smtp.mail.me.com",
+      "imap.mail.ru",
+      "smtp.mail.ru",
+      "imap.fastmail.com",
+      "smtp.fastmail.com",
+      "outlook.office365.com",
+      "smtp.office365.com",
+      "smtp-mail.outlook.com"
+    ],
+    "user_hosts": "the mail server you sign in to, your domain's autoconfig file, and each sender domain's registry from IANA's list"
+  },
+  "desktop": {
+    "tagline": "Your mailbox over IMAP, searchable on your computer",
+    "profiles": {
+      "args": [
+        "session",
+        "list",
+        "--no-record",
+        "--json"
+      ],
+      "shape": "items"
+    },
+    "doctor": [
+      "{profile}",
+      "doctor",
+      "--record",
+      "--json"
+    ],
+    "runs": {
+      "list": [
+        "runs",
+        "list",
+        "{query}",
+        "--limit",
+        "{limit}",
+        "--page",
+        "{page}",
+        "--no-record",
+        "--json"
+      ],
+      "show": [
+        "runs",
+        "show",
+        "{run}",
+        "--no-record",
+        "--json"
+      ]
+    },
+    "search": null,
+    "setup": [
+      "{profile}",
+      "session",
+      "start"
+    ],
+    "signIn": {
+      "gives": "Lets your agent read, organise and send your mail.",
+      "asks": "Your mail address and an app password, or a Microsoft or Google sign-in in the browser."
+    },
+    "skill": {
+      "status": [
+        "skill",
+        "status",
+        "--no-record",
+        "--json"
+      ],
+      "install": [
+        "skill",
+        "install",
+        "--for",
+        "{target}",
+        "--json"
+      ],
+      "show": [
+        "skill",
+        "show",
+        "--no-record",
+        "--json"
+      ]
+    },
+    "mcpServer": {
+      "start": [
+        "mcp",
+        "server",
+        "start",
+        "--port",
+        "{port}",
+        "--public-url",
+        "{url}",
+        "--profiles",
+        "all",
+        "--json"
+      ],
+      "stop": [
+        "mcp",
+        "server",
+        "stop",
+        "--profiles",
+        "all",
+        "--json"
+      ],
+      "status": [
+        "mcp",
+        "server",
+        "status",
+        "--profiles",
+        "all",
+        "--no-record",
+        "--json"
+      ],
+      "revoke": [
+        "mcp",
+        "revoke",
+        "--profiles",
+        "all",
+        "--json"
+      ],
+      "config": [
+        "mcp",
+        "config",
+        "--profiles",
+        "all",
+        "--no-record",
+        "--json"
+      ]
+    },
+    "tasks": null,
+    "sync": {
+      "run": [
+        "{profile}",
+        "sync",
+        "--record",
+        "--json"
+      ],
+      "last": [
+        "runs",
+        "list",
+        "command:sync",
+        "status:success",
+        "--limit",
+        "50",
+        "--no-record",
+        "--json"
+      ],
+      "lastShape": "runs",
+      "what": "mail from the folders you choose",
+      "note": null
+    },
+    "storeInfo": null,
+    "storeTables": null,
+    "storeTableSizes": null,
+    "storeCheck": null,
+    "storeBackup": null,
+    "storeBackupEncrypted": null,
+    "storeResetPreview": null,
+    "storeReset": null,
+    "storage": {
+      "app": "mail-cli",
+      "env": "MAIL"
+    },
+    "settings": null
+  }
+}

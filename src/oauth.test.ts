@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
 import type { MailCredential, MailEndpoint, RunBounds } from "./mail/backend.js"
 import { imapBackend } from "./mail/imap/index.js"
-import { GOOGLE_MAIL_SCOPE, MICROSOFT_IMAP_SCOPE, MICROSOFT_SMTP_SCOPE, recordSignIn } from "./oauth.js"
+import { GOOGLE_MAIL_SCOPE, MICROSOFT_IMAP_SCOPE, MICROSOFT_SMTP_SCOPE, recordSignIn, signInRecords } from "./oauth.js"
 import { run } from "./program.js"
 import { providerFor } from "./providers.js"
 import { type FakeImap, startFakeImap } from "./testing/fake-imap.js"
@@ -499,4 +499,20 @@ it("keeps the sign-in records in a folder only the owner can open", async () => 
   if (process.platform === "win32") return
   expect(statSync(state).mode & 0o777).toBe(0o700)
   expect(statSync(join(state, "sign-ins.json")).mode & 0o777).toBe(0o600)
+})
+
+it("keeps every profile's record when sign-ins finish at the same time", async () => {
+  const env = { MAIL_STATE_DIR: join(mkdtempSync(join(tmpdir(), "mail-sign-ins-")), "state") }
+  const profiles = ["work", "home", "shop", "club", "team", "side"]
+  await Promise.all(
+    profiles.map((profile) =>
+      recordSignIn(env, profile, {
+        provider: "microsoft",
+        client: "wirecat",
+        signed_in_at: "2026-11-13T00:00:00.000Z",
+        scopes: [MICROSOFT_IMAP_SCOPE],
+      }),
+    ),
+  )
+  expect(Object.keys(signInRecords(env)).sort()).toEqual([...profiles].sort())
 })

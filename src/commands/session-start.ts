@@ -184,11 +184,7 @@ const signInWithOAuth = async (
         steps.progress("login", `checking the sign-in with ${given.endpoint.host}`)
         if (!tokens.accessToken) throw new CliError("authentication_error", `${name} returned no access token`)
         if (given.kind === "google") {
-          const signedIn = await googleAddress(
-            tokens.accessToken,
-            environment.fetch ?? globalThis.fetch,
-            environment.signal,
-          )
+          const signedIn = await googleAddress(tokens.accessToken, environment.fetch, environment.signal)
           if (signedIn !== given.address.toLowerCase())
             throw new CliError(
               "authentication_error",
