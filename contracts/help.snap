@@ -13,6 +13,7 @@ Works with:
   gcal                    Google Calendar events, searchable with your other WireCat data
   memo context <person>   one person across messengers, mail, notes and meetings
   b24                     Bitrix24 CRM: deals, leads and pipelines, searchable with your other WireCat data
+  pbx                     Asterisk PBX calls and recordings, searchable with your other WireCat data
 
 Start here:   mail personal session start --address <email>  (any profile name works)
 Next:         mail commands                                  every command, by section

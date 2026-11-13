@@ -1161,7 +1161,13 @@
       "smtp.fastmail.com",
       "outlook.office365.com",
       "smtp.office365.com",
-      "smtp-mail.outlook.com"
+      "smtp-mail.outlook.com",
+      "registry.npmjs.org",
+      "huggingface.co",
+      "*.huggingface.co",
+      "*.hf.co",
+      "github.com",
+      "*.githubusercontent.com"
     ],
     "user_hosts": "the mail server you sign in to, your domain's autoconfig file, and each sender domain's registry from IANA's list"
   },

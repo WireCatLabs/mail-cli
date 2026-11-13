@@ -49,8 +49,8 @@
     "version:check": "cli-dev version && node --experimental-strip-types scripts/version-level.ts",
     "version:sync": "cli-dev version --sync",
     "standards:check": "node config/wirecat/check.mjs",
-    "lint:commands": "pnpm build && cli-dev lint --cli dist/bin/mail.js --budget 30",
-    "audit:commands": "pnpm build && bash scripts/audit.sh",
+    "lint:commands": "pnpm build && cli-dev lint --cli dist/bin/mail.js --budget 24",
+    "audit:commands": "pnpm build && cli-dev audit --family --cli dist/bin/mail.js --differences lint/audit-differences.json",
     "ci:quick": "pnpm typecheck && pnpm build && pnpm lint:commands",
     "release:check": "pnpm standards:check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm lint:commands && pnpm audit:commands && pnpm contracts:check && pnpm contracts:upgrade && pnpm test:matrix:check && pnpm docs:check && pnpm generate:check && pnpm version:check && pnpm security:no-leak && pnpm package:check",
     "prepare": "lefthook install || true",
@@ -58,8 +58,8 @@
     "docs:spell": "cspell lint --config cspell.json --no-progress --no-summary README.md SECURITY.md CHANGELOG.md AGENTS.md CLAUDE.md 'docs/*.md' 'skills/**/*.md'"
   },
   "dependencies": {
-    "@wirecat/cli-base": "0.98.0",
-    "@wirecat/cli-core": "0.648.0",
+    "@wirecat/cli-base": "0.99.0",
+    "@wirecat/cli-core": "0.651.0",
     "commander": "15.0.0",
     "imapflow": "2.9.1",
     "nodemailer": "10.1.7",
