@@ -2,6 +2,41 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## 0.26.0 — 13.11.2026
+
+### Added
+
+- **`rules add --do meeting-notes:<provider>` saves meeting notes as meetings.** Each email the rule matches is kept whole,
+  protected, and on sync also saved as a meeting of that provider, linked to the calendar event in the same room that
+  day. Without a condition it matches the provider's sender: `--do meeting-notes:telemost` is
+  `keeper@telemost.yandex.ru`. `rules apply --yes` saves the notes stored before the rule; its dry run counts them.
+  `rules list`, `export` and `import` carry the flag.
+
+### Changed — may break callers
+
+- **Built on cli-core 0.651.0** (was 0.648.0). A missing OAuth sign-in is now reason `session.missing` (was
+  `oauth.missing`), `ai.address-refused` is now `model.address-refused`, and a stale meeting project fingerprint exits
+  as `conflict` instead of `configuration_error`. The first screen lists `pbx`, the Asterisk tool. What changed in
+  between is in [cli-core's changelog](https://github.com/WireCatLabs/cli-core/blob/main/CHANGELOG.md).
+- **Built on cli-core 0.648.0** (was 0.647.0). A profile name that no profile has now exits with code 6.
+  `store reset` is no longer offered over MCP. What changed in between is in
+  [cli-core's changelog](https://github.com/WireCatLabs/cli-core/blob/main/CHANGELOG.md).
+
+### Fixed
+
+- **Two sign-ins that finish at the same time keep both records.** `sign-ins.json`, which `doctor` reads, is changed
+  under a lock, so one profile's record no longer overwrites another's.
+
+### Security
+
+- **`contracts/wirecat.json` lists the hosts cli-core reaches for mail**: npm for `upgrade`, and Hugging Face and
+  GitHub for the model downloads and the hosts they redirect to. WireCat Desktop shows them before you install mail.
+- **mail reaches only the hosts it declares.** Sign-in, the Google account check, server discovery and the sender
+  score's registry lookups go through `hostFetch`, which refuses any other host before a byte leaves and checks every
+  redirect. A discovery file or a registry that redirects to another host is no longer followed: discovery tries the
+  next source, and the registry lookup counts as failed and is asked again on a later run. The package ships
+  `contracts/wirecat.json`, so WireCat Desktop shows these hosts before you install mail.
+
 ## 0.25.0 — 13.11.2026
 
 ### Changed — may break callers
