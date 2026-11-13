@@ -2,6 +2,19 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## 0.25.0 — 13.11.2026
+
+### Changed — may break callers
+
+- **Built on cli-core 0.647.0** (was 0.630.0). The store moves to a newer version on first open (additive). Lists
+  read from cli-core are `ListResult`s, `doctor reports show` and `doctor reports create` write a problem report to
+  send, and a `crm.<provider>:<account>.activities` setting is offered. What changed in between is in
+  [cli-core's changelog](https://github.com/WireCatLabs/cli-core/blob/main/CHANGELOG.md).
+- **Model calls stay on this computer when you ask.** With the local-only switch on (`memo models local-only set on`),
+  every model call cli-core makes for mail, remote embeddings included, refuses an address that is not this computer
+  before anything is sent. Plain `http://` is now accepted only to this computer, so records never cross the network
+  unencrypted; use https or run the model locally.
+
 ## 0.24.0 — 10.11.2026
 
 ### Changed — may break callers
