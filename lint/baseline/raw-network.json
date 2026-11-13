@@ -1,4 +1,0 @@
-[
-  "src/commands/session-start.ts fetch",
-  "src/oauth.ts fetch"
-]

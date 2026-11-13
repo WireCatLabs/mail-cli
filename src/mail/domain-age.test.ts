@@ -87,4 +87,22 @@ describe("lookUpAges", () => {
     expect(await lookUpAges(env, ["a.example", "b.example", "c.example"], deps)).toEqual({ looked: 3, failed: 3 })
     expect(knownAges(env).size).toBe(0)
   })
+
+  it("counts a registry that redirects to another host as a failure, and never follows it", async () => {
+    const env = { MAIL_STATE_DIR: mkdtempSync(join(tmpdir(), "mail-age-")) }
+    const asked: string[] = []
+    const deps = {
+      now: () => new Date("2026-10-14T00:00:00Z"),
+      sleep: async () => {},
+      fetch: (async (url: string | URL | Request) => {
+        asked.push(String(url))
+        return String(url) === BOOTSTRAP_URL
+          ? answer(200, services)
+          : new Response(null, { status: 302, headers: { location: "https://elsewhere.example/domain/a.example" } })
+      }) as typeof fetch,
+    }
+
+    expect(await lookUpAges(env, ["a.example"], deps)).toEqual({ looked: 1, failed: 1 })
+    expect(asked).toEqual([BOOTSTRAP_URL, "https://rdap.registry.example/v1/domain/a.example"])
+  })
 })

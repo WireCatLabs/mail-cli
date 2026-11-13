@@ -1,6 +1,7 @@
 import { describeProgram } from "@wirecat/cli-base/commands"
 import { changesAuthorityAt, readsOverMcpAt } from "@wirecat/cli-core/cli"
 import { toolsFromCommands } from "@wirecat/cli-core/mcp"
+import { ownCatalogue } from "@wirecat/cli-core/testing"
 import { expect, it } from "vitest"
 import { configuration } from "./config.js"
 import { createProgram, run } from "./program.js"
@@ -56,16 +57,22 @@ it("mcp serve refuses a --permission that names no command", async () => {
   expect(err.join("")).toContain("nope.list")
 })
 
-it("pins the commands an agent can find, and whether each reads or writes", async () => {
+it("pins mail's own commands an agent can find, and whether each reads or writes", async () => {
   const program = createProgram()
-  const tools = toolsFromCommands(describeProgram(program), {
+  const options = {
     includeUnavailable: true,
     exclude: [["mcp"]],
     authority: changesAuthorityAt(program),
     fetchOnly: readsOverMcpAt(program),
     permissions: configuration.permissions,
-  })
-  const catalogue = Object.fromEntries(tools.map((tool) => [tool.command, tool.writes ? "write" : "read"]))
-  await expect(`${JSON.stringify(catalogue, null, 2)}\n`).toMatchFileSnapshot("../contracts/mcp-catalogue.json")
-  expect(catalogue).not.toHaveProperty("session start")
+  }
+  await expect(`${JSON.stringify(ownCatalogue(program, options), null, 2)}\n`).toMatchFileSnapshot(
+    "../contracts/mcp-catalogue.json",
+  )
+  const offered = new Map(toolsFromCommands(describeProgram(program), options).map((tool) => [tool.command, tool]))
+  expect(offered.has("session start")).toBe(false)
+  expect(offered.has("store reset")).toBe(false)
+  // cli-core's family rule: a schedule's run and exec are MCP writes behind schedule.run and schedule.exec (ask).
+  expect(offered.get("schedule run")?.writes).toBe(true)
+  expect(offered.get("schedule exec")?.writes).toBe(true)
 })

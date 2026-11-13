@@ -49,8 +49,6 @@ mail commands info [path]
 |---|---|---|
 | `path` | optional | one command path; without one, export schemas, error reasons and explicit overrides. |
 
-**Returns:** one command contract, or all schemas, error reasons and explicit overrides
-
 **Example:** `mail commands info commands`
 
 ## `mail session`
@@ -81,8 +79,6 @@ mail session start [options]
 | `--client-file <file>` | Gmail over OAuth: your own Google Desktop app client JSON (chmod 600). |
 | `--method <method>` | how a new profile signs in: oauth or app-password (default: what the provider takes). |
 | `--credential-storage <storage>` | where the password is kept: keyring (the default, which falls back to a private file by itself when no keyring works), or file, not recommended. Default: `keyring`. |
-
-**Returns:** sign in; a new profile is created first
 
 **Example:** `mail personal session start --address me@example.com`, `mail work session start --address me@outlook.com`, `mail gm session start --address me@gmail.com --method oauth`
 
@@ -115,8 +111,6 @@ mail session end [options]
 | Option | What it does |
 |---|---|
 | `--revoke` | Gmail over OAuth: also ask Google to revoke the sign-in, which ends every sign-in of that Google project. |
-
-**Returns:** forget this profile's password or sign-in; synced mail stays
 
 **Example:** `mail personal session end`, `mail personal session end --revoke`
 
@@ -382,8 +376,6 @@ print this mailbox's rules as JSON, to review, keep or move elsewhere
 mail rules export
 ```
 
-**Returns:** print this mailbox's rules as JSON, to review, keep or move elsewhere
-
 **Example:** `mail personal rules export`
 
 ### `mail rules import`
@@ -500,8 +492,6 @@ mail messages show <message> [options]
 |---|---|
 | `--before-n <n>` | also this many earlier emails of its thread. Default: `0`. |
 | `--after-n <n>` | also this many later emails of its thread. Default: `0`. |
-
-**Returns:** one stored email whole, with the text of its attachments
 
 **Example:** `mail personal messages show 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E'`, `mail personal messages show 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E' --before-n 2`
 
@@ -925,8 +915,6 @@ mail conversations show <conversation>
 |---|---|---|
 | `conversation` | required | a chat:email/… thread from conversations list, or a msg:email/… email in it. |
 
-**Returns:** one email thread, every email oldest first
-
 **Example:** `mail personal conversations show 'chat:email/me%40example.com/thread-1'`, `mail personal conversations show 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E'`
 
 ## `mail attachments`
@@ -1222,8 +1210,6 @@ mail doctor [options]
 |---|---|
 | `--online` | also connect once and read the account; sends nothing. |
 
-**Returns:** the state this installation is in, without connecting unless --online
-
 **Example:** `mail doctor`, `mail doctor --json`
 
 ### `mail doctor reports`
@@ -1237,8 +1223,6 @@ what a problem report holds; writes nothing
 ```sh
 mail doctor reports show
 ```
-
-**Returns:** what a report holds and never holds, and where to send it; writes nothing
 
 **Example:** `mail doctor reports show`
 
@@ -1256,8 +1240,6 @@ mail doctor reports create [options]
 |---|---|
 | `--run <id>` | the run the report is about; the newest failed one if not given. |
 | `--output <file>` | where to write it; a new file in this directory if not given. |
-
-**Returns:** the report file written: its path, the run it is about, and where to send it
 
 **Example:** `mail doctor reports create --output ./problem-report.json`
 
@@ -1277,8 +1259,6 @@ mail skill show [options]
 |---|---|
 | `--for <agents>` | print the copy installed for these agents instead of this version's. One of: `claude`, `agents`. |
 
-**Returns:** print the tool's instructions for AI agents
-
 **Example:** `mail skill show`
 
 ### `mail skill install`
@@ -1295,8 +1275,6 @@ mail skill install [options]
 |---|---|
 | `--for <agents>` | which agents to install for. One of: `claude`, `agents`, `hermes`, `all`. Default: `all`. |
 
-**Returns:** install the tool's instructions for AI agents
-
 **Example:** `mail skill install --for agents`
 
 ### `mail skill status`
@@ -1306,8 +1284,6 @@ for each place `mail skill install` writes to, and for the copy Hermes reads: th
 ```sh
 mail skill status
 ```
-
-**Returns:** whether the installed instructions for AI agents match this version
 
 **Example:** `mail skill status`, `mail skill status --json`
 
@@ -1333,8 +1309,6 @@ mail mcp serve [options]
 | `--port <port>` | the local port for --http (default 8765). |
 | `--public-url <url>` | the tunnel's https address the browser apps use, e.g. https://<name>.ts.net or https://<name>.ts.net/tg. |
 
-**Returns:** serve this profile's commands to an AI agent
-
 **Example:** `mail personal mcp serve`, `mail mcp serve --profiles work,personal`, `mail personal mcp serve --http --public-url https://laptop.example.ts.net`
 
 ### `mail mcp revoke`
@@ -1350,8 +1324,6 @@ mail mcp revoke [options]
 | Option | What it does |
 |---|---|
 | `--profiles <names\|all>` | serve several profiles from one server instead of one: names, comma-separated, or all for every profile. |
-
-**Returns:** forget every login given to a browser app
 
 **Example:** `mail personal mcp revoke`, `mail mcp revoke --profiles all`
 
@@ -1376,8 +1348,6 @@ mail mcp server start [options]
 | `--permission <key=level>` | make a permission stricter for this server only; repeat for more keys. |
 | `--profiles <names\|all>` | the server of several profiles that `mcp serve --profiles` serves: names, comma-separated, or all. |
 
-**Returns:** start the HTTP MCP server in the background
-
 **Example:** `mail personal mcp server start --public-url https://laptop.example.ts.net`
 
 #### `mail mcp server stop`
@@ -1394,8 +1364,6 @@ mail mcp server stop [options]
 |---|---|
 | `--profiles <names\|all>` | the server of several profiles that `mcp serve --profiles` serves: names, comma-separated, or all. |
 
-**Returns:** stop the background HTTP MCP server
-
 **Example:** `mail personal mcp server stop`
 
 #### `mail mcp server status`
@@ -1409,8 +1377,6 @@ mail mcp server status [options]
 | Option | What it does |
 |---|---|
 | `--profiles <names\|all>` | the server of several profiles that `mcp serve --profiles` serves: names, comma-separated, or all. |
-
-**Returns:** whether the HTTP MCP server runs, its login code and the apps logged in
 
 **Example:** `mail personal mcp server status --json`
 
@@ -1426,8 +1392,6 @@ mail mcp config [options]
 |---|---|
 | `--permission <key=level>` | make a permission stricter for this server only, like sync=deny; it never loosens the profile; repeat for more keys. |
 | `--profiles <names\|all>` | serve several profiles from one server instead of one: names, comma-separated, or all for every profile. |
-
-**Returns:** print the local MCP configuration of this profile, or of those --profiles names
 
 **Example:** `mail personal mcp config`, `mail mcp config --profiles all`
 
@@ -1450,8 +1414,6 @@ mail mcp add <client> [options]
 | `--allow-writes` | acknowledge that this profile offers writing tools. |
 | `--permission <key=level>` | make a permission stricter for this server only, like sync=deny; it never loosens the profile; repeat for more keys. |
 
-**Returns:** add this profile's local MCP server to Codex or Claude Code
-
 **Example:** `mail personal mcp add codex --allow-writes`
 
 ### `mail mcp check`
@@ -1465,8 +1427,6 @@ mail mcp check [options]
 | Option | What it does |
 |---|---|
 | `--permission <key=level>` | make a permission stricter for this server only, like sync=deny; it never loosens the profile; repeat for more keys. |
-
-**Returns:** check this profile's local MCP handshake and tool list
 
 **Example:** `mail personal mcp check`
 
@@ -1484,8 +1444,6 @@ mail upgrade [options]
 |---|---|
 | `--check` | say whether a newer version exists, and install nothing. |
 
-**Returns:** upgrade mail with the package manager that installed it; --check only looks
-
 **Example:** `mail upgrade --check`
 
 ## `mail config`
@@ -1499,8 +1457,6 @@ the profile, the profiles that exist, and each setting with where it came from
 ```sh
 mail config show
 ```
-
-**Returns:** the profile, the profiles that exist, and each setting with where it came from
 
 **Example:** `mail personal config show`
 
@@ -1523,8 +1479,6 @@ mail config set <setting> <value> [options]
 |---|---|
 | `--defaults` | change what every profile gets, rather than this profile. |
 
-**Returns:** save a setting to the configuration file
-
 **Example:** `mail personal config set limit 20`
 
 ### `mail config unset`
@@ -1545,8 +1499,6 @@ mail config unset <setting> [options]
 |---|---|
 | `--defaults` | change what every profile gets, rather than this profile. |
 
-**Returns:** remove a setting from the configuration file
-
 **Example:** `mail personal config unset limit`
 
 ### `mail config migrate`
@@ -1558,8 +1510,6 @@ write each setting the file lacks at its default, keeping yours
 ```sh
 mail config migrate
 ```
-
-**Returns:** write each setting the file lacks at its default, keeping yours
 
 **Example:** `mail config migrate`
 
@@ -1576,8 +1526,6 @@ mail config repair [options]
 | Option | What it does |
 |---|---|
 | `--dry-run` | say what it would fix, and change nothing. |
-
-**Returns:** fix the settings file's JSON syntax, keeping every value
 
 **Example:** `mail config repair`, `mail config repair --dry-run`
 
@@ -1669,8 +1617,6 @@ mail schedule command <name> <args> [options]
 | `--notify-on <when>` | desktop notice after a run (default failures for an agent that repeats with --every, else always). One of: `always`, `failures`, `never`. |
 | `--deliver-to <route>` | also send the result, when --notify-on says so, by the owner's own tg or mail: telegram-bot:<profile>/<chat id or user:id>, or email:<profile>/<address>; repeat it for more. |
 
-**Returns:** run mail <args…> on a timer — reads save what they read, so this is how a…
-
 **Example:** `mail personal schedule command health --every 1h -- doctor`, `mail personal schedule command morning-check --at 08:00 -- doctor`
 
 ### `mail schedule agent`
@@ -1700,8 +1646,6 @@ mail schedule agent <name> <harness> <prompt> [options]
 | `--at-time <time>` | one run: 30m, 2d from now, or an ISO time; the schedule removes itself after it. |
 | `--notify-on <when>` | desktop notice after a run (default failures for an agent that repeats with --every, else always). One of: `always`, `failures`, `never`. |
 | `--deliver-to <route>` | also send the result, when --notify-on says so, by the owner's own tg or mail: telegram-bot:<profile>/<chat id or user:id>, or email:<profile>/<address>; repeat it for more. |
-
-**Returns:** start an agent (claude, codex, gemini, cursor, opencode, openclaw, hermes,…
 
 **Example:** `mail personal schedule agent review claude "review what came in overnight and draft replies" --at 08:30`, `mail personal schedule agent triage gemini "list what needs an answer today" --every 2h`, `mail personal schedule agent weekly claude "review the week's open threads" --at 09:00 --model opus`
 
@@ -1760,8 +1704,6 @@ mail schedule run <name> [options]
 | `--no-notify` | keep the result here: send it along none of its routes. |
 | `--deliver-to <route>` | send it along only this one of its own routes; repeat it for more. |
 
-**Returns:** run a schedule now, as its timer would, and wait for it; a paused one runs too
-
 **Example:** `mail personal schedule run health`
 
 ### `mail schedule remove`
@@ -1777,8 +1719,6 @@ mail schedule remove <name>
 | Argument | | What it is |
 |---|---|---|
 | `name` | required | the schedule's name, as `schedule list` shows it. |
-
-**Returns:** stop a schedule and remove its timer; its past output stays
 
 **Example:** `mail personal schedule remove health`
 
@@ -1796,8 +1736,6 @@ mail schedule pause <name>
 |---|---|---|
 | `name` | required | the schedule's name, as `schedule list` shows it. |
 
-**Returns:** take a schedule off its timer and keep it; run runs it, resume puts it back
-
 **Example:** `mail personal schedule pause health`
 
 ### `mail schedule resume`
@@ -1813,8 +1751,6 @@ mail schedule resume <name>
 | Argument | | What it is |
 |---|---|---|
 | `name` | required | the schedule's name, as `schedule list` shows it. |
-
-**Returns:** put a paused schedule back on its timer
 
 **Example:** `mail personal schedule resume health`
 
@@ -1832,8 +1768,6 @@ mail schedule exec <file> [seal]
 |---|---|---|
 | `file` | required | the schedule's schedule.json in the state folder, as the timer passes it. |
 | `seal` | optional | the file's SHA-256 as it was saved, which the timer passes; a file that differs does not run. |
-
-**Returns:** what a timer runs, given the schedule's file; to run one by hand, use run
 
 **Example:** `mail personal schedule exec ~/.local/share/mail-cli/schedules/health/schedule.json`
 

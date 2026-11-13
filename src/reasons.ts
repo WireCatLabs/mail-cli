@@ -7,6 +7,11 @@ const ENTRIES: [reason: string, code: string, message: string][] = [
   ["mail.host-unreachable", "network_error", "the mail server cannot be reached"],
   ["mail.no-password", "authentication_error", "no app password is stored for this profile"],
   ["mail.oauth-refused", "authentication_error", "the mail server refused the OAuth token even after a refresh"],
+  [
+    "mail.google-account-refused",
+    "authentication_error",
+    "Google refused the account check or gave no verified address",
+  ],
   ["mail.smtp-auth-disabled", "authentication_error", "Microsoft refused the OAuth login for sending"],
   ["mail.uidvalidity-changed", "invalid_response", "the folder's UIDVALIDITY changed during the run"],
   ["mail.not-returned", "not_found", "the server did not return the email"],

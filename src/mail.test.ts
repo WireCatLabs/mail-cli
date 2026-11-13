@@ -17,9 +17,11 @@ import { openStore, storePath } from "@wirecat/cli-core/store"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
 import { discover } from "./discovery.js"
+import { DESKTOP } from "./identity.js"
 import type { AccountCheck, MailBackend, MailCredential, MailEndpoint, RunBounds } from "./mail/backend.js"
 import { type ImapTuning, imapBackend } from "./mail/imap/index.js"
 import { run } from "./program.js"
+import { PROVIDER_KEYS, PROVIDERS } from "./providers.js"
 import { type FakeImap, type FakeOptions, startFakeImap } from "./testing/fake-imap.js"
 
 const PASSWORD = "fixture-app-password-4Rt9"
@@ -158,6 +160,11 @@ describe("discovery", () => {
 
   it("says Outlook needs OAuth", async () => {
     expect(await discover("me@outlook.com")).toMatchObject({ auth: "oauth" })
+  })
+
+  it("declares the server of every built-in provider among the hosts Desktop shows", () => {
+    const servers = PROVIDER_KEYS.flatMap((key) => [PROVIDERS[key].imap.host, PROVIDERS[key].smtp?.host ?? []].flat())
+    expect(servers.filter((host) => !DESKTOP.hosts?.includes(host))).toEqual([])
   })
 })
 

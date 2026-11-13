@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { resolvePaths, writeSecurely } from "@wirecat/cli-base"
+import { hostFetch } from "@wirecat/cli-base/http"
 import { providerRequest } from "@wirecat/cli-core/cli"
 import type { DomainAge } from "@wirecat/cli-core/mail"
 import * as v from "valibot"
@@ -60,13 +61,13 @@ export const knownAges = (env: NodeJS.ProcessEnv): Map<string, DomainAge> =>
   new Map(Object.entries(loadCache(env).domains))
 
 export interface LookupDeps {
-  fetch: typeof fetch
+  fetch?: typeof fetch | undefined
   sleep: (ms: number) => Promise<void>
   now: () => Date
 }
 
 /** The real clock and pause, with the fetch a test hands in, else the network's. */
-export const rdapDeps = (fetcher: typeof fetch = (input, init) => fetch(input, init)): LookupDeps => ({
+export const rdapDeps = (fetcher?: typeof fetch): LookupDeps => ({
   fetch: fetcher,
   sleep: (ms) => new Promise((done) => setTimeout(done, ms)),
   now: () => new Date(),
@@ -116,9 +117,14 @@ const getJson = async (
   })
   let response: Response
   try {
-    response = await deps.fetch(url, {
+    // The registry's host comes from IANA's list, not from a list mail could keep: each lookup reaches that host only.
+    const only = hostFetch({
+      hosts: [new URL(url).hostname],
+      timeoutMs: TIMEOUT_MS,
+      ...(deps.fetch ? { fetch: deps.fetch } : {}),
+    })
+    response = await only(url, {
       headers: { accept: "application/rdap+json, application/json", "user-agent": USER_AGENT },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
     })
   } catch (error) {
     answered({ error })

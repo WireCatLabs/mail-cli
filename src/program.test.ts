@@ -1,8 +1,8 @@
 import { chmodSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs"
-import { join } from "node:path"
+import { delimiter, isAbsolute, join } from "node:path"
 import { resolvePaths } from "@wirecat/cli-base"
 import { appDoctorReport } from "@wirecat/cli-core/cli"
-import { expect, it } from "vitest"
+import { afterEach, expect, it, vi } from "vitest"
 import { configuration } from "./config.js"
 import { IDENTITY } from "./identity.js"
 import { createProgram, run } from "./program.js"
@@ -24,6 +24,10 @@ const json = (text: string) => {
   if (!isRecord(parsed) || !isRecord(parsed.item)) throw new Error(`not an answer with one item: ${text}`)
   return { item: parsed.item }
 }
+
+afterEach(() => {
+  vi.unstubAllEnvs()
+})
 
 it("lists the required root commands and config", async () => {
   const { code, out } = await ran(["commands", "--json"])
@@ -241,6 +245,14 @@ it("schedules a profile's sync on a timer and lists it", async () => {
 })
 
 it.runIf(process.platform !== "win32")("runs the argv of a generated unit with no profile named", async () => {
+  // pnpm puts ./node_modules/.bin on PATH, and cli-core refuses to run a schedule saved with a relative PATH entry.
+  vi.stubEnv(
+    "PATH",
+    (process.env.PATH ?? "")
+      .split(delimiter)
+      .filter((dir) => isAbsolute(dir))
+      .join(delimiter),
+  )
   const entry = [process.execPath, "-e", "console.log(process.env.MAIL_PROFILE)"]
   const system = {
     platform: "linux" as const,

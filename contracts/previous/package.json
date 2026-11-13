@@ -1,9 +1,0 @@
-{
-  "name": "wirecat-contract-baselines",
-  "private": true,
-  "type": "module",
-  "packageManager": "pnpm@11.28.8",
-  "dependencies": {
-    "@wirecat/previous-cli": "npm:@wirecat/mail-cli@0.16.3"
-  }
-}

@@ -16,7 +16,9 @@ from the reference CLI below; the template has no sample code on purpose.
 <!-- cli-template:reference-cli:start -->
 ## Reference CLI
 
-No reference CLI for this category yet: pick the nearest one with the owner from the Reference CLIs page.
+This CLI is the reference CLI for the mail category
+([new CLI](node_modules/@wirecat/cli-base/docs/standards/new-cli.md)): a new mail CLI copies its provider, store and
+command patterns, so a pattern changed here changes what they copy.
 <!-- cli-template:reference-cli:end -->
 
 ## Template-owned files

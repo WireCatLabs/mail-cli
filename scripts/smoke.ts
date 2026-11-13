@@ -4,6 +4,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync }
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { packContents } from "@wirecat/cli-base/release"
+import { MANIFEST_FILE } from "@wirecat/cli-base/wcat/manifest"
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value)
@@ -38,7 +39,10 @@ const FORBIDDEN = [
 ]
 const overlaps = (entry: string, path: string) =>
   entry === path || entry.startsWith(`${path}/`) || path.startsWith(`${entry}/`)
-const forbidden = shipped.flatMap((entry) => FORBIDDEN.filter((path) => overlaps(entry.replace(/\/$/, ""), path)))
+// WireCat Desktop reads the manifest out of the tarball before it installs anything (WC-CMD-29).
+const forbidden = shipped
+  .filter((entry) => entry !== MANIFEST_FILE)
+  .flatMap((entry) => FORBIDDEN.filter((path) => overlaps(entry.replace(/\/$/, ""), path)))
 assert.deepEqual(forbidden, [], "package.json's files ships paths WC-REL-16 forbids")
 const temp = mkdtempSync(join(tmpdir(), "mail-package-"))
 try {
@@ -77,7 +81,7 @@ try {
   const run = (args: string[]) =>
     execFileSync(process.execPath, [bin, ...args], { cwd: temp, env, encoding: "utf8", timeout: 20000 })
   assert.equal(run(["--version"]).trim(), version)
-  assert.deepEqual(JSON.parse(run(["--wcat-describe"])).name, "mail")
+  assert.ok(JSON.parse(run(["--wcat-describe"])).manifest_sha256, `${MANIFEST_FILE} is missing from the package`)
   assert.match(run(["--help"]), /Usage: mail/)
   const tree: unknown = JSON.parse(run(["commands", "--json"]))
   const names =
