@@ -28,7 +28,6 @@ import {
   type MailRule,
   type MailRuleMatch,
   MEETING_NOTES,
-  MEETING_NOTES_PROVIDERS,
   mailMeetingSource,
   mapProposedTags,
   PRESET_NAMES,
@@ -275,8 +274,7 @@ const addCommand = () =>
             examples: [
               `${IDENTITY.command} personal rules add --domain shop.example --do envelope,tag:promo`,
               `${IDENTITY.command} personal rules add --sender boss@example.com --do protect --reason "never lose these"`,
-              `${IDENTITY.command} personal rules add --filter "older:365d larger:5MB" --do envelope`,
-              `${IDENTITY.command} personal rules add --meeting-notes telemost`,
+              `${IDENTITY.command} personal rules add --do meeting-notes:telemost`,
             ],
           }),
         ),
@@ -286,13 +284,7 @@ const addCommand = () =>
     mailRule,
   )
     .description("decide mail by sender, list, subject, age, size, label or kind; repeats replace")
-    .option("--do <actions>", ACTION_HELP, flagParser("--do", actionsOf))
-    .addOption(
-      new Option(
-        "--meeting-notes <provider>",
-        "the mail is a meeting's notes: also save each email as a meeting; kept whole and protected",
-      ).choices(MEETING_NOTES_PROVIDERS),
-    )
+    .requiredOption("--do <actions>", ACTION_HELP, flagParser("--do", actionsOf))
     .option("--reason <text>", "why, for the owner later")
     .addHelpText(
       "after",
@@ -306,34 +298,29 @@ const addCommand = () =>
         "from that mail. has:attachment reads Content-Type at list time: a guess, not a parse.\n\n" +
         "Under MAIL_READ_ONLY, as in memo's scheduled mail triage, it takes only --sender or --list-id with " +
         "--do envelope, never replaces a rule, and records the rule with source agent.\n\n" +
-        "--meeting-notes telemost, with no condition, matches the sender Telemost mails its notes from " +
+        "--do meeting-notes:telemost, with no condition, matches the sender Telemost mails its notes from " +
         "(keeper@telemost.yandex.ru). Each email it matches is also saved as a meeting on sync; rules apply --yes " +
         "saves the ones stored before.",
     )
     .action(async function (
       this: Command,
-      options: MatchOptions & { do?: ReturnType<typeof actionsOf>; meetingNotes?: string; reason?: string },
+      options: MatchOptions & { do: ReturnType<typeof actionsOf>; reason?: string },
     ) {
       const lock = readOnlyLockOf(IDENTITY, contextOf(this).env)
-      if (lock && options.meetingNotes !== undefined) throw readOnlyRefusal(lock, "add a meeting-notes rule")
-      if (options.do === undefined && options.meetingNotes === undefined)
-        throw new CliError("validation_error", "give --do <actions> or --meeting-notes <provider>")
-      const actions = options.do ?? { action: "keep" as const, protect: false, tags: [] }
+      const actions = options.do
       // A query, a kind or a domain could catch a whole mailbox, and skip or a tag decides more than how mail is
       // stored; the triage only files one sender or list as envelopes, which the owner can list and remove.
       if (lock && (options.filter !== undefined || options.kind !== undefined || options.domain !== undefined))
         throw readOnlyRefusal(lock, "add a rule by --filter, --kind or --domain; give --sender or --list-id")
-      if (lock && (actions.action !== "envelope" || actions.protect || actions.tags.length > 0))
+      if (lock && (actions.action !== "envelope" || actions.protect || actions.tags.length > 0 || actions.meetingNotes))
         throw readOnlyRefusal(lock, "add a rule that does more than --do envelope")
-      const match = matchOf(options, options.meetingNotes)
-      // Notes are the only copy of a meeting: no other rule or cleanup may cut them.
-      const notes = options.meetingNotes === undefined ? {} : { protected: true, meeting_notes: options.meetingNotes }
+      const match = matchOf(options, actions.meetingNotes)
       const rule: MailRule = {
         match,
-        action: notes.protected ? "keep" : actions.action,
+        action: actions.action,
         ...(actions.tags.length ? { tags: actions.tags } : {}),
         ...(actions.protect ? { protected: true } : {}),
-        ...notes,
+        ...(actions.meetingNotes === undefined ? {} : { meeting_notes: actions.meetingNotes }),
         ...(options.kind === undefined ? {} : { source: `preset:${options.kind}` }),
         ...(lock ? { source: "agent" } : {}),
         ...(options.reason === undefined ? {} : { reason: options.reason }),

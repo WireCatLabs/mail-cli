@@ -261,7 +261,7 @@ describe("rules", () => {
     const { mail, env } = await harness([notes])
     expect((await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])).code).toBe(0)
 
-    const added = await mail(["ya", "rules", "add", "--meeting-notes", "telemost", "--json"])
+    const added = await mail(["ya", "rules", "add", "--do", "meeting-notes:telemost", "--json"])
     expect(body(added.out).item).toMatchObject({
       match: { from: "keeper@telemost.yandex.ru" },
       action: "keep",
@@ -279,13 +279,6 @@ describe("rules", () => {
     expect(meetings).toHaveLength(1)
     expect(meetings[0]).toMatchObject({ joinUrl: "https://telemost.360.yandex.ru/j/1234567890" })
     expect((await mail(["ya", "rules", "list"], { tty: true })).out).toContain("telemost meeting notes")
-  })
-
-  it("refuses a rule with neither --do nor --meeting-notes", async () => {
-    const { mail } = await harness()
-    const refused = await mail(["ya", "rules", "add", "--sender", "a@example.com", "--json"])
-    expect(refused.code).not.toBe(0)
-    expect(refused.err + refused.out).toContain("--meeting-notes")
   })
 
   it("under the read-only lock refuses a change and still previews with --dry-run", async () => {
@@ -377,6 +370,14 @@ describe("--filter, --do and Gmail filters", () => {
     expect(actionsOf("envelope,tag:promo")).toEqual({ action: "envelope", protect: false, tags: ["promo"] })
     expect(actionsOf("protect")).toEqual({ action: "keep", protect: true, tags: [] })
     expect(() => actionsOf("protect,skip")).toThrow(/choose skip, envelope, keep, protect/)
+    expect(actionsOf("meeting-notes:telemost")).toEqual({
+      action: "keep",
+      protect: true,
+      tags: [],
+      meetingNotes: "telemost",
+    })
+    expect(() => actionsOf("envelope,meeting-notes:telemost")).toThrow(/goes with keep, protect/)
+    expect(() => actionsOf("meeting-notes:zoom")).toThrow(/takes one of telemost/)
   })
 
   it("turns hiding filters into envelope rules and skips what a rule cannot mirror", () => {
