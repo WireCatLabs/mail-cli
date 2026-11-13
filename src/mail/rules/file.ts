@@ -1,5 +1,12 @@
 import { CliError } from "@wirecat/cli-base"
-import { conditionKeys, type MailAction, type MailRule, type MailRuleMatch, PRESET_NAMES } from "@wirecat/cli-core/mail"
+import {
+  conditionKeys,
+  type MailAction,
+  type MailRule,
+  type MailRuleMatch,
+  MEETING_NOTES_PROVIDERS,
+  PRESET_NAMES,
+} from "@wirecat/cli-core/mail"
 import * as v from "valibot"
 
 /** What `rules export` prints and `rules import` reads back; memo writes and reads the same file. */
@@ -83,6 +90,9 @@ export const rulesFileOf = (text: string, path: string, exporter: string): MailR
       ...(Array.isArray(rule.tags) ? { tags: rule.tags.filter((tag) => typeof tag === "string") } : {}),
       ...(typeof rule.reason === "string" ? { reason: rule.reason } : {}),
       ...(rule.protected === true ? { protected: true } : {}),
+      ...(typeof rule.meeting_notes === "string" && MEETING_NOTES_PROVIDERS.includes(rule.meeting_notes)
+        ? { meeting_notes: rule.meeting_notes }
+        : {}),
       ...(typeof rule.source === "string" ? { source: rule.source } : {}),
       decided_at: typeof rule.decided_at === "string" ? rule.decided_at : new Date().toISOString(),
     }

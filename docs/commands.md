@@ -299,7 +299,7 @@ mail rules list [query]
 |---|---|---|
 | `query` | optional | field:value terms that narrow the list — the fields are below. |
 
-**Returns:** mail rule — match, action, decided_at, id, tags, reason, protected, source; every field: mail commands info rules list
+**Returns:** mail rule — match, action, decided_at, id, tags, reason, protected, meeting_notes, and 1 more; every field: mail commands info rules list
 
 **Example:** `mail personal rules list`, `mail personal rules list protected:true --json`
 
@@ -320,12 +320,12 @@ mail rules add [options]
 | `--list-id <id>` | a mailing list, by its List-Id. |
 | `--filter <query>` | from:<address, domain or word>, to:<address>, subject:<word> (or a bare word), older:<n>d, larger:<size> (5MB, 300KB), has:attachment, label:<name> (label:"Two words"), is:unread, is:bulk, score:<n> (at least); all must hold. |
 | `--kind <kind>` | a built-in kind of mail. One of: `social`, `newsletters`, `developer`, `shopping`, `alerts`. |
-| `--do <actions>` | one of skip (never read or store), envelope (store only sender, date, size and labels: counted, out of search, cleanable later), keep (store in full even when a skip or envelope rule matches) or protect (keep, and no cleanup may ever cut, archive or trash it); add tag:<name> to also tag the mail, e.g. envelope,tag:promo. |
+| `--do <actions>` | one of skip (never read or store), envelope (store only sender, date, size and labels: counted, out of search, cleanable later), keep (store in full even when a skip or envelope rule matches) or protect (keep, and no cleanup may ever cut, archive or trash it); add tag:<name> to also tag the mail, e.g. envelope,tag:promo; meeting-notes:<provider> (telemost) marks a meeting's notes: kept, protected, and saved as a meeting too. |
 | `--reason <text>` | why, for the owner later. |
 
-**Returns:** mail rule — match, action, decided_at, id, tags, reason, protected, source; every field: mail commands info rules add
+**Returns:** mail rule — match, action, decided_at, id, tags, reason, protected, meeting_notes, and 1 more; every field: mail commands info rules add
 
-**Example:** `mail personal rules add --domain shop.example --do envelope,tag:promo`, `mail personal rules add --sender boss@example.com --do protect --reason "never lose these"`, `mail personal rules add --filter "older:365d larger:5MB" --do envelope`
+**Example:** `mail personal rules add --domain shop.example --do envelope,tag:promo`, `mail personal rules add --sender boss@example.com --do protect --reason "never lose these"`, `mail personal rules add --do meeting-notes:telemost`
 
 ### `mail rules remove`
 
@@ -364,7 +364,7 @@ mail rules apply [options]
 | `--since-time <time>` | only mail from this time, ISO 8601 or 30d ago (default: all mail). |
 | `--dry-run` | only say what would change, even with --yes; the read-only lock lets this through. |
 
-**Returns:** mail rules apply — account, applied, listed, envelopes, bytes, skip_matched, protected_kept, tagged, and 1 more; every field: mail commands info rules apply
+**Returns:** mail rules apply — account, applied, listed, envelopes, bytes, skip_matched, protected_kept, tagged, and 2 more; every field: mail commands info rules apply
 
 **Example:** `mail personal rules apply`, `mail personal rules apply --since-time 2026-01-01 --yes`
 
@@ -396,7 +396,7 @@ mail rules import <file> [options]
 |---|---|
 | `--format <format>` | the file's format: mail (memo's export is the same file) or gmail. One of: `mail`, `memo`, `gmail`. Default: `mail`. |
 
-**Returns:** mail rule import — match, action, decided_at, id, tags, reason, protected, source, and 4 more; every field: mail commands info rules import
+**Returns:** mail rule import — match, action, decided_at, id, tags, reason, protected, meeting_notes, and 5 more; every field: mail commands info rules import
 
 **Example:** `mail personal rules import rules.json`, `mail personal rules import Filters.json --format gmail`, `mail personal rules import Filters.json --format gmail --yes`
 

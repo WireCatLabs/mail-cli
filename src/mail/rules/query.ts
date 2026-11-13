@@ -1,5 +1,6 @@
 import { CliError } from "@wirecat/cli-base"
 import type { MailAction, MailRuleMatch } from "@wirecat/cli-core/mail"
+import { MEETING_NOTES_PROVIDERS } from "@wirecat/cli-core/mail"
 
 export const FILTER_HELP =
   "from:<address, domain or word>, to:<address>, subject:<word> (or a bare word), older:<n>d, larger:<size> (5MB, 300KB), has:attachment, label:<name> " +
@@ -82,19 +83,34 @@ export const filterMatch = (query: string): MailRuleMatch => {
 export const ACTION_HELP =
   "one of skip (never read or store), envelope (store only sender, date, size and labels: counted, out of search, " +
   "cleanable later), keep (store in full even when a skip or envelope rule matches) or protect (keep, and no " +
-  "cleanup may ever cut, archive or trash it); add tag:<name> to also tag the mail, e.g. envelope,tag:promo"
+  "cleanup may ever cut, archive or trash it); add tag:<name> to also tag the mail, e.g. envelope,tag:promo; " +
+  "meeting-notes:<provider> (telemost) marks a meeting's notes: kept, protected, and saved as a meeting too"
 
 const ACTIONS = ["skip", "envelope", "keep", "protect"] as const
 
-/** `envelope,tag:promo` → the store action, protection and tags. */
-export const actionsOf = (value: string): { action: MailAction; protect: boolean; tags: string[] } => {
+const NOTES = "meeting-notes:"
+
+/** `envelope,tag:promo` → the store action, protection and tags; `meeting-notes:telemost` → a protected keep. */
+export const actionsOf = (
+  value: string,
+): { action: MailAction; protect: boolean; tags: string[]; meetingNotes?: string } => {
   const parts = value
     .split(",")
     .map((part) => part.trim())
     .filter(Boolean)
   const tags = parts.filter((part) => part.startsWith("tag:")).map((part) => part.slice(4).trim())
-  const actions = parts.filter((part) => !part.startsWith("tag:"))
+  const notes = parts.filter((part) => part.startsWith(NOTES)).map((part) => part.slice(NOTES.length).trim())
+  const actions = parts.filter((part) => !part.startsWith("tag:") && !part.startsWith(NOTES))
   if (tags.some((tag) => tag === "")) throw new CliError("validation_error", "tag: needs a name, e.g. tag:promo")
+  if (notes.length > 1 || notes.some((provider) => !MEETING_NOTES_PROVIDERS.includes(provider)))
+    throw new CliError("validation_error", `meeting-notes: takes one of ${MEETING_NOTES_PROVIDERS.join(", ")}`)
+  const [meetingNotes] = notes
+  if (meetingNotes !== undefined) {
+    // Notes are the only copy of a meeting: kept whole, and no other rule or cleanup may cut them.
+    if (!actions.every((one) => one === "keep" || one === "protect"))
+      throw new CliError("validation_error", "meeting-notes: keeps the mail; it goes with keep, protect or no action")
+    return { action: "keep", protect: true, tags, meetingNotes }
+  }
   const action = actions.length === 1 ? ACTIONS.find((one) => one === actions[0]) : undefined
   if (action === undefined) throw new CliError("validation_error", `choose ${ACTIONS.join(", ")}, plus any tag:<name>`)
   return { action: action === "protect" ? "keep" : action, protect: action === "protect", tags }
