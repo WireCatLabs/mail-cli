@@ -131,7 +131,10 @@ if [ "$next" != "$version" ]; then
     swap("package.json", `"version": "${o}"`, `"version": "${n}"`)
     swap("src/version.ts", `VERSION = "${o}"`, `VERSION = "${n}"`)
     const today = new Date().toLocaleDateString("en-GB").replaceAll("/", ".")
-    if (taken) swap("CHANGELOG.md", "\n## Unreleased\n", `\n## ${n} — ${today}\n`)
+    // With only changes/ fragments there is no Unreleased section: the new version gets an empty one they fill.
+    const log = fs.readFileSync("CHANGELOG.md", "utf8")
+    if (taken && log.includes("\n## Unreleased\n")) swap("CHANGELOG.md", "\n## Unreleased\n", `\n## ${n} — ${today}\n`)
+    else if (taken) swap("CHANGELOG.md", "\n## ", `\n## ${n} — ${today}\n\n## `)
     else swap("CHANGELOG.md", `\n## ${o} — `, `\n## ${n} — `)' "$version" "$next" "$taken"
   node --experimental-strip-types scripts/changelog-fragments.ts --rules scripts/docs-rules.ts "$next"
   body="bin/release: $why. Only the number changes: package.json, src/version.ts, the CHANGELOG heading, and the
