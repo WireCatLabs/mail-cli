@@ -26,7 +26,11 @@ afterEach(async () => {
   fake = undefined
 })
 
-const harness = async () => {
+const NOTES =
+  "Итоги\r\nДоговорились о синтетическом плане.\r\n\r\nЗадачи\r\nЗАДАЧА 1. Пример\r\n\r\n" +
+  "Встреча: https://telemost.360.yandex.ru/j/1234567890"
+
+const harness = async (more: { uid: number; raw: string }[] = []) => {
   fake = await startFakeImap({
     login: ADDRESS,
     password: PASSWORD,
@@ -46,6 +50,7 @@ const harness = async () => {
               "List-Id: <deals.shop.example>\r\n",
             ),
           },
+          ...more,
         ],
       },
       { name: "Sent", attributes: ["\\Sent"], messages: [] },
@@ -85,6 +90,16 @@ const harness = async () => {
 }
 
 const body = (text: string) => JSON.parse(text)
+
+const storedMeetings = async (env: NodeJS.ProcessEnv) => {
+  const store = await openStore({ path: storePath(env), env, command: "mail" })
+  try {
+    const account = await store.accounts.storedAccount({ provider: "telemost", account: ADDRESS }).catch(() => null)
+    return account === null ? [] : await store.meetings.meetings({ accountId: account.id, limit: 10 })
+  } finally {
+    await store.close()
+  }
+}
 
 const storedEmails = async (env: NodeJS.ProcessEnv) => {
   const store = await openStore({ path: storePath(env), env, command: "mail" })
@@ -216,7 +231,8 @@ describe("rules", () => {
 
   it("cuts a stored email an envelope rule matches to its envelope only with --yes", async () => {
     const { mail, env } = await harness()
-    expect((await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])).code).toBe(0)
+    const synced = await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])
+    expect(synced.code, synced.err + synced.out).toBe(0)
     await mail(["ya", "rules", "add", "--list-id", "deals.shop.example", "--do", "envelope", "--json"])
 
     const dry = await mail(["ya", "rules", "apply", "--json"])
@@ -235,6 +251,41 @@ describe("rules", () => {
     expect(emails.find(({ fromAddress }) => fromAddress === "ann@example.com")?.bodyText).toContain("coffee shop")
     const listed = body((await mail(["ya", "rules", "list", "--json"])).out).items
     expect(listed[0].recorded.emails).toBe(1)
+  })
+
+  it("saves Telemost's meeting notes as meetings: stored ones with rules apply --yes, new ones on sync", async () => {
+    const notes = {
+      uid: 3,
+      raw: raw("notes1", "Telemost <keeper@telemost.yandex.ru>", "Конспект встречи от 26.10.2026", NOTES),
+    }
+    const { mail, env } = await harness([notes])
+    expect((await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])).code).toBe(0)
+
+    const added = await mail(["ya", "rules", "add", "--meeting-notes", "telemost", "--json"])
+    expect(body(added.out).item).toMatchObject({
+      match: { from: "keeper@telemost.yandex.ru" },
+      action: "keep",
+      protected: true,
+      meeting_notes: "telemost",
+    })
+    const dry = await mail(["ya", "rules", "apply", "--json"])
+    expect(body(dry.out).item).toMatchObject({ applied: false, meeting_notes: { telemost: { meetings: 1 } } })
+    expect(await storedMeetings(env)).toEqual([])
+
+    const applied = await mail(["ya", "rules", "apply", "--yes", "--json"])
+    expect(body(applied.out).item).toMatchObject({ applied: true, meeting_notes: { telemost: { meetings: 1 } } })
+    expect((await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])).code).toBe(0)
+    const meetings = await storedMeetings(env)
+    expect(meetings).toHaveLength(1)
+    expect(meetings[0]).toMatchObject({ joinUrl: "https://telemost.360.yandex.ru/j/1234567890" })
+    expect((await mail(["ya", "rules", "list"], { tty: true })).out).toContain("telemost meeting notes")
+  })
+
+  it("refuses a rule with neither --do nor --meeting-notes", async () => {
+    const { mail } = await harness()
+    const refused = await mail(["ya", "rules", "add", "--sender", "a@example.com", "--json"])
+    expect(refused.code).not.toBe(0)
+    expect(refused.err + refused.out).toContain("--meeting-notes")
   })
 
   it("under the read-only lock refuses a change and still previews with --dry-run", async () => {

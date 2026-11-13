@@ -27,10 +27,14 @@ import {
   describeMatch,
   type MailRule,
   type MailRuleMatch,
+  MEETING_NOTES,
+  MEETING_NOTES_PROVIDERS,
+  mailMeetingSource,
   mapProposedTags,
   PRESET_NAMES,
   type PresetName,
   ruleInput,
+  saveMeetingNotes,
   storedMailRules,
 } from "@wirecat/cli-core/mail"
 import type { MessageStore } from "@wirecat/cli-core/store"
@@ -55,6 +59,7 @@ const mailRule = v.looseObject({
   tags: v.optional(v.array(v.string())),
   reason: v.optional(v.string()),
   protected: v.optional(v.boolean()),
+  meeting_notes: v.optional(v.string()),
   source: v.optional(v.string()),
   decided_at: v.string(),
 })
@@ -71,6 +76,7 @@ const mailRulesApply = v.looseObject({
   protected_kept: v.number(),
   tagged: v.number(),
   rules: v.array(v.looseObject({})),
+  meeting_notes: v.optional(v.record(v.string(), v.looseObject({ meetings: v.number() }))),
 })
 
 const gmailFiltersPreview = v.looseObject({
@@ -105,7 +111,7 @@ const matchOptions = (command: Command) =>
     .option("--filter <query>", FILTER_HELP)
     .addOption(new Option("--kind <kind>", "a built-in kind of mail").choices(PRESET_NAMES))
 
-const matchOf = (options: MatchOptions): MailRuleMatch => {
+const matchOf = (options: MatchOptions, meetingNotes?: string): MailRuleMatch => {
   const match: MailRuleMatch = {
     ...(options.sender === undefined ? {} : { from: options.sender }),
     ...(options.domain === undefined ? {} : { domain: options.domain }),
@@ -113,6 +119,8 @@ const matchOf = (options: MatchOptions): MailRuleMatch => {
     ...(options.filter === undefined ? {} : flagParser("--filter", filterMatch)(options.filter)),
     ...(options.kind === undefined ? {} : { preset: options.kind }),
   }
+  const sender = meetingNotes === undefined ? undefined : MEETING_NOTES[meetingNotes]?.senders[0]
+  if (conditionKeys(match).length === 0 && sender !== undefined) return { from: sender }
   if (conditionKeys(match).length === 0)
     throw new CliError("validation_error", "give at least one of --sender, --domain, --list-id, --filter, --kind")
   return match
@@ -138,6 +146,7 @@ const ruleLine = (rule: MailRule & { recorded?: Recorded }): string =>
     rule.protected ? "PROTECTED" : rule.action.padEnd(8),
     describeMatch(rule.match),
     rule.tags?.length ? `tag ${rule.tags.join(", ")}` : "",
+    rule.meeting_notes ? `${rule.meeting_notes} meeting notes` : "",
     rule.tags_skipped ? `tags skipped: ${Object.keys(rule.tags_skipped).join(", ")}` : "",
     rule.source === undefined ? "" : `(${rule.source})`,
     rule.decided_at.slice(0, 10),
@@ -148,7 +157,7 @@ const ruleLine = (rule: MailRule & { recorded?: Recorded }): string =>
     .join("  ")
     .trimEnd()
 
-const applyText = (result: ApplyResult): string =>
+const applyText = (result: ApplyResult & { meetingNotes?: Record<string, { meetings: number }> }): string =>
   [
     ...result.rules
       .filter(({ emails }) => emails > 0)
@@ -159,7 +168,33 @@ const applyText = (result: ApplyResult): string =>
       `${megabytes(result.bytes)} MB of text, of ${result.listed} listed; ` +
       `${result.skipMatched} match only a skip rule and stay as stored; ` +
       `${result.protectedKept} are protected and stay whole; ${result.applied ? "tagged" : "would tag"} ${result.tagged}`,
+    ...Object.entries(result.meetingNotes ?? {}).map(
+      ([provider, { meetings }]) =>
+        `${result.applied ? "saved" : "would save"} ${meetings} ${provider} meetings from notes`,
+    ),
   ].join("\n")
+
+/** What a meeting-notes rule makes of mail stored before it: saved with --yes, counted without. */
+const meetingNotesOf = async (
+  store: MessageStore,
+  address: string,
+  rules: readonly MailRule[],
+  since: Date,
+  apply: boolean,
+): Promise<Record<string, { meetings: number }> | undefined> => {
+  const providers = [...new Set(rules.flatMap(({ meeting_notes }) => (meeting_notes ? [meeting_notes] : [])))]
+  if (providers.length === 0) return undefined
+  if (apply) {
+    const reports = await saveMeetingNotes(store, address, rules, { since: since.toISOString() })
+    return Object.fromEntries(Object.entries(reports).map(([provider, { meetings }]) => [provider, { meetings }]))
+  }
+  const counted: Record<string, { meetings: number }> = {}
+  for (const provider of providers) {
+    const source = mailMeetingSource({ store, meetings: store.meetings, address, rules, provider })
+    counted[provider] = { meetings: (await source.meetings(since.toISOString())).length }
+  }
+  return counted
+}
 
 const addressOf = (context: ReturnType<typeof contextOf>): string => {
   const address = context.settings.mailbox.address
@@ -241,6 +276,7 @@ const addCommand = () =>
               `${IDENTITY.command} personal rules add --domain shop.example --do envelope,tag:promo`,
               `${IDENTITY.command} personal rules add --sender boss@example.com --do protect --reason "never lose these"`,
               `${IDENTITY.command} personal rules add --filter "older:365d larger:5MB" --do envelope`,
+              `${IDENTITY.command} personal rules add --meeting-notes telemost`,
             ],
           }),
         ),
@@ -250,7 +286,13 @@ const addCommand = () =>
     mailRule,
   )
     .description("decide mail by sender, list, subject, age, size, label or kind; repeats replace")
-    .requiredOption("--do <actions>", ACTION_HELP, flagParser("--do", actionsOf))
+    .option("--do <actions>", ACTION_HELP, flagParser("--do", actionsOf))
+    .addOption(
+      new Option(
+        "--meeting-notes <provider>",
+        "the mail is a meeting's notes: also save each email as a meeting; kept whole and protected",
+      ).choices(MEETING_NOTES_PROVIDERS),
+    )
     .option("--reason <text>", "why, for the owner later")
     .addHelpText(
       "after",
@@ -263,25 +305,35 @@ const addCommand = () =>
         "score: and --kind judge a sender by its mail in the same listing; a sync that lists only new mail judges it " +
         "from that mail. has:attachment reads Content-Type at list time: a guess, not a parse.\n\n" +
         "Under MAIL_READ_ONLY, as in memo's scheduled mail triage, it takes only --sender or --list-id with " +
-        "--do envelope, never replaces a rule, and records the rule with source agent.",
+        "--do envelope, never replaces a rule, and records the rule with source agent.\n\n" +
+        "--meeting-notes telemost, with no condition, matches the sender Telemost mails its notes from " +
+        "(keeper@telemost.yandex.ru). Each email it matches is also saved as a meeting on sync; rules apply --yes " +
+        "saves the ones stored before.",
     )
     .action(async function (
       this: Command,
-      options: MatchOptions & { do: ReturnType<typeof actionsOf>; reason?: string },
+      options: MatchOptions & { do?: ReturnType<typeof actionsOf>; meetingNotes?: string; reason?: string },
     ) {
       const lock = readOnlyLockOf(IDENTITY, contextOf(this).env)
+      if (lock && options.meetingNotes !== undefined) throw readOnlyRefusal(lock, "add a meeting-notes rule")
+      if (options.do === undefined && options.meetingNotes === undefined)
+        throw new CliError("validation_error", "give --do <actions> or --meeting-notes <provider>")
+      const actions = options.do ?? { action: "keep" as const, protect: false, tags: [] }
       // A query, a kind or a domain could catch a whole mailbox, and skip or a tag decides more than how mail is
       // stored; the triage only files one sender or list as envelopes, which the owner can list and remove.
       if (lock && (options.filter !== undefined || options.kind !== undefined || options.domain !== undefined))
         throw readOnlyRefusal(lock, "add a rule by --filter, --kind or --domain; give --sender or --list-id")
-      if (lock && (options.do.action !== "envelope" || options.do.protect || options.do.tags.length > 0))
+      if (lock && (actions.action !== "envelope" || actions.protect || actions.tags.length > 0))
         throw readOnlyRefusal(lock, "add a rule that does more than --do envelope")
-      const match = matchOf(options)
+      const match = matchOf(options, options.meetingNotes)
+      // Notes are the only copy of a meeting: no other rule or cleanup may cut them.
+      const notes = options.meetingNotes === undefined ? {} : { protected: true, meeting_notes: options.meetingNotes }
       const rule: MailRule = {
         match,
-        action: options.do.action,
-        ...(options.do.tags.length ? { tags: options.do.tags } : {}),
-        ...(options.do.protect ? { protected: true } : {}),
+        action: notes.protected ? "keep" : actions.action,
+        ...(actions.tags.length ? { tags: actions.tags } : {}),
+        ...(actions.protect ? { protected: true } : {}),
+        ...notes,
         ...(options.kind === undefined ? {} : { source: `preset:${options.kind}` }),
         ...(lock ? { source: "agent" } : {}),
         ...(options.reason === undefined ? {} : { reason: options.reason }),
@@ -351,7 +403,8 @@ const applyCommand = () =>
       "\nWithout --yes it only says what would change. Reads the mailbox's headers from the server, from the folders sync reads (List-Id is not stored), then " +
         "drops the text, attachments and search entries of each matching stored email and keeps its sender, date, " +
         "size, labels and subject in metadata. Mail a skip rule matches is left as stored. Nothing changes in the " +
-        "mailbox. Changing a rule to keep, or removing it, reads those emails in full on the next sync.",
+        "mailbox. Changing a rule to keep, or removing it, reads those emails in full on the next sync. A " +
+        "meeting-notes rule saves the stored emails it matches as meetings.",
     )
     .action(async function (this: Command, options: { sinceTime?: string; dryRun?: boolean }) {
       const context = contextOf(this)
@@ -362,23 +415,30 @@ const applyCommand = () =>
       // --yes is the shared program's; it is read from the globals, as cli-core's own confirmed writes read it.
       const apply = this.optsWithGlobals<{ yes?: boolean }>().yes === true && options.dryRun !== true
       const { backend } = await openMail(context)
-      let result: Awaited<ReturnType<typeof applyRules>>
+      let result: ApplyResult & { meetingNotes?: Record<string, { meetings: number }> }
       try {
-        result = await withRules(this, async (store) =>
-          applyRules({
+        result = await withRules(this, async (store) => {
+          const rules = await storedMailRules(store, { address })
+          const applied = await applyRules({
             store,
             source: backend,
-            account: { address, rules: await storedMailRules(store, { address }) },
+            account: { address, rules },
             folders: await syncFoldersOf(context.settings.mailbox, backend),
             since,
             apply,
-          }),
-        )
+          })
+          const meetingNotes = await meetingNotesOf(store, address, rules, since, apply)
+          return meetingNotes === undefined ? applied : { ...applied, meetingNotes }
+        })
       } finally {
         await backend.close()
       }
       const next: NextStep[] =
-        result.applied || result.envelopes + result.tagged === 0
+        result.applied ||
+        result.envelopes +
+          result.tagged +
+          Object.values(result.meetingNotes ?? {}).reduce((n, { meetings }) => n + meetings, 0) ===
+          0
           ? []
           : [
               {

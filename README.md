@@ -72,6 +72,9 @@ You need Node.js 22.16 or a later 22.x, or 24 or later. To try it with no instal
 - **Decide what to keep.** `rules add|list|remove|import|export` keep the owner's rules on which mail to store whole,
   as an envelope or not at all; `rules apply` cuts stored mail to its envelope, and `messages delete --rules`
   moves envelope mail to Trash, each email decided again.
+- **Meeting notes become meetings.** `rules add --meeting-notes telemost` marks the notes Yandex Telemost mails after
+  a meeting: each one is kept whole and also saved as a meeting, linked to your calendar event in the same room that
+  day. `rules apply --yes` does the same for notes already stored.
 
 ## For AI agents
 
