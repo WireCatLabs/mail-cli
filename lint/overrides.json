@@ -92,28 +92,7 @@
   },
   {
     "rule": "undeclared-host",
-    "target": "account.apple.com",
-    "reason": "A help page in src/providers.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
-    "owner": "@WireCatLabs",
-    "review_after": "2027-05-13"
-  },
-  {
-    "rule": "undeclared-host",
-    "target": "e.mail.ru",
-    "reason": "A help page in src/providers.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
-    "owner": "@WireCatLabs",
-    "review_after": "2027-05-13"
-  },
-  {
-    "rule": "undeclared-host",
     "target": "help.mail.ru",
-    "reason": "A help page in src/providers.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
-    "owner": "@WireCatLabs",
-    "review_after": "2027-05-13"
-  },
-  {
-    "rule": "undeclared-host",
-    "target": "id.yandex.ru",
     "reason": "A help page in src/providers.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
     "owner": "@WireCatLabs",
     "review_after": "2027-05-13"
@@ -134,22 +113,8 @@
   },
   {
     "rule": "undeclared-host",
-    "target": "mail.yandex.ru",
-    "reason": "A help page in src/providers.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
-    "owner": "@WireCatLabs",
-    "review_after": "2027-05-13"
-  },
-  {
-    "rule": "undeclared-host",
     "target": "myaccount.google.com",
     "reason": "A help page in src/providers.ts and src/commands/session.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
-    "owner": "@WireCatLabs",
-    "review_after": "2027-05-13"
-  },
-  {
-    "rule": "undeclared-host",
-    "target": "myapps.microsoft.com",
-    "reason": "A help page in src/commands/session.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
     "owner": "@WireCatLabs",
     "review_after": "2027-05-13"
   },
@@ -178,13 +143,6 @@
     "rule": "undeclared-host",
     "target": "www.fastmail.help",
     "reason": "A help page in src/providers.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
-    "owner": "@WireCatLabs",
-    "review_after": "2027-05-13"
-  },
-  {
-    "rule": "undeclared-host",
-    "target": "www.microsoft.com",
-    "reason": "A help page in src/commands/session.ts that mail prints for the person to open; mail never sends a request there, and hostFetch would refuse one.",
     "owner": "@WireCatLabs",
     "review_after": "2027-05-13"
   },
