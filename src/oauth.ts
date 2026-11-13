@@ -6,6 +6,7 @@ import { type AppSource, googleApp, microsoftApp } from "@wirecat/cli-core/const
 import { acquireLock, type FileLock, writeFileAtomic } from "@wirecat/cli-core/files"
 import {
   credentialStorage,
+  googleProvider,
   type OAuthClient,
   type OAuthProvider,
   oauthAccount,
@@ -60,22 +61,6 @@ const microsoftProvider = (client: OAuthClient, address?: string): OAuthProvider
   client,
   redirect: { kind: "loopback", host: "localhost" },
   authorizeParams: { prompt: "select_account", ...(address ? { login_hint: address } : {}) },
-})
-
-const googleProvider = (client: OAuthClient, address?: string): OAuthProvider => ({
-  id: "google",
-  name: "Google",
-  authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
-  tokenUrl: "https://oauth2.googleapis.com/token",
-  revokeUrl: "https://oauth2.googleapis.com/revoke",
-  client,
-  redirect: { kind: "loopback" },
-  // Without offline access Google returns no refresh token; without consent it does not return one again.
-  authorizeParams: {
-    access_type: "offline",
-    prompt: "select_account consent",
-    ...(address ? { login_hint: address } : {}),
-  },
 })
 
 const standardGoogle = standardCodec("google")
@@ -136,11 +121,15 @@ export const googleAddress = async (accessToken: string, fetcher?: typeof fetch,
     })
   }
   if (!response.ok)
-    throw new CliError("authentication_error", `Google refused the account lookup (HTTP ${response.status})`)
+    throw new CliError("authentication_error", `Google refused the account lookup (HTTP ${response.status})`, {
+      reason: "mail.google-account-refused",
+    })
   const info = v.safeParse(UserInfo, await response.json().catch(() => undefined))
   const email = info.success ? info.output.email : undefined
   if (!email || (info.success && info.output.email_verified === false))
-    throw new CliError("authentication_error", "Google gave no verified address for this account")
+    throw new CliError("authentication_error", "Google gave no verified address for this account", {
+      reason: "mail.google-account-refused",
+    })
   return email.toLowerCase()
 }
 
@@ -194,7 +183,7 @@ export const oauthKeeper = (options: KeeperOptions): TokenKeeper =>
   tokenKeeper({
     provider:
       options.kind === "google"
-        ? googleProvider(options.client, options.address)
+        ? googleProvider(options.client, options.address ? { loginHint: options.address } : {})
         : microsoftProvider(options.client, options.address),
     storage: oauthStorage(options),
     lockDir: paths(options.env).config,

@@ -1,3 +1,9 @@
+### Changed — may break callers
+
+- **Built on cli-core 0.648.0** (was 0.647.0). A profile name that no profile has now exits with code 6.
+  `store reset` is no longer offered over MCP. What changed in between is in
+  [cli-core's changelog](https://github.com/WireCatLabs/cli-core/blob/main/CHANGELOG.md).
+
 ### Security
 
 - **mail reaches only the hosts it declares.** Sign-in, the Google account check, server discovery and the sender
