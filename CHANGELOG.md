@@ -2,6 +2,13 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## 0.28.0 — 13.11.2026
+
+### Fixed
+
+- **Telemost meeting notes in Yandex's older layout get their summary** (cli-core 0.657.0). Most notes emails have no
+  «Итоги» heading: the summary is now the text before the first heading, and Yandex's footer is no longer stored.
+
 ## 0.27.0 — 13.11.2026
 
 ### Changed — may break callers
