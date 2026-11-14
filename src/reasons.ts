@@ -18,6 +18,7 @@ const ENTRIES: [reason: string, code: string, message: string][] = [
   ["mail.rules-file-invalid", "validation_error", "the rules file is not one rules export writes"],
   ["mail.filters-file-invalid", "validation_error", "the file is not a Gmail Takeout Filters.json"],
   ["mail.rule-not-found", "not_found", "no rule has exactly these conditions"],
+  ["mail.cursor-foreign", "validation_error", "the cursor is not one a stopped run gave for these folders"],
   ["mail.no-trash", "provider_unavailable", "the mailbox has no Trash folder this tool can find"],
   ["mail.no-all-mail", "provider_unavailable", "Gmail's All Mail folder is not listed"],
   ["mail.no-uidplus", "provider_unavailable", "the server cannot expunge single messages"],

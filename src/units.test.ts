@@ -177,5 +177,9 @@ describe("the layers below the commands name no command", () => {
       fetch: async () => new Response("", { status: 404 }),
     }).catch((error: unknown) => messageOf(inWords(error, "personal")))
     expect(unknown).toMatch(/^no mail server found for nowhere\.test; pass --provider \(.+\), or --host, --port/)
+    const late = new CliError("timeout", "the command reached its time limit", { reason: "command.timed-out" })
+    expect(messageOf(inWords(late, "personal"))).toBe(
+      "the command reached its time limit; run it again with a longer --timeout, such as --timeout 30m",
+    )
   })
 })

@@ -3,10 +3,12 @@ import { CliError } from "@wirecat/cli-base"
 import { annotate } from "@wirecat/cli-base/commands"
 import { type QueryRegistry, queryFieldsOf } from "@wirecat/cli-base/query"
 import type { NextStep } from "@wirecat/cli-base/standards"
+import { runBudget } from "@wirecat/cli-core/background"
 import {
   answerEntity,
   baseContext,
   dateWindow,
+  environmentOf,
   grantsAuthority,
   itemOf,
   LOCAL_READ,
@@ -49,7 +51,7 @@ import { ACTION_HELP, actionsOf, FILTER_HELP, filterMatch } from "../mail/rules/
 import { removeRule, ruleCounts, saveRule } from "../mail/rules/store.js"
 import { openMailStore } from "../store.js"
 import { contextOf, openMail, refuseOffline } from "./context.js"
-import { flagParser } from "./words.js"
+import { flagParser, worded } from "./words.js"
 
 const mailRule = v.looseObject({
   id: v.optional(v.number()),
@@ -74,6 +76,9 @@ const mailRulesApply = v.looseObject({
   skip_matched: v.number(),
   protected_kept: v.number(),
   tagged: v.number(),
+  state: v.picklist(["partial", "complete"]),
+  stopped: v.optional(v.picklist(["requests", "deadline", "cancelled"])),
+  cursor: v.optional(v.string()),
   rules: v.array(v.looseObject({})),
   meeting_notes: v.optional(v.record(v.string(), v.looseObject({ meetings: v.number() }))),
 })
@@ -156,7 +161,10 @@ const ruleLine = (rule: MailRule & { recorded?: Recorded }): string =>
     .join("  ")
     .trimEnd()
 
-const applyText = (result: ApplyResult & { meetingNotes?: Record<string, { meetings: number }> }): string =>
+const applyText = (
+  result: ApplyResult & { meetingNotes?: Record<string, { meetings: number }> },
+  goOn: string | undefined,
+): string =>
   [
     ...result.rules
       .filter(({ emails }) => emails > 0)
@@ -171,6 +179,7 @@ const applyText = (result: ApplyResult & { meetingNotes?: Record<string, { meeti
       ([provider, { meetings }]) =>
         `${result.applied ? "saved" : "would save"} ${meetings} ${provider} meetings from notes`,
     ),
+    ...(goOn === undefined ? [] : [`the run stopped before its time limit and kept what it did; to go on: ${goOn}`]),
   ].join("\n")
 
 /** What a meeting-notes rule makes of mail stored before it: saved with --yes, counted without. */
@@ -370,10 +379,16 @@ const removeCommand = () =>
       )
     })
 
+const STOP_CODES = { requests: "rate_limited", deadline: "timeout", cancelled: "cancelled" } as const
+
 const applyCommand = () =>
   answerEntity(
     annotate(new Command("apply"), {
       effects: LOCAL_WRITE,
+      // A large mailbox takes minutes to list; the run stops before its deadline, keeps what it did and gives a
+      // --cursor to go on (WC-LIFE-10, WC-LIFE-16), so an MCP call answers before the client gives up.
+      cooperative: true,
+      partial: true,
       examples: [
         `${IDENTITY.command} personal rules apply`,
         `${IDENTITY.command} personal rules apply --since-time 2026-01-01 --yes`,
@@ -384,61 +399,119 @@ const applyCommand = () =>
   )
     .description("cut stored mail an envelope rule matches to its envelope; dry run unless --yes")
     .option("--since-time <time>", "only mail from this time, ISO 8601 or 30d ago (default: all mail)")
+    // Its own --yes, not only the program's: an MCP tool offers a command's own options, so an agent can apply.
+    .option("--yes", "cut them; without it, only say what would change")
     .option("--dry-run", "only say what would change, even with --yes; the read-only lock lets this through")
+    .option("--cursor <cursor>", "go on from where a stopped run ended; its next step gives it, with the same options")
     .addHelpText(
       "after",
-      "\nWithout --yes it only says what would change. Reads the mailbox's headers from the server, from the folders sync reads (List-Id is not stored), then " +
+      "\nWithout --yes it only says what would change. Reads the mailbox's headers from the server, newest first, from the folders sync reads (List-Id is not stored), then " +
         "drops the text, attachments and search entries of each matching stored email and keeps its sender, date, " +
         "size, labels and subject in metadata. Mail a skip rule matches is left as stored. Nothing changes in the " +
         "mailbox. Changing a rule to keep, or removing it, reads those emails in full on the next sync. A " +
-        "meeting-notes rule saves the stored emails it matches as meetings.",
+        "meeting-notes rule saves the stored emails it matches as meetings.\n\n" +
+        "A large mailbox takes minutes: 17,000 emails took about 4 minutes on one server. The run stops before its " +
+        "time limit " +
+        "(15 minutes, 45 seconds over MCP; --timeout changes it), keeps what it did and answers state partial with " +
+        "a --cursor to go on.",
     )
-    .action(async function (this: Command, options: { sinceTime?: string; dryRun?: boolean }) {
+    .action(async function (this: Command, options: { sinceTime?: string; dryRun?: boolean; cursor?: string }) {
       const context = contextOf(this)
       refuseOffline(context.flags)
       const address = addressOf(context)
       const window = dateWindow({ sinceTime: options.sinceTime })
       const since = new Date(window.since ?? 0)
-      // --yes is the shared program's; it is read from the globals, as cli-core's own confirmed writes read it.
       const apply = this.optsWithGlobals<{ yes?: boolean }>().yes === true && options.dryRun !== true
+      const { deadline, signal } = environmentOf(this)
+      const ends = deadline?.()
+      // Only the deadline and the slowest batch stop it, not a count of requests: a mailbox of 17,151 emails listed
+      // about 70 headers a second (4 min 15 s), far more than the 60 in 9 s that requestMs assumes for a sync.
+      const budget = runBudget({ requestMs: 1, ...(ends ? { deadline: ends } : {}), ...(signal ? { signal } : {}) })
       const { backend } = await openMail(context)
       let result: ApplyResult & { meetingNotes?: Record<string, { meetings: number }> }
       try {
-        result = await withRules(this, async (store) => {
-          const rules = await storedMailRules(store, { address })
-          const applied = await applyRules({
-            store,
-            source: backend,
-            account: { address, rules },
-            folders: await syncFoldersOf(context.settings.mailbox, backend),
-            since,
-            apply,
-          })
-          const meetingNotes = await meetingNotesOf(store, address, rules, since, apply)
-          return meetingNotes === undefined ? applied : { ...applied, meetingNotes }
-        })
+        result = await worded(context.profile, () =>
+          withRules(this, async (store) => {
+            const rules = await storedMailRules(store, { address })
+            const applied = await applyRules({
+              store,
+              source: backend,
+              account: { address, rules },
+              folders: await syncFoldersOf(context.settings.mailbox, backend),
+              since,
+              apply,
+              ...(options.cursor === undefined ? {} : { cursor: options.cursor }),
+              take: () => budget.take(),
+            })
+            if (applied.stopped) return applied
+            const meetingNotes = await meetingNotesOf(store, address, rules, since, apply)
+            return meetingNotes === undefined ? applied : { ...applied, meetingNotes }
+          }),
+        )
       } finally {
         await backend.close()
       }
-      const next: NextStep[] =
-        result.applied ||
+      const timeout = this.optsWithGlobals<{ timeout?: string }>().timeout
+      const same = {
+        ...(options.sinceTime === undefined ? {} : { since_time: options.sinceTime }),
+        ...(timeout === undefined ? {} : { timeout }),
+      }
+      const changes =
         result.envelopes +
-          result.tagged +
-          Object.values(result.meetingNotes ?? {}).reduce((n, { meetings }) => n + meetings, 0) ===
-          0
-          ? []
-          : [
+        result.tagged +
+        Object.values(result.meetingNotes ?? {}).reduce((n, { meetings }) => n + meetings, 0)
+      const next: NextStep[] =
+        result.cursor !== undefined
+          ? [
               {
                 kind: "command",
                 step: "mail.rules-apply",
                 command: "rules apply",
-                args: { yes: true, ...(options.sinceTime === undefined ? {} : { since_time: options.sinceTime }) },
-                why: "this was a dry run; --yes cuts them",
-                safe_to_auto_execute: false,
+                args: { ...same, ...(apply ? { yes: true } : {}), cursor: result.cursor },
+                why:
+                  result.listed === 0
+                    ? "the run read nothing before its time limit; run it again with a longer --timeout"
+                    : "the run stopped before its time limit to answer in time; this goes on from where it stopped",
+                // The same decision, already made: only the stored copy changes, and the mailbox stays as it is.
+                safe_to_auto_execute: true,
               },
             ]
-      renderAnswer(this, outputFor(this), itemOf(snakeKeys(result), { next, meta: window.meta }), () =>
-        applyText(result),
+          : result.applied || changes === 0
+            ? []
+            : [
+                {
+                  kind: "command",
+                  step: "mail.rules-apply",
+                  command: "rules apply",
+                  args: { yes: true, ...same },
+                  why: "this was a dry run; --yes cuts them",
+                  safe_to_auto_execute: false,
+                },
+              ]
+      const issues = result.stopped
+        ? [{ code: STOP_CODES[result.stopped], reason: `budget.${result.stopped}`, source: "rules apply" }]
+        : []
+      const state = result.stopped ? "partial" : "complete"
+      renderAnswer(
+        this,
+        outputFor(this),
+        itemOf(snakeKeys({ ...result, state }), {
+          next,
+          meta: { ...window.meta, ...(issues.length ? { complete: false, issues } : {}) },
+        }),
+        () =>
+          applyText(
+            result,
+            result.cursor === undefined
+              ? undefined
+              : [
+                  `${IDENTITY.command} ${context.profile} rules apply`,
+                  ...(apply ? ["--yes"] : []),
+                  ...(options.sinceTime === undefined ? [] : [`--since-time ${options.sinceTime}`]),
+                  ...(timeout === undefined ? [] : [`--timeout ${timeout}`]),
+                  `--cursor ${result.cursor}`,
+                ].join(" "),
+          ),
       )
     })
 
