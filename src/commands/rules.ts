@@ -164,6 +164,7 @@ const ruleLine = (rule: MailRule & { recorded?: Recorded }): string =>
 const applyText = (
   result: ApplyResult & { meetingNotes?: Record<string, { meetings: number }> },
   goOn: string | undefined,
+  stalled: boolean,
 ): string =>
   [
     ...result.rules
@@ -179,7 +180,11 @@ const applyText = (
       ([provider, { meetings }]) =>
         `${result.applied ? "saved" : "would save"} ${meetings} ${provider} meetings from notes`,
     ),
-    ...(goOn === undefined ? [] : [`the run stopped before its time limit and kept what it did; to go on: ${goOn}`]),
+    ...(goOn === undefined
+      ? []
+      : stalled
+        ? [`the run read nothing before its time limit; to run it with a longer one: ${goOn}`]
+        : [`the run stopped before its time limit and kept what it did; to go on: ${goOn}`]),
   ].join("\n")
 
 /** What a meeting-notes rule makes of mail stored before it: saved with --yes, counted without. */
@@ -379,6 +384,8 @@ const removeCommand = () =>
       )
     })
 
+const LONGER_TIMEOUT = "30m"
+
 const STOP_CODES = { requests: "rate_limited", deadline: "timeout", cancelled: "cancelled" } as const
 
 const applyCommand = () =>
@@ -427,6 +434,7 @@ const applyCommand = () =>
       // Only the deadline and the slowest batch stop it, not a count of requests: a mailbox of 17,151 emails listed
       // about 70 headers a second (4 min 15 s), far more than the 60 in 9 s that requestMs assumes for a sync.
       const budget = runBudget({ requestMs: 1, ...(ends ? { deadline: ends } : {}), ...(signal ? { signal } : {}) })
+      let batches = 0
       const { backend } = await openMail(context)
       let result: ApplyResult & { meetingNotes?: Record<string, { meetings: number }> }
       try {
@@ -441,7 +449,11 @@ const applyCommand = () =>
               since,
               apply,
               ...(options.cursor === undefined ? {} : { cursor: options.cursor }),
-              take: () => budget.take(),
+              take: () => {
+                const stop = budget.take()
+                if (stop === null) batches++
+                return stop
+              },
             })
             if (applied.stopped) return applied
             const meetingNotes = await meetingNotesOf(store, address, rules, since, apply)
@@ -460,23 +472,18 @@ const applyCommand = () =>
         result.envelopes +
         result.tagged +
         Object.values(result.meetingNotes ?? {}).reduce((n, { meetings }) => n + meetings, 0)
+      // Stopped before reading a batch: run again under the same limit, it gets no further.
+      const stalled = result.stopped !== undefined && batches === 0
+      const resumed = (more: Record<string, string>): Record<string, unknown> => ({
+        ...same,
+        ...more,
+        ...(apply ? { yes: true } : {}),
+        cursor: result.cursor,
+      })
+      const agent = environmentOf(this).agent !== undefined
       const next: NextStep[] =
-        result.cursor !== undefined
-          ? [
-              {
-                kind: "command",
-                step: "mail.rules-apply",
-                command: "rules apply",
-                args: { ...same, ...(apply ? { yes: true } : {}), cursor: result.cursor },
-                why:
-                  result.listed === 0
-                    ? "the run read nothing before its time limit; run it again with a longer --timeout"
-                    : "the run stopped before its time limit to answer in time; this goes on from where it stopped",
-                // The same decision, already made: only the stored copy changes, and the mailbox stays as it is.
-                safe_to_auto_execute: true,
-              },
-            ]
-          : result.applied || changes === 0
+        result.cursor === undefined
+          ? result.applied || changes === 0
             ? []
             : [
                 {
@@ -488,6 +495,40 @@ const applyCommand = () =>
                   safe_to_auto_execute: false,
                 },
               ]
+          : !stalled
+            ? [
+                {
+                  kind: "command",
+                  step: "mail.rules-apply",
+                  command: "rules apply",
+                  args: resumed({}),
+                  why: "the run stopped before its time limit to answer in time; this goes on from where it stopped",
+                  // The same decision, already made: only the stored copy changes, and the mailbox stays as it is.
+                  safe_to_auto_execute: true,
+                },
+              ]
+            : agent
+              ? [
+                  {
+                    // An MCP call cannot pass --timeout: the server's MAIL_TIMEOUT sets it, and a repeat gets no further.
+                    kind: "user_action",
+                    step: "mail.rules-apply-longer-timeout",
+                    why:
+                      "the run read nothing before its time limit; the owner can give the MCP server a longer " +
+                      `MAIL_TIMEOUT, such as 30m, or run \`${IDENTITY.command} ${context.profile} rules apply\` in a terminal`,
+                    safe_to_auto_execute: false,
+                  },
+                ]
+              : [
+                  {
+                    kind: "command",
+                    step: "mail.rules-apply",
+                    command: "rules apply",
+                    args: resumed({ timeout: LONGER_TIMEOUT }),
+                    why: `the run read nothing before its time limit; this runs it again with --timeout ${LONGER_TIMEOUT}`,
+                    safe_to_auto_execute: false,
+                  },
+                ]
       const issues = result.stopped
         ? [{ code: STOP_CODES[result.stopped], reason: `budget.${result.stopped}`, source: "rules apply" }]
         : []
@@ -508,9 +549,14 @@ const applyCommand = () =>
                   `${IDENTITY.command} ${context.profile} rules apply`,
                   ...(apply ? ["--yes"] : []),
                   ...(options.sinceTime === undefined ? [] : [`--since-time ${options.sinceTime}`]),
-                  ...(timeout === undefined ? [] : [`--timeout ${timeout}`]),
+                  ...(stalled
+                    ? [`--timeout ${LONGER_TIMEOUT}`]
+                    : timeout === undefined
+                      ? []
+                      : [`--timeout ${timeout}`]),
                   `--cursor ${result.cursor}`,
                 ].join(" "),
+            stalled,
           ),
       )
     })
@@ -531,7 +577,10 @@ const exportCommand = () =>
         const rules = await storedMailRules(store, { address })
         return { version: 1, account: address, rules: rules.map(({ id: _, ...rule }) => rule) }
       })
-      outputFor(this).streams.data(`${JSON.stringify(file, null, 2)}\n`)
+      // A terminal and a pipe get the file itself, so `rules export > rules.json` imports back; an agent gets it as the
+      // answer, since an MCP call that prints instead of answering fails.
+      if (environmentOf(this).agent) renderAnswer(this, outputFor(this), itemOf(file))
+      else outputFor(this).streams.data(`${JSON.stringify(file, null, 2)}\n`)
     })
 
 const importCommand = () =>
@@ -557,6 +606,8 @@ const importCommand = () =>
         .choices(["mail", "memo", "gmail"])
         .default("mail"),
     )
+    // Its own --yes, as rules apply has: an MCP tool offers a command's own options, so an agent can add them.
+    .option("--yes", "with --format gmail, add the rules the filters suggest; without it, only preview them")
     .addHelpText(
       "after",
       "\nWith --format gmail it only previews the rules the filters suggest; --yes adds them. A rules file is " +

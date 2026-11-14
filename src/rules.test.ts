@@ -384,7 +384,9 @@ describe("rules", () => {
       tty: true,
     })
     expect(stopped.code, stopped.err).toBe(0)
-    expect(stopped.out).toMatch(/to go on: mail ya rules apply --yes --since-time 2026-10-01 --timeout 4s --cursor \S+/)
+    expect(stopped.out).toMatch(
+      /with a longer one: mail ya rules apply --yes --since-time 2026-10-01 --timeout 30m --cursor \S+/,
+    )
 
     const serve = async (more: NodeJS.ProcessEnv) => {
       const { client, close } = await mcpClient(options({ data: () => {}, diagnostic: () => {} }, { more }), [], "ya")
@@ -406,8 +408,97 @@ describe("rules", () => {
     const text = JSON.stringify(called.content)
     expect(text).toContain('\\"state\\":\\"partial\\"')
     expect(text).toContain('\\"cursor\\"')
-    expect(text).toContain("longer --timeout")
-    expect(text).toContain('\\"yes\\":true')
+  })
+
+  it("never offers a run that read nothing again with the same limit, over MCP or in a terminal, resumed or not", async () => {
+    const deal = (uid: number) => ({
+      uid,
+      raw: raw(`deal${uid}`, "Shop Deals <deals@shop.example>", `Bargain ${uid}`, `Bargain ${uid} inside`, LIST_ID),
+    })
+    const { mail, env, options } = await harness([deal(3)])
+    expect((await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])).code).toBe(0)
+    await mail(["ya", "rules", "add", "--list-id", "deals.shop.example", "--do", "envelope", "--json"])
+    const store = await openStore({ path: storePath(env), env, command: "mail" })
+    const source = imapBackend(
+      { host: "127.0.0.1", port: fake?.port ?? 0, security: "plain", login: ADDRESS },
+      passwordCredential(PASSWORD),
+      { listSize: 1, connections: 1, sleep: async () => {} },
+    )
+    let taken = 0
+    const first = await applyRules({
+      store,
+      source,
+      account: { address: ADDRESS, rules: await storedMailRules(store, { address: ADDRESS }) },
+      folders: ["INBOX", "Sent"],
+      since: new Date("2026-10-01"),
+      apply: true,
+      take: () => (++taken > 1 ? "deadline" : null),
+    }).finally(async () => {
+      await source.close()
+      await store.close()
+    })
+    expect(first).toMatchObject({ stopped: "deadline", listed: 1 })
+    const cursor = first.cursor ?? ""
+
+    const { client, close } = await mcpClient(
+      options({ data: () => {}, diagnostic: () => {} }, { more: { MAIL_TIMEOUT: "4s" } }),
+      [],
+      "ya",
+    )
+    try {
+      for (const args of [{ yes: true }, { yes: true, cursor }]) {
+        const called = await client.callTool({
+          name: "mail_write",
+          arguments: { command: "rules apply", arguments: args },
+        })
+        const answer = called.structuredContent as { item: { state: string }; next: object[] }
+        expect(answer.item.state).toBe("partial")
+        expect(answer.next).toEqual([
+          {
+            kind: "user_action",
+            step: "mail.rules-apply-longer-timeout",
+            why: expect.stringContaining("MAIL_TIMEOUT"),
+            safe_to_auto_execute: false,
+          },
+        ])
+      }
+    } finally {
+      expect(await close()).toBe(0)
+    }
+
+    const terminal = await mail(["ya", "rules", "apply", "--yes", "--cursor", cursor, "--timeout", "4s", "--json"])
+    expect(body(terminal.out).next).toMatchObject([
+      { command: "rules apply", args: { yes: true, cursor, timeout: "30m" }, safe_to_auto_execute: false },
+    ])
+  })
+
+  it("over MCP adds Gmail filters with yes and answers rules export with the rules file", async () => {
+    const { mail, dir, options } = await harness()
+    // Adding a rule decides what an agent may do with mail later, so the owner grants it first.
+    expect((await mail(["ya", "config", "set", "permissions.mcp.authority", "allow"])).code).toBe(0)
+    const path = join(dir, "Filters.json")
+    writeFileSync(
+      path,
+      JSON.stringify([{ criteria: { from: "news@example.test" }, action: { removeLabelIds: ["INBOX"] } }]),
+    )
+    const { client, close } = await mcpClient(options({ data: () => {}, diagnostic: () => {} }), [], "ya")
+    try {
+      const call = async (name: string, command: string, args: object) => {
+        const called = await client.callTool({ name, arguments: { command, arguments: args } })
+        expect(called.isError, JSON.stringify(called.content)).not.toBe(true)
+        return called.structuredContent as { item: Record<string, unknown> }
+      }
+      const added = await call("mail_write", "rules import", { file: path, format: "gmail", yes: true })
+      expect(added.item).toMatchObject({ added: 1 })
+      const exported = await call("mail_read", "rules export", {})
+      expect(exported.item).toMatchObject({
+        version: 1,
+        account: ADDRESS,
+        rules: [{ match: { from: "news@example.test" }, action: "envelope" }],
+      })
+    } finally {
+      expect(await close()).toBe(0)
+    }
   })
 
   it("saves Telemost's meeting notes as meetings: stored ones with rules apply --yes, new ones on sync", async () => {

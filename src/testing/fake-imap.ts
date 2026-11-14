@@ -235,6 +235,8 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
 
   const serve = (socket: Socket) => {
     sockets.add(socket)
+    // A reply of several lines is several writes; with Nagle each waits for the client's delayed ACK, about 40 ms.
+    socket.setNoDelay(true)
     socket.on("close", () => sockets.delete(socket))
     socket.on("error", () => {})
     let buffer = Buffer.alloc(0)
