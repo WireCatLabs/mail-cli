@@ -258,6 +258,30 @@ it("times a command out on its own and reports the transport code", async () => 
   await source.close()
 })
 
+it("blames the command's own time limit, not the server, when that limit cut the command short", async () => {
+  fake = await serve(false, 0, { hangFetches: true })
+  const server = fake
+  const timers = new Set<() => void>()
+  const expireAfter = (_ms: number, fire: () => void) => {
+    timers.add(fire)
+    return () => timers.delete(fire)
+  }
+  const source = sourceOf(server.port, undefined, { maxAttempts: 2, expireAfter, timeLeftMs: () => 20_000 })
+  const searched = await source.search?.(SINCE, "INBOX")
+  const failure = failureOf(source.list(SINCE, "INBOX", searched ? { searched } : {}))
+  while (!server.commands.some((command) => command.startsWith("UID FETCH")))
+    await new Promise((resolve) => setImmediate(resolve))
+  for (const fire of timers) fire()
+  const error = await failure
+  await source.close()
+  expect(error).toMatchObject({
+    code: "timeout",
+    message: expect.stringContaining("its time limit"),
+    details: { reason: "command.timed-out", retryable: false },
+  })
+  expect(server.commands.filter((command) => command.startsWith("UID FETCH"))).toHaveLength(1)
+})
+
 it("refuses every call after close instead of opening a new connection", async () => {
   fake = await serve()
   const source = sourceOf(fake.port)

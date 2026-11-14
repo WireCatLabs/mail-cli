@@ -7,7 +7,7 @@ ran it · ⛔ not tested offline, with the reason and where it is checked instea
 Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 [TESTING.md](TESTING.md) for how, and for the states and failures that cut across commands.
 
-**286 ✅ · 42 ⛔ · 0 ❌** — 86 commands, 242 options.
+**288 ✅ · 42 ⛔ · 0 ❌** — 86 commands, 244 options.
 
 | Command | Option | | Note |
 |---|---|---|---|
@@ -74,7 +74,9 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `rules remove` | `--kind` | ✅ |  |
 | `rules apply` |  | ✅ |  |
 | `rules apply` | `--since-time` | ✅ |  |
+| `rules apply` | `--yes` | ✅ |  |
 | `rules apply` | `--dry-run` | ✅ |  |
+| `rules apply` | `--cursor` | ✅ |  |
 | `rules export` |  | ✅ |  |
 | `rules import` |  | ✅ |  |
 | `rules import` | `--format` | ✅ |  |

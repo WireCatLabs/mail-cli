@@ -2,16 +2,19 @@ import { mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { memoryKeyring } from "@wirecat/cli-base"
+import { storedMailRules } from "@wirecat/cli-core/mail"
 import { openStore, storePath } from "@wirecat/cli-core/store"
 import { afterEach, describe, expect, it } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
-import type { MailCredential, MailEndpoint, RunBounds } from "./mail/backend.js"
+import { type MailCredential, type MailEndpoint, passwordCredential, type RunBounds } from "./mail/backend.js"
 import { imapBackend } from "./mail/imap/index.js"
+import { applyRules } from "./mail/rules/apply.js"
 import { rulesFileOf } from "./mail/rules/file.js"
 import { importFilters } from "./mail/rules/filters.js"
 import { actionsOf, filterMatch } from "./mail/rules/query.js"
 import { run } from "./program.js"
 import { type FakeImap, startFakeImap } from "./testing/fake-imap.js"
+import { answered, mcpClient } from "./testing/mcp.js"
 
 const PASSWORD = "fixture-app-password-7Qp2"
 const ADDRESS = "me@example.com"
@@ -30,7 +33,7 @@ const NOTES =
   "Итоги\r\nДоговорились о синтетическом плане.\r\n\r\nЗадачи\r\nЗАДАЧА 1. Пример\r\n\r\n" +
   "Встреча: https://telemost.360.yandex.ru/j/1234567890"
 
-const harness = async (more: { uid: number; raw: string }[] = []) => {
+const harness = async (more: { uid: number; raw: string }[] = [], sent: { uid: number; raw: string }[] = []) => {
   fake = await startFakeImap({
     login: ADDRESS,
     password: PASSWORD,
@@ -53,7 +56,7 @@ const harness = async (more: { uid: number; raw: string }[] = []) => {
           ...more,
         ],
       },
-      { name: "Sent", attributes: ["\\Sent"], messages: [] },
+      { name: "Sent", attributes: ["\\Sent"], messages: sent },
     ],
   })
   const port = fake.port
@@ -66,30 +69,45 @@ const harness = async (more: { uid: number; raw: string }[] = []) => {
     MESSAGING_STORE: join(mkdtempSync(join(tmpdir(), "store-")), "wirecat.db"),
   }
   delete env.CI
+  // The time each run had left when it opened the mailbox: its deadline, less the margin kept for answering.
+  const timeLeft: (number | undefined)[] = []
+  const options = (
+    streams: MailEnvironment["streams"],
+    { password, tty = false, more = {} }: { password?: string; tty?: boolean; more?: NodeJS.ProcessEnv } = {},
+  ): MailEnvironment & Record<string, unknown> => ({
+    streams,
+    tty,
+    env: { ...env, ...more, ...(password === undefined ? {} : { MAIL_PASSWORD: password }) },
+    keyring,
+    himalaya: async () => undefined,
+    discovery: { mx: async () => ["mx.yandex.net"], fetch: async () => new Response("", { status: 404 }) },
+    backend: (endpoint: MailEndpoint, password: MailCredential, bounds: RunBounds = {}) => {
+      timeLeft.push(bounds.timeLeftMs?.())
+      return imapBackend({ ...endpoint, host: "127.0.0.1", port, security: "plain" }, password, {
+        sleep: async () => {},
+        ...bounds,
+      })
+    },
+  })
   const mail = async (argv: string[], { password, tty = false }: { password?: string; tty?: boolean } = {}) => {
     const out: string[] = []
     const err: string[] = []
-    const options: MailEnvironment & Record<string, unknown> = {
-      streams: { data: (text) => out.push(text), diagnostic: (text) => err.push(text) },
-      tty,
-      env: password === undefined ? env : { ...env, MAIL_PASSWORD: password },
-      keyring,
-      himalaya: async () => undefined,
-      discovery: { mx: async () => ["mx.yandex.net"], fetch: async () => new Response("", { status: 404 }) },
-      backend: (endpoint: MailEndpoint, password: MailCredential, bounds: RunBounds = {}) =>
-        imapBackend({ ...endpoint, host: "127.0.0.1", port, security: "plain" }, password, {
-          sleep: async () => {},
-          ...bounds,
-        }),
-    }
-    const code = await run(argv, options)
+    const code = await run(
+      argv,
+      options(
+        { data: (text) => out.push(text), diagnostic: (text) => err.push(text) },
+        { tty, ...(password === undefined ? {} : { password }) },
+      ),
+    )
     return { code, out: out.join("\n"), err: err.join("\n") }
   }
   expect((await mail(["ya", "session", "start", "--address", ADDRESS, "--json"], { password: PASSWORD })).code).toBe(0)
-  return { mail, env, dir }
+  return { mail, env, dir, options, timeLeft }
 }
 
 const body = (text: string) => JSON.parse(text)
+
+const LIST_ID = "List-Id: <deals.shop.example>\r\n"
 
 const storedMeetings = async (env: NodeJS.ProcessEnv) => {
   const store = await openStore({ path: storePath(env), env, command: "mail" })
@@ -251,6 +269,100 @@ describe("rules", () => {
     expect(emails.find(({ fromAddress }) => fromAddress === "ann@example.com")?.bodyText).toContain("coffee shop")
     const listed = body((await mail(["ya", "rules", "list", "--json"])).out).items
     expect(listed[0].recorded.emails).toBe(1)
+  })
+
+  it("stops before its time limit with a cursor that goes on through every folder and keeps the counts", async () => {
+    const deal = (uid: number, id: string) => ({
+      uid,
+      raw: raw(id, "Shop Deals <deals@shop.example>", `Bargain ${id}`, `Bargain ${id} inside`, LIST_ID),
+    })
+    const { mail, env } = await harness([deal(3, "deal3")], [deal(1, "sent-deal")])
+    expect((await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])).code).toBe(0)
+    await mail(["ya", "rules", "add", "--list-id", "deals.shop.example", "--do", "envelope", "--json"])
+    const stopAfter = async (batches: number, apply: boolean) => {
+      const store = await openStore({ path: storePath(env), env, command: "mail" })
+      const source = imapBackend(
+        { host: "127.0.0.1", port: fake?.port ?? 0, security: "plain", login: ADDRESS },
+        passwordCredential(PASSWORD),
+        { listSize: 1, connections: 1, sleep: async () => {} },
+      )
+      let taken = 0
+      return applyRules({
+        store,
+        source,
+        account: { address: ADDRESS, rules: await storedMailRules(store, { address: ADDRESS }) },
+        folders: ["INBOX", "Sent"],
+        since: new Date("2026-10-01"),
+        apply,
+        take: () => (++taken > batches ? "deadline" : null),
+      }).finally(async () => {
+        await source.close()
+        await store.close()
+      })
+    }
+
+    // The newest email, the only one in the first batch, is a deal; the rest of INBOX holds one more.
+    const preview = await stopAfter(1, false)
+    expect(preview).toMatchObject({ stopped: "deadline", listed: 1, envelopes: 1 })
+    const previewed = await mail(["ya", "rules", "apply", "--cursor", preview.cursor ?? "", "--json"])
+    expect(previewed.code, previewed.err).toBe(0)
+    expect(body(previewed.out).item).toMatchObject({ state: "complete", applied: false, listed: 4, envelopes: 3 })
+    expect(body(previewed.out).next[0]).toMatchObject({ command: "rules apply", args: { yes: true } })
+    expect(body(previewed.out).next[0].args.cursor).toBeUndefined()
+
+    const wrongMode = await mail(["ya", "rules", "apply", "--yes", "--cursor", preview.cursor ?? "", "--json"])
+    expect([wrongMode.code, wrongMode.err.includes("without --cursor")]).toEqual([2, true])
+
+    const first = await stopAfter(2, true)
+    expect(first).toMatchObject({ stopped: "deadline", listed: 2, envelopes: 2 })
+    const rest = await mail(["ya", "rules", "apply", "--yes", "--cursor", first.cursor ?? "", "--json"])
+    expect(rest.code, rest.err).toBe(0)
+    expect(body(rest.out).item).toMatchObject({ state: "complete", listed: 4, envelopes: 3 })
+    expect(body(rest.out).next ?? []).toEqual([])
+    const cut = (await storedEmails(env)).filter(({ fromAddress }) => fromAddress === "deals@shop.example")
+    expect(cut.map(({ bodyText }) => bodyText)).toEqual([null, null, null])
+
+    const wrong = await mail(["ya", "rules", "apply", "--cursor", "bm90LWEtY3Vyc29y", "--json"])
+    expect([wrong.code, wrong.err.includes("--cursor")]).toEqual([2, true])
+  })
+
+  it("runs 15 minutes in a terminal and 45 s over MCP, where a stop answers partial with the step to go on", async () => {
+    const { mail, options, timeLeft } = await harness()
+    expect((await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])).code).toBe(0)
+    await mail(["ya", "rules", "add", "--list-id", "deals.shop.example", "--do", "envelope", "--json"])
+    timeLeft.length = 0
+    expect((await mail(["ya", "rules", "apply", "--json"])).code).toBe(0)
+    expect(timeLeft[0]).toBeGreaterThan(14 * 60_000)
+
+    // A deadline inside the run's safety margin stops it before its first batch, with no wait.
+    const stopped = await mail(["ya", "rules", "apply", "--yes", "--since-time", "2026-10-01", "--timeout", "4s"], {
+      tty: true,
+    })
+    expect(stopped.code, stopped.err).toBe(0)
+    expect(stopped.out).toMatch(/to go on: mail ya rules apply --yes --since-time 2026-10-01 --timeout 4s --cursor \S+/)
+
+    const serve = async (more: NodeJS.ProcessEnv) => {
+      const { client, close } = await mcpClient(options({ data: () => {}, diagnostic: () => {} }, { more }), [], "ya")
+      try {
+        return await answered(
+          client.callTool({ name: "mail_write", arguments: { command: "rules apply", arguments: { yes: true } } }),
+        )
+      } finally {
+        expect(await close()).toBe(0)
+      }
+    }
+    timeLeft.length = 0
+    expect((await serve({})).isError).not.toBe(true)
+    expect(timeLeft[0]).toBeGreaterThan(30_000)
+    expect(timeLeft[0]).toBeLessThanOrEqual(45_000)
+
+    const called = await serve({ MAIL_TIMEOUT: "4s" })
+    expect(called.isError, JSON.stringify(called.content)).not.toBe(true)
+    const text = JSON.stringify(called.content)
+    expect(text).toContain('\\"state\\":\\"partial\\"')
+    expect(text).toContain('\\"cursor\\"')
+    expect(text).toContain("longer --timeout")
+    expect(text).toContain('\\"yes\\":true')
   })
 
   it("saves Telemost's meeting notes as meetings: stored ones with rules apply --yes, new ones on sync", async () => {

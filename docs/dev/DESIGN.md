@@ -100,12 +100,17 @@ Claims about our code cite the file. The imapflow notes were read in imapflow 2.
   an unknown outcome (WC-CMD-10). A run logged before writes had ids, or an id the run does not hold, is refused
   (`mail.write-unknown`). What comes back is recorded per write (`undoes` on the change log's `restore` line), so a
   later restore of the whole run still undoes the run's other writes of the same message.
-- **Only `sync`, `messages import` and `messages export` finish their current step on a stop** (owner, 2026-11-05,
-  NEED-2214 A for sync and import; 2026-11-06, NEED-2225 A for export). All three are `cooperative` (WC-LIFE-10).
+- **Only `sync`, `messages import`, `messages export` and `rules apply` finish their current step on a stop** (owner, 2026-11-05,
+  NEED-2214 A for sync and import; 2026-11-06, NEED-2225 A for export). All of them are `cooperative` (WC-LIFE-10).
   Sync and import hand the signal to cli-core's `syncMail`, which checks it before each read and right after it,
   saving what was stored before it throws: the read in flight completes, its mail is stored by the next run, and
   nothing after it starts. Export checks it before each batch: the batch in flight is read and written, the answer
-  says `stopped: "cancelled"`, and `--resume` goes on (`src/stop.test.ts`). Every other long command stops at once.
+  says `stopped: "cancelled"`, and `--resume` goes on (`src/stop.test.ts`). `rules apply` does the same (owner,
+  2026-11-14, UX-30): it is `cooperative` and `partial`, so it gets 15 minutes in a terminal and 45 s over MCP
+  (WC-LIFE-5), where clients give up at about a minute. The owner's mailbox listed 17,151 headers in 4 min 15 s. It
+  reads the headers newest first, decides and saves each batch, stops before its deadline, and answers
+  `state: "partial"` with a `--cursor` (folder, UIDVALIDITY, next UID) that goes on (`src/rules.test.ts`). Every
+  other long command stops at once.
 
 ## Open questions for the owner
 

@@ -22,6 +22,8 @@ const WORDS: Record<string, (message: string, profile: string, error: CliError) 
   "download.exists": (message) => `${message}; pass --replace to overwrite it`,
   "mail.server-unknown": (message) =>
     `${message}; pass --provider (${PROVIDER_NAMES.join(", ")}), or --host, --port and --security yourself`,
+  "mail.cursor-foreign": (message) => `--cursor: ${message}; run it again without --cursor`,
+  "command.timed-out": (message) => `${message}; run it again with a longer --timeout, such as --timeout 30m`,
   "mail.export-other": (message) => `${message}; resume it with the same --format and profile`,
   "mail.export-destination-exists": (message, _profile, error) =>
     error.details.resumable === true

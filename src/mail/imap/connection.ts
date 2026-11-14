@@ -203,11 +203,20 @@ export const imapConnections = (
   const limited = async <T>(slot: number, work: Promise<T>): Promise<T> => {
     const left = timeLeftMs?.()
     const ms = left === undefined ? requestTimeoutMs : Math.max(1, Math.min(requestTimeoutMs, left))
+    // Cut short by the run's own time limit, the server was still within its time: say which limit ran out.
+    const ranOut = left !== undefined && left < requestTimeoutMs
     let cancel = () => {}
     const expired = new Promise<never>((_, reject) => {
       cancel = expireAfter(ms, () => {
         drop(slot)
-        reject(Object.assign(new Error("request timed out"), { code: "RequestTimeout" }))
+        reject(
+          ranOut
+            ? new CliError("timeout", "the command reached its time limit before the mail server finished", {
+                reason: "command.timed-out",
+                retryable: false,
+              })
+            : Object.assign(new Error("request timed out"), { code: "RequestTimeout" }),
+        )
       })
     })
     work.catch(() => {})
@@ -257,7 +266,8 @@ export const imapConnections = (
       } catch (raw) {
         const error = mapImapError(raw)
         const transient =
-          error.code === "network_error" || error.code === "timeout" || error.code === "provider_unavailable"
+          (error.code === "network_error" || error.code === "timeout" || error.code === "provider_unavailable") &&
+          error.details.retryable !== false
         if (transient) drop(slot)
         if (!transient || closed || attempt >= maxAttempts || signal?.aborted) throw error
         const wait = backoffMs(attempt, { ...backoff, retries: maxAttempts, maxRetryAfterMs: 0 }, random)
