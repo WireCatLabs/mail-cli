@@ -98,7 +98,7 @@ const storedAggregates = async (
   const from = since.toISOString()
   const stored = (await store.mail.emailFacts({ accountId })).map(listedOf).filter((item) => item.receivedAt >= from)
   const known = new Map(stored.map((item) => [item.messageId, item]))
-  const factsFor = factsOf(stored, rules)
+  const factsFor = await factsOf(stored, rules, (addresses) => store.mail.writtenTo(addresses))
   return (item) => {
     const { score, replied } = factsFor(known.get(item.messageId) ?? item)
     return { ...item, ...(score === undefined ? {} : { score }), ...(replied === undefined ? {} : { replied }) }

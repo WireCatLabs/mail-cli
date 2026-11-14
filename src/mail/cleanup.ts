@@ -58,7 +58,7 @@ const keptBecause = (
   if (rule.protected || rule.action === "keep") return "protected"
   if (rule.action !== ENVELOPE && rule.action !== "skip") return "rule_changed"
   const from = item.headers?.from
-  if (from !== undefined && replied.has(from)) return "replied"
+  if (from !== undefined && replied.has(from.toLowerCase())) return "replied"
   const labels = item.labels ?? []
   if (item.flagged || labels.includes("Starred") || labels.includes("Important")) return "starred"
   if (labels.includes("Sent") || labels.includes("Drafts")) return "sent"
@@ -121,10 +121,9 @@ export const cleanupOf = async (
   const cap = first ? Math.min(limit, FIRST_RUN_LIMIT) : limit
   const facts = (await mailbox.store.mail.emailFacts({ accountId: mailbox.accountId })).map(listedOf)
   const envelopes = facts.filter(({ envelope }) => envelope)
-  const replied = new Set(
-    facts.filter(({ labels }) => labels?.includes("Sent")).flatMap(({ headers }) => headers?.to ?? []),
-  )
-  const factsFor = factsOf(facts, rules)
+  const writtenTo = (addresses: readonly string[]) => mailbox.store.mail.writtenTo(addresses)
+  const replied = await writtenTo([...new Set(envelopes.flatMap(({ headers }) => headers?.from ?? []))])
+  const factsFor = await factsOf(facts, rules, writtenTo)
   const kept: Cleanup["kept"] = {}
   const totals = new Map<string, RuleTotals>()
   const chosen: string[] = []

@@ -738,6 +738,52 @@ describe("messages delete --rules", () => {
     expect(preview).toMatchObject({ located: 0, cleanup: { envelopes: 1, candidates: 0 } })
   })
 
+  it("keeps an envelope from a sender the owner wrote to from another account", async () => {
+    const { mail, stored } = await harness({ folders: yandex() })
+    await stored(async (store, id) => {
+      await store.mail.rules.upsert(
+        id,
+        {
+          conditions: { domain: "shop.example" },
+          actions: { store: "envelope" },
+          source: "owner",
+          decidedAt: Date.now(),
+        },
+        Date.now(),
+      )
+    })
+    expect((await mail(["ya", "rules", "apply", "--since-time", "2026-01-01", "--yes", "--json"])).code).toBe(0)
+    await stored(async (store) => {
+      const work = await store.accounts.saveAccount(
+        { provider: "email", account: "me@work.example" },
+        { name: "me@work.example" },
+      )
+      await store.mail.saveThread({
+        accountId: work,
+        externalId: "t-shop",
+        now: Date.now(),
+        emails: [
+          {
+            externalId: "<to-shop@work.example>",
+            subject: "Order question",
+            from: { address: "me@work.example", name: null },
+            to: [{ address: "News@Shop.example", name: null }],
+            cc: [],
+            sentAt: Date.parse("2026-09-02"),
+            receivedAt: Date.parse("2026-09-02"),
+            references: [],
+            bodyText: "Where is my order?",
+            outgoing: true,
+            read: true,
+            mailboxes: [],
+          },
+        ],
+      })
+    })
+    const preview = item((await mail(["ya", "messages", "delete", "--rules", "--json"])).out)
+    expect(preview).toMatchObject({ located: 0, cleanup: { envelopes: 1, candidates: 0 } })
+  })
+
   it("lets no preset rule trash an envelope from a sender the owner wrote to after it was stored", async () => {
     const folders = yandex()
     folders[0]?.messages.push({
