@@ -10,6 +10,7 @@
 - **`rules apply` finishes on a large mailbox, and over MCP it answers in time.** It failed after 27 seconds on a
   mailbox of 17,000 emails, which takes about 4 minutes to list. It now runs up to 15 minutes by default (45 seconds
   over MCP, where clients give up after about a minute; `--timeout` still sets it). It reads the headers newest first
-  and saves its work batch by batch, so a run that stops keeps what it did.
+  and saves its work batch by batch, so a run that stops keeps what it did. `score:` and `--kind` judge a sender by
+  its mail in the store, so where a run stops never changes what they decide.
 - **`rules apply` says when it runs out of its time limit.** The error said the mail server did not answer in time.
   Now it says the command reached its time limit and to run it again with a longer `--timeout`.

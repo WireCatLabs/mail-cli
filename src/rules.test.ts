@@ -326,6 +326,51 @@ describe("rules", () => {
     expect([wrong.code, wrong.err.includes("--cursor")]).toEqual([2, true])
   })
 
+  it("judges a sender the same whichever batch or part its mail falls in", async () => {
+    const note = (uid: number) => ({
+      uid,
+      raw: raw(`gh${uid}`, "GitHub <notifications@github.com>", `Build ${uid} failed`, `Build ${uid} failed`),
+    })
+    const wrote = {
+      uid: 1,
+      raw:
+        `Message-ID: <reply1@example.com>\r\nDate: Tue, 27 Oct 2026 11:00:00 +0000\r\nFrom: ${ADDRESS}\r\n` +
+        "To: notifications@github.com\r\nSubject: Re: Build\r\n\r\nThanks\r\n",
+    }
+    const { mail, env } = await harness([note(3), note(4)], [wrote])
+    expect((await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])).code).toBe(0)
+    await mail(["ya", "rules", "add", "--kind", "developer", "--do", "envelope", "--json"])
+    const dryRun = async (batches: number, cursor?: string) => {
+      const store = await openStore({ path: storePath(env), env, command: "mail" })
+      const source = imapBackend(
+        { host: "127.0.0.1", port: fake?.port ?? 0, security: "plain", login: ADDRESS },
+        passwordCredential(PASSWORD),
+        { listSize: 1, connections: 1, sleep: async () => {} },
+      )
+      let taken = 0
+      return applyRules({
+        store,
+        source,
+        account: { address: ADDRESS, rules: await storedMailRules(store, { address: ADDRESS }) },
+        folders: ["INBOX", "Sent"],
+        since: new Date("2026-10-01"),
+        apply: false,
+        ...(cursor === undefined ? {} : { cursor }),
+        take: () => (++taken > batches ? "deadline" : null),
+      }).finally(async () => {
+        await source.close()
+        await store.close()
+      })
+    }
+
+    // The owner wrote to the sender, and that mail is listed last: no preset may catch the sender before it is read.
+    const whole = await dryRun(Number.POSITIVE_INFINITY)
+    const part = await dryRun(1)
+    expect(part.stopped).toBe("deadline")
+    const rest = await dryRun(Number.POSITIVE_INFINITY, part.cursor)
+    expect([whole.envelopes, rest.envelopes, rest.listed]).toEqual([0, 0, whole.listed])
+  })
+
   it("runs 15 minutes in a terminal and 45 s over MCP, where a stop answers partial with the step to go on", async () => {
     const { mail, options, timeLeft } = await harness()
     expect((await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])).code).toBe(0)

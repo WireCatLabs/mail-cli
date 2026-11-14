@@ -413,7 +413,7 @@ const applyCommand = () =>
         "A large mailbox takes minutes: 17,000 emails took about 4 minutes on one server. The run stops before its " +
         "time limit " +
         "(15 minutes, 45 seconds over MCP; --timeout changes it), keeps what it did and answers state partial with " +
-        "a --cursor to go on. score: and --kind judge a sender by the mail this run has listed so far.",
+        "a --cursor to go on.",
     )
     .action(async function (this: Command, options: { sinceTime?: string; dryRun?: boolean; cursor?: string }) {
       const context = contextOf(this)

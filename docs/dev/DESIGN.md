@@ -109,7 +109,9 @@ Claims about our code cite the file. The imapflow notes were read in imapflow 2.
   2026-11-14, UX-30): it is `cooperative` and `partial`, so it gets 15 minutes in a terminal and 45 s over MCP
   (WC-LIFE-5), where clients give up at about a minute. The owner's mailbox listed 17,151 headers in 4 min 15 s. It
   reads the headers newest first, decides and saves each batch, stops before its deadline, and answers
-  `state: "partial"` with a `--cursor` (folder, UIDVALIDITY, next UID) that goes on (`src/rules.test.ts`). Every
+  `state: "partial"` with a `--cursor` (folder, UIDVALIDITY, next UID) that goes on (`src/rules.test.ts`). A
+  sender's score and whether the owner wrote to it come from the mail stored in the window, read before the first
+  batch, so where a batch or a part stops never changes a decision (owner, 2026-11-14). Every
   other long command stops at once.
 
 ## Open questions for the owner

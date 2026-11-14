@@ -6,7 +6,9 @@ import {
   ENVELOPE,
   envelopeBox,
   factsOf,
+  listedOf,
   type MailAccount,
+  type MailFacts,
   type MailRule,
   ruleTagger,
   sameMatch,
@@ -83,6 +85,34 @@ const positionOf = (cursor: string, folders: readonly string[], apply: boolean):
   return position
 }
 
+/**
+ * A sender's score and whether the owner wrote to it, from the mail stored in the window, so no batch and no resumed
+ * part sees a sender other than the rest do. The headers the server gave still decide everything else.
+ */
+const storedAggregates = async (
+  store: MessageStore,
+  accountId: number,
+  rules: readonly MailRule[],
+  since: Date,
+): Promise<(item: Listed) => MailFacts> => {
+  const from = since.toISOString()
+  // listedOf gives a stored email no folder, so mail the owner sent is marked Sent as scoreSenders marks it.
+  const stored = (await store.mail.emailFacts({ accountId }))
+    .map((email) => {
+      const item = listedOf(email)
+      return email.outgoing && !item.labels?.includes("Sent")
+        ? { ...item, labels: [...(item.labels ?? []), "Sent"] }
+        : item
+    })
+    .filter((item) => item.receivedAt >= from)
+  const known = new Map(stored.map((item) => [item.messageId, item]))
+  const factsFor = factsOf(stored, rules)
+  return (item) => {
+    const { score, replied } = factsFor(known.get(item.messageId) ?? item)
+    return { ...item, ...(score === undefined ? {} : { score }), ...(replied === undefined ? {} : { replied }) }
+  }
+}
+
 const textBytes = (text: string | null | undefined) => (text ? Buffer.byteLength(text) : 0)
 
 /**
@@ -144,6 +174,7 @@ export const applyRules = async ({
   const all = new Set((await store.mail.emailRefs({ accountId: stored.id })).map(({ externalId }) => externalId))
   const tagger = ruleTagger(store, key)
   const listed = new Map<string, Listed>()
+  const aggregatesOf = await storedAggregates(store, stored.id, rules, since)
 
   const envelope = async (item: Listed, rule: MailRule) => {
     const email = await store.mail.email(stored.id, item.messageId)
@@ -195,10 +226,8 @@ export const applyRules = async ({
   const settle = async (batch: Listed[]) => {
     const fresh = batch.filter(({ messageId }) => !listed.has(messageId))
     for (const item of fresh) listed.set(item.messageId, item)
-    // score: and --kind judge a sender by the mail listed so far in this run.
-    const factsFor = factsOf([...listed.values()], rules)
     for (const item of fresh) {
-      const facts = factsFor(item)
+      const facts = aggregatesOf(item)
       const tags = all.has(item.messageId) ? tagsOf(rules, facts) : []
       if (tags.length) {
         result.tagged++
