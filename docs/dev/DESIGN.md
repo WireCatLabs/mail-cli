@@ -111,8 +111,11 @@ Claims about our code cite the file. The imapflow notes were read in imapflow 2.
   reads the headers newest first, decides and saves each batch, stops before its deadline, and answers
   `state: "partial"` with a `--cursor` (folder, UIDVALIDITY, next UID) that goes on (`src/rules.test.ts`). A
   sender's score and whether the owner wrote to it come from the mail stored in the window, read before the first
-  batch, so where a batch or a part stops never changes a decision (owner, 2026-11-14). Every
-  other long command stops at once.
+  batch, so where a batch or a part stops never changes a decision (owner, 2026-11-14). Going on from the cursor
+  is safe to run unasked; a run that stopped before reading a batch, fresh or resumed, never offers itself again
+  under the same limit (owner, 2026-11-14, BUG-764). In a terminal its step adds `--timeout 30m` and waits for the
+  owner; over MCP, where only the server's `MAIL_TIMEOUT` sets the limit, it is a `user_action`: a longer
+  `MAIL_TIMEOUT`, or the command in a terminal. Every other long command stops at once.
 
 ## Open questions for the owner
 

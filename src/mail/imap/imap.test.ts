@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { connect } from "node:net"
 import type { Quick, Searched } from "@wirecat/cli-core/mail"
 import { type FetchMessageObject, ImapFlow } from "imapflow"
 import { afterEach, expect, it, vi } from "vitest"
@@ -526,4 +527,38 @@ it("names Gmail labels as memo does, so stored label:Inbox mailboxes keep matchi
     labels: new Set(["\\Inbox", "\\Important", "Работа", "R&D-team"]),
   }
   expect(quickOf(message, "[Gmail]/All Mail").labels).toEqual(["Important", "Inbox", "R&D-team", "Starred", "Работа"])
+})
+
+// Nagle's algorithm held each reply line after the first until the client's delayed ACK, about 40 ms per command;
+// the organise tests spent 55 of their 65 s waiting so, and timed out at random on GitHub's runners (DEBT-358).
+it("the fake server answers a command of many lines at once, with no wait between its lines", async () => {
+  fake = await serve()
+  const socket = connect(fake.port, "127.0.0.1")
+  let text = ""
+  const replied = (line: string) =>
+    new Promise<void>((resolve) => {
+      const check = () => {
+        if (!text.includes(line)) return
+        socket.off("data", check)
+        resolve()
+      }
+      socket.on("data", check)
+      check()
+    })
+  socket.on("data", (chunk: Buffer) => {
+    text += chunk.toString("utf8")
+  })
+  try {
+    await replied("fake ready")
+    socket.write('a LOGIN "me@example.com" "app-secret-1"\r\n')
+    await replied("a OK")
+    const started = performance.now()
+    for (let n = 0; n < 10; n++) {
+      socket.write(`s${n} SELECT INBOX\r\n`)
+      await replied(`s${n} OK`)
+    }
+    expect(performance.now() - started).toBeLessThan(200)
+  } finally {
+    socket.destroy()
+  }
 })

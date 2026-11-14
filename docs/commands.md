@@ -397,6 +397,7 @@ mail rules import <file> [options]
 | Option | What it does |
 |---|---|
 | `--format <format>` | the file's format: mail (memo's export is the same file) or gmail. One of: `mail`, `memo`, `gmail`. Default: `mail`. |
+| `--yes` | with --format gmail, add the rules the filters suggest; without it, only preview them. |
 
 **Returns:** mail rule import — match, action, decided_at, id, tags, reason, protected, meeting_notes, and 5 more; every field: mail commands info rules import
 
