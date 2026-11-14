@@ -265,7 +265,7 @@ backup is under 8 days old, and a first run moves at most 100, to check by hand.
             ...(since ? { since } : {}),
           })
           const facts = (await mailbox.store.mail.emailFacts({ accountId: mailbox.accountId })).map(listedOf)
-          const factsFor = factsOf(facts, rules)
+          const factsFor = await factsOf(facts, rules, (addresses) => mailbox.store.mail.writtenTo(addresses))
           rulesOf = new Map(
             facts.flatMap((item) => {
               const rule = decide(rules, factsFor(item))

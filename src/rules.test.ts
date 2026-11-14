@@ -371,6 +371,26 @@ describe("rules", () => {
     expect([whole.envelopes, rest.envelopes, rest.listed]).toEqual([0, 0, whole.listed])
   })
 
+  it("counts a sender the owner wrote to before the window as a correspondent", async () => {
+    const note = (uid: number) => ({
+      uid,
+      raw: raw(`gh${uid}`, "GitHub <notifications@github.com>", `Build ${uid} failed`, `Build ${uid} failed`),
+    })
+    const wrote = {
+      uid: 1,
+      date: "01-Sep-2026 11:00:00 +0000",
+      raw:
+        `Message-ID: <reply1@example.com>\r\nDate: Tue, 01 Sep 2026 11:00:00 +0000\r\nFrom: ${ADDRESS}\r\n` +
+        "To: notifications@github.com\r\nSubject: Re: Build\r\n\r\nThanks\r\n",
+    }
+    const { mail } = await harness([note(3)], [wrote])
+    expect((await mail(["ya", "sync", "--since-time", "2026-08-01", "--json"])).code).toBe(0)
+    await mail(["ya", "rules", "add", "--kind", "developer", "--do", "envelope", "--json"])
+    const applied = await mail(["ya", "rules", "apply", "--since-time", "2026-10-01", "--json"])
+    expect(applied.code, applied.err).toBe(0)
+    expect(body(applied.out).item).toMatchObject({ envelopes: 0 })
+  })
+
   it("runs 15 minutes in a terminal and 45 s over MCP, where a stop answers partial with the step to go on", async () => {
     const { mail, options, timeLeft } = await harness()
     expect((await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])).code).toBe(0)

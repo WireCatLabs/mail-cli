@@ -124,7 +124,7 @@ export const cleanupOf = async (
   const replied = new Set(
     facts.filter(({ labels }) => labels?.includes("Sent")).flatMap(({ headers }) => headers?.to ?? []),
   )
-  const factsFor = factsOf(facts, rules)
+  const factsFor = await factsOf(facts, rules, (addresses) => mailbox.store.mail.writtenTo(addresses))
   const kept: Cleanup["kept"] = {}
   const totals = new Map<string, RuleTotals>()
   const chosen: string[] = []
