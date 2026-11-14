@@ -703,6 +703,85 @@ describe("messages delete --rules", () => {
     )
     expect(recent).toMatchObject({ applied: false, located: 0 })
   })
+
+  it("keeps an envelope from a sender the owner wrote to, judged from the Sent folder the store holds", async () => {
+    const folders = yandex()
+    folders[3]?.messages.push({
+      uid: 1,
+      raw: raw("to-shop", "Order question", "Where is my order?", ADDRESS).replace(
+        `To: ${ADDRESS}`,
+        "To: news@shop.example",
+      ),
+      flags: ["\\Seen"],
+      date: OLD,
+    })
+    const { mail, stored } = await harness({ folders })
+    await stored(async (store, id) => {
+      await store.mail.rules.upsert(
+        id,
+        {
+          conditions: { domain: "shop.example" },
+          actions: { store: "envelope" },
+          source: "owner",
+          decidedAt: Date.now(),
+        },
+        Date.now(),
+      )
+    })
+    expect((await mail(["ya", "rules", "apply", "--since-time", "2026-01-01", "--yes", "--json"])).code).toBe(0)
+    const preview = item((await mail(["ya", "messages", "delete", "--rules", "--json"])).out)
+    const own = await stored(async (store, id) =>
+      (await store.mail.emailFacts({ accountId: id })).find(({ fromAddress }) => fromAddress === ADDRESS),
+    )
+    expect(own).toMatchObject({ outgoing: true })
+    expect(own?.mailboxes.some(({ kind, name }) => kind === "label" && name === "Sent")).toBe(false)
+    expect(preview).toMatchObject({ located: 0, cleanup: { envelopes: 1, candidates: 0 } })
+  })
+
+  it("lets no preset rule trash an envelope from a sender the owner wrote to after it was stored", async () => {
+    const folders = yandex()
+    folders[0]?.messages.push({
+      uid: 4,
+      raw: raw("ebay", "Your order", "Shipped", "eBay <orders@ebay.com>"),
+      flags: ["\\Seen"],
+      date: OLD,
+    })
+    const { mail, stored } = await harness({ folders })
+    await stored(async (store, id) => {
+      await store.mail.rules.upsert(
+        id,
+        { conditions: { preset: "shopping" }, actions: { store: "envelope" }, source: "owner", decidedAt: Date.now() },
+        Date.now(),
+      )
+    })
+    expect((await mail(["ya", "rules", "apply", "--since-time", "2026-01-01", "--yes", "--json"])).code).toBe(0)
+    // The reply reaches the store without a sync of the inbox, as an import or a sync of Sent alone leaves it.
+    await stored(async (store, id) => {
+      await store.mail.saveThread({
+        accountId: id,
+        externalId: "t-ebay",
+        now: Date.now(),
+        emails: [
+          {
+            externalId: "<to-ebay@example.com>",
+            subject: "Re: Your order",
+            from: { address: ADDRESS, name: null },
+            to: [{ address: "orders@ebay.com", name: null }],
+            cc: [],
+            sentAt: Date.parse("2026-09-02"),
+            receivedAt: Date.parse("2026-09-02"),
+            references: [],
+            bodyText: "Not arrived",
+            outgoing: true,
+            read: true,
+            mailboxes: [],
+          },
+        ],
+      })
+    })
+    const preview = item((await mail(["ya", "messages", "delete", "--rules", "--json"])).out)
+    expect(preview).toMatchObject({ located: 0, cleanup: { envelopes: 1, candidates: 0 } })
+  })
 })
 
 describe("folders create, rename and delete", () => {

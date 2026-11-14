@@ -96,15 +96,7 @@ const storedAggregates = async (
   since: Date,
 ): Promise<(item: Listed) => MailFacts> => {
   const from = since.toISOString()
-  // listedOf gives a stored email no folder, so mail the owner sent is marked Sent as scoreSenders marks it.
-  const stored = (await store.mail.emailFacts({ accountId }))
-    .map((email) => {
-      const item = listedOf(email)
-      return email.outgoing && !item.labels?.includes("Sent")
-        ? { ...item, labels: [...(item.labels ?? []), "Sent"] }
-        : item
-    })
-    .filter((item) => item.receivedAt >= from)
+  const stored = (await store.mail.emailFacts({ accountId })).map(listedOf).filter((item) => item.receivedAt >= from)
   const known = new Map(stored.map((item) => [item.messageId, item]))
   const factsFor = factsOf(stored, rules)
   return (item) => {
