@@ -1550,8 +1550,8 @@ mail runs list [query] [options]
 
 | Option | What it does |
 |---|---|
-| `--limit <n>` | how many to show. Default: `20`. |
-| `--page <n>` | which page, starting at 1. Default: `1`. |
+| `--limit <n>` | how many to show. |
+| `--page <n>` | which page, starting at 1. |
 
 **Returns:** run — run_id, command, started_at, status, cli_version, profile, completed_at, requests, and 23 more; every field: mail commands info runs list
 

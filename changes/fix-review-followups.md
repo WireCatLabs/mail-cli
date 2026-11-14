@@ -8,4 +8,5 @@
 
 ### Changed — may break callers
 
-- **Needs `@wirecat/cli-base` 0.100.0** (was 0.99.0), as the next cli-core does.
+- **Built on cli-core 0.663.0** (was 0.662.0) and cli-base 0.100.0 (was 0.99.0). See the
+  [cli-core changelog](https://github.com/WireCatLabs/cli-core/blob/main/CHANGELOG.md).
