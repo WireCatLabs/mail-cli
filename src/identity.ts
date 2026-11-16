@@ -49,9 +49,10 @@ export const DESKTOP: ManifestIdentity = {
   userHosts:
     "the mail server you sign in to, your domain's autoconfig file, and each sender domain's registry from IANA's list",
   tagline: "Your mailbox over IMAP, searchable on your computer",
-  syncs: "mail from the folders you choose",
+  syncs: "mail",
   signIn: {
-    gives: "Lets your agent read, organise and send your mail.",
+    gives:
+      "Lets your agent read and search your mail, and sort and send it as far as your settings allow. A Microsoft sign-in may not grant sending.",
     asks: "Your mail address and an app password, or a Microsoft or Google sign-in in the browser.",
   },
 }

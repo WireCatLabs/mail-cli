@@ -29,7 +29,6 @@
     "docs/dev/skills/release/SKILL.md": "b621813918ed50ab63a37e29ceb4a1fcbedebcee80810323c708f25d637ccc81",
     "docs/dev/skills/release/fresh-audit.md": "f74c41958ae343791085d3cfc3a55d8f4f7b3baeb5f833a88f97aae7dce9e320",
     "lefthook.yml": "c41b0b3b90a5c1e3f5b8c78a524139bdbafb836a0e0e4ebd90ccb2c7939b57ed",
-    "scripts/audit.sh": "a3b23b86d451e7ab8f5820e5d7bf95c6f63165ae42615c45fcba9fba22ed542a",
     "tsconfig.json": "1d6455eff0cd509e4d24217757d7b2c5ff8fe70dad8fac2d9d4eb4e9b5d7ee50",
     "tsconfig.scripts.json": "5987bd02d21f42c55ad06cedbb49ede9fa39debccb44286cda23f0c605ee6107",
     "tsconfig.test.json": "e46769f0660e23692c6dcb33ede02e02415038dfd27c0a5bb10c23c576237da7"
