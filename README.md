@@ -8,7 +8,10 @@
 and read it there, offline. It also organises the mailbox on the server: flags, folders, and deletion to Trash, each
 change one you can undo. It keeps drafts, and sends, replies and forwards over SMTP.
 
-[Documentation](https://github.com/WireCatLabs/mail-cli/blob/main/docs/index.md) · [Roadmap](https://github.com/WireCatLabs/mail-cli/blob/main/docs/roadmap.md) · [WireCat](https://wirecat.dev)
+[Docs](https://wirecat.dev/en/docs/mail) ·
+[Install](https://github.com/WireCatLabs/mail-cli/blob/main/docs/installation.md) ·
+[Usage](https://github.com/WireCatLabs/mail-cli/blob/main/docs/usage.md) ·
+[Discord](https://discord.gg/DebENqbRrJ)
 
 [![npm](https://img.shields.io/npm/v/@wirecat/mail-cli)](https://www.npmjs.com/package/@wirecat/mail-cli)
 [![CI](https://github.com/WireCatLabs/mail-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/WireCatLabs/mail-cli/actions/workflows/ci.yml)
