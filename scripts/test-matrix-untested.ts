@@ -11,6 +11,13 @@ export const UNTESTED: { command: string; option?: string; reason: string }[] = 
     ...entry,
     reason: "cli-core src/cli/schedule/schedule.test.ts drives it through the shared schedule commands the CLI mounts",
   })),
+  ...["--max-messages", "--max-tokens", "--yes"].map((option) => ({
+    command: "inbox",
+    option,
+    reason:
+      "each needs an AI model answering: cli-core src/mail/cli/inbox.test.ts drives them with a fake model; " +
+      "src/mail.test.ts runs mail's inbox with no model",
+  })),
   {
     command: "",
     option: "--help-all",

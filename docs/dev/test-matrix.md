@@ -7,7 +7,7 @@ ran it · ⛔ not tested offline, with the reason and where it is checked instea
 Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 [TESTING.md](TESTING.md) for how, and for the states and failures that cut across commands.
 
-**289 ✅ · 42 ⛔ · 0 ❌** — 86 commands, 245 options.
+**290 ✅ · 45 ⛔ · 0 ❌** — 87 commands, 248 options.
 
 | Command | Option | | Note |
 |---|---|---|---|
@@ -197,6 +197,10 @@ Measured from the test run (`coverage/argv.jsonl`), not searched for — see
 | `conversations list` | `--limit` | ✅ |  |
 | `conversations list` | `--page` | ✅ |  |
 | `conversations show` |  | ✅ |  |
+| `inbox` |  | ✅ |  |
+| `inbox` | `--max-messages` | ⛔ | each needs an AI model answering: cli-core src/mail/cli/inbox.test.ts drives them with a fake model; src/mail.test.ts runs mail's inbox with no model |
+| `inbox` | `--max-tokens` | ⛔ | each needs an AI model answering: cli-core src/mail/cli/inbox.test.ts drives them with a fake model; src/mail.test.ts runs mail's inbox with no model |
+| `inbox` | `--yes` | ⛔ | each needs an AI model answering: cli-core src/mail/cli/inbox.test.ts drives them with a fake model; src/mail.test.ts runs mail's inbox with no model |
 | `attachments list` |  | ✅ |  |
 | `attachments download` |  | ✅ |  |
 | `attachments download` | `--output-dir` | ✅ |  |
