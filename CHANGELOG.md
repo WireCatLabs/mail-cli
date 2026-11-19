@@ -2,6 +2,29 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## 0.35.0 — 19.11.2026
+
+### Added
+
+- **`sync_since`: how far back `sync` reads, as a setting.** Before, `sync` read the last 30 days unless a run gave
+  `--since-time`, and WireCat Desktop had no way to read further back. The profile setting takes a window back from now
+  (`90d`, `12w`, `1y`) or a date (`2025-01-01`). The default stays `30d`. `--since-time` still wins for one run. Make
+  the window wider and the next `sync` reads the older mail too, with no `--rescan`. `config show` lists it, and
+  `config set sync_since 2x` is refused with the forms it takes. See [Settings](docs/configuration.md).
+- **`inbox` sorts new mail with the AI model you chose**, with no agent: each thread that changed since the last run
+  goes under needs an answer, to read or can wait, with a one-line reason. A local Ollama works. It follows local
+  only and `memo models chats`, sends at most 40 emails a run, and runs on a schedule. `review` shows the verdict
+  as `email.inbox`. See [usage](docs/usage.md#inbox-new-mail-sorted-by-an-ai-model).
+
+### Changed — may break callers
+
+- **The MCP Registry entry asks which profiles to serve.** It started `mcp serve --profiles all`, so a client that
+  installed the server from the registry reached every account on the computer without the owner choosing. Now
+  `--profiles` is a required argument with the example `personal`: the client asks for one profile, a
+  comma-separated list or `all`. Why: a CLI never picks an account for the owner
+  ([WC-MCP-9](https://github.com/WireCatLabs/cli-base/blob/main/docs/standards/mcp.md#wc-mcp-9--a-server-serves-the-profiles-it-is-told-with-one-connection-for-each)). Watch for: a client set up from the old entry keeps `--profiles all` until it is set up again; a
+  server added by hand or with `mcp config` does not change.
+
 ## 0.34.0 — 16.11.2026
 
 ### Changed — may break callers
