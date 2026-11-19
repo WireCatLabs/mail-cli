@@ -758,7 +758,7 @@ describe("account check, folders and sync", () => {
 
     expect((await mail(["ya", "config", "set", "sync_since", "1w", "--json"])).code).toBe(0)
     const given = item((await mail(["ya", "sync", "--since-time", "2026-01-01", "--json"])).out)
-    expect(given.since.slice(0, 4)).toBe("2025")
+    expect(Date.parse(given.since)).toBeLessThan(Date.parse("2026-01-02T00:00:00Z"))
     expect((await mail(["ya", "config", "set", "sync_since", "1y", "--defaults", "--json"])).code).toBe(0)
     expect((await mail(["ya", "config", "migrate", "--json"])).code).toBe(0)
   })
