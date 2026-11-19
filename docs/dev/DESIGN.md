@@ -116,6 +116,12 @@ Claims about our code cite the file. The imapflow notes were read in imapflow 2.
   under the same limit (owner, 2026-11-14, BUG-764). In a terminal its step adds `--timeout 30m` and waits for the
   owner; over MCP, where only the server's `MAIL_TIMEOUT` sets the limit, it is a `user_action`: a longer
   `MAIL_TIMEOUT`, or the command in a terminal. Every other long command stops at once.
+- **How far back `sync` reads is the profile's `sync_since`, default `30d`** (owner, 2026-11-19, NEED-2764 A). It
+  takes a window (`90d`, `12w`, `1y`) or a date; `--since-time` still wins for one run. It stays in mail: cli-core has
+  no shared window (the messengers keep `ALL_SINCE = "90d"` in code, gcal and zm have only `--lookback-days`).
+- **`inbox` sorts new mail with the shared AI model, no agent** (owner, 2026-11-19, NEED-2763 A). cli-core's
+  `mailInboxCommand`; the fixes it names for the model and `models chats` are memo's commands, since mail has no
+  `models` group.
 
 ## Open questions for the owner
 

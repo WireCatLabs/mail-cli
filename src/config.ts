@@ -45,7 +45,23 @@ const PROFILE_ENTRIES = {
   folders: v.optional(v.array(v.string())),
   read_attachments: v.optional(v.boolean()),
   max_attachment_mb: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+  sync_since: v.optional(
+    v.pipe(
+      v.string(),
+      v.trim(),
+      v.check(
+        (value) =>
+          SYNC_WINDOW.test(value) ||
+          (/^\d{4}-\d{2}-\d{2}([T ].*)?$/.test(value) && Date.parse(value.slice(0, 10)) <= Date.now()),
+        "has to be a window such as 30d, 12w or 1y, or a date in the past such as 2026-01-01",
+      ),
+    ),
+  ),
 }
+
+/** How far back `sync` reads when the run gives no `--since-time`: days, weeks or years back from now. */
+export const SYNC_WINDOW = /^([1-9]\d*)(d|w|y)$/
+export const DEFAULT_SYNC_SINCE = "30d"
 
 /** On, up to 10 MB a file, as cli-core's `DEFAULT_ATTACHMENT_POLICY`. */
 export const DEFAULT_MAX_ATTACHMENT_MB = 10
@@ -67,6 +83,8 @@ export interface Mailbox {
   folders?: string[]
   /** Whether sync reads attachments into the search index, and the largest file it reads; no file is kept. */
   attachments: { read: boolean; maxMb: number }
+  /** `sync_since`: a window such as `30d`, or a date, read when a sync gives no `--since-time`. */
+  syncSince: string
 }
 
 /** mail mounts `schedule agent` without `--on-new-mail`, so only the settings every agent schedule reads. */
@@ -94,7 +112,14 @@ export const configuration = settingsFor<{ mailbox: Mailbox; schedule: ScheduleL
     schedule_model_codex: v.optional(v.string()),
     schedule_lean_start: v.optional(v.boolean()),
   },
-  settings: AGENT_SCHEDULE_SETTINGS,
+  settings: [
+    ...AGENT_SCHEDULE_SETTINGS,
+    {
+      key: "sync_since",
+      default: DEFAULT_SYNC_SINCE,
+      description: "how far back sync reads when a run names no start: 30d, 12w, 1y or a date",
+    },
+  ],
   resolve: ({ fromLayers }) => {
     const pick = <T>(key: string) => fromLayers<T | undefined>(key, undefined)
     const address = pick<string>("address")
@@ -111,6 +136,7 @@ export const configuration = settingsFor<{ mailbox: Mailbox; schedule: ScheduleL
     const microsoftClientId = pick<string>("microsoft_client_id")
     const readAttachments = pick<boolean>("read_attachments")
     const maxAttachmentMb = pick<number>("max_attachment_mb")
+    const syncSince = pick<string>("sync_since")
     const defined = <T>(key: string, value: T | undefined) => (value === undefined ? {} : { [key]: value })
     const schedule = AGENT_SCHEDULE_SETTINGS.map(({ key }) => [key, pick<unknown>(key)] as const)
     return {
@@ -138,6 +164,7 @@ export const configuration = settingsFor<{ mailbox: Mailbox; schedule: ScheduleL
             read: readAttachments.value ?? true,
             maxMb: maxAttachmentMb.value ?? DEFAULT_MAX_ATTACHMENT_MB,
           },
+          syncSince: syncSince.value ?? DEFAULT_SYNC_SINCE,
         },
         schedule: scheduleLimitsOf(Object.fromEntries(schedule.map(([key, one]) => [key, one.value]))),
       },
@@ -156,6 +183,7 @@ export const configuration = settingsFor<{ mailbox: Mailbox; schedule: ScheduleL
         microsoft_client_id: microsoftClientId.from,
         read_attachments: readAttachments.from,
         max_attachment_mb: maxAttachmentMb.from,
+        sync_since: syncSince.from,
         ...Object.fromEntries(schedule.map(([key, one]) => [key, one.from])),
       },
     }

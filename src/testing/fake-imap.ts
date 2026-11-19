@@ -36,6 +36,8 @@ export interface FakeOptions {
   capabilities?: string[]
   /** Answers every UID FETCH of message bodies with `NO [THROTTLED]`, as Gmail does under load. */
   throttleBodies?: boolean
+  /** SEARCH SINCE keeps only messages whose INTERNALDATE falls on that day or later; otherwise date keys match all. */
+  since?: boolean
   /** Drops the connection instead of answering this many UID SEARCH commands, as a flaky network does. */
   dropSearches?: number
   /** Never answers a UID SEARCH, as a server busy with a large folder does. */
@@ -152,8 +154,11 @@ const tokens = (text: string): string[] => {
 
 type Test = (message: FakeMessage, all: number[]) => boolean
 
-/** UID SEARCH criteria, as far as the tests and imapflow use them; date keys match every message. */
-const criteria = (words: string[]): Test => {
+const DEFAULT_DATE = "28-Oct-2026 10:00:00 +0000"
+const dayOf = (date: string) => Date.parse(`${date.slice(0, 11).replace(/-/g, " ")} 00:00:00 +0000`)
+
+/** UID SEARCH criteria, as far as the tests and imapflow use them; date keys match every message unless `since`. */
+const criteria = (words: string[], since = false): Test => {
   let at = 0
   const key = (): Test => {
     const word = (words[at++] ?? "").toUpperCase()
@@ -184,6 +189,10 @@ const criteria = (words: string[]): Test => {
       const name = words[at++] ?? ""
       const value = (words[at++] ?? "").toLowerCase()
       return (message) => (headerOf(message.raw, name) ?? "").toLowerCase().includes(value)
+    }
+    if (word === "SINCE" && since) {
+      const from = dayOf(words[at++] ?? "")
+      return (message) => dayOf(message.date ?? DEFAULT_DATE) >= from
     }
     if (word === "CHARSET" || ["SINCE", "BEFORE", "ON", "SENTSINCE", "SENTBEFORE"].includes(word)) {
       at++
@@ -353,7 +362,7 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
               return send(`${tag} NO search failed`)
             const messages = selected?.messages ?? []
             const all = messages.map((message) => message.uid)
-            const test = criteria(tokens(more.join(" ")))
+            const test = criteria(tokens(more.join(" ")), options.since === true)
             const found =
               options.search?.(more.join(" "), selected?.name ?? "") ??
               messages.filter((message) => test(message, all)).map((message) => message.uid)
@@ -396,8 +405,7 @@ export const startFakeImap = async (options: FakeOptions): Promise<FakeImap> => 
                 sent += 1
                 const parts = [`UID ${uid}`]
                 if (/FLAGS/i.test(items)) parts.push(`FLAGS (${(message.flags ?? []).join(" ")})`)
-                if (/INTERNALDATE/i.test(items))
-                  parts.push(`INTERNALDATE "${message.date ?? "28-Oct-2026 10:00:00 +0000"}"`)
+                if (/INTERNALDATE/i.test(items)) parts.push(`INTERNALDATE "${message.date ?? DEFAULT_DATE}"`)
                 if (message.emailId && /EMAILID/i.test(items)) parts.push(`EMAILID (${message.emailId})`)
                 if (message.threadId && /THREADID/i.test(items)) parts.push(`THREADID (${message.threadId})`)
                 if (options.gmail && message.emailId && /X-GM-MSGID/i.test(items))

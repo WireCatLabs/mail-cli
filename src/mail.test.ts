@@ -722,6 +722,47 @@ describe("account check, folders and sync", () => {
     expect(everything([first, second])).not.toContain(PASSWORD)
   })
 
+  it("reads the window the profile's sync_since sets, and reads older mail once the window grows", async () => {
+    const day = 86_400_000
+    const imapDate = (daysAgo: number) => {
+      const at = new Date(Date.now() - daysAgo * day)
+      const month = at.toLocaleString("en-US", { month: "short", timeZone: "UTC" })
+      return `${String(at.getUTCDate()).padStart(2, "0")}-${month}-${at.getUTCFullYear()} 11:00:00 +0000`
+    }
+    const { mail } = await ready({
+      fake: {
+        since: true,
+        folders: [
+          {
+            name: "INBOX",
+            messages: [
+              { uid: 1, raw: raw("old", "From the spring", "older than 30 days"), flags: [], date: imapDate(60) },
+              { uid: 2, raw: raw("new", "From this week", "a few days old"), flags: [], date: imapDate(5) },
+            ],
+          },
+          { name: "Sent", attributes: ["\\Sent"], messages: [] },
+        ],
+      },
+    })
+    const shown = JSON.parse((await mail(["ya", "config", "show", "--json"])).out)
+    expect(JSON.stringify(shown)).toContain("sync_since")
+
+    expect(item((await mail(["ya", "sync", "--json"])).out)).toMatchObject({ saved: 1 })
+    const refused = await mail(["ya", "config", "set", "sync_since", "2x", "--json"])
+    expect(refused.code).not.toBe(0)
+    expect(refused.err).toContain("1y")
+    expect((await mail(["ya", "config", "set", "sync_since", "90d", "--json"])).code).toBe(0)
+    const wider = item((await mail(["ya", "sync", "--json"])).out)
+    expect(wider).toMatchObject({ saved: 1 })
+    expect(Date.parse(wider.since)).toBeLessThan(Date.now() - 89 * day)
+
+    expect((await mail(["ya", "config", "set", "sync_since", "1w", "--json"])).code).toBe(0)
+    const given = item((await mail(["ya", "sync", "--since-time", "2026-01-01", "--json"])).out)
+    expect(given.since.slice(0, 4)).toBe("2025")
+    expect((await mail(["ya", "config", "set", "sync_since", "1y", "--defaults", "--json"])).code).toBe(0)
+    expect((await mail(["ya", "config", "migrate", "--json"])).code).toBe(0)
+  })
+
   it("lists the whole window again with --rescan and deletes nothing that is still on the server", async () => {
     const { mail } = await ready()
     await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])

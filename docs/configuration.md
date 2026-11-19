@@ -21,6 +21,11 @@ attachments into the search index and the largest file it reads. No file is kept
 `--attachments` and `--max-attachment-mb` override them for one run; `messages show` reads one email's attachments
 whatever they say.
 
+`sync_since` (default `30d`) is how far back `sync` reads when a run gives no `--since-time`: a window back from now
+in days, weeks or years (`90d`, `12w`, `1y`), or a date (`2025-01-01`, from local midnight). Make it wider and the next
+`sync` reads the older mail too; no `--rescan` is needed. `config set sync_since 1y` sets it for one profile,
+`--defaults` for every profile. WireCat Desktop shows it in the mail settings.
+
 `microsoft_client_id` is the Microsoft app that Outlook.com and Microsoft 365 sign in with, when you use your own instead
 of WireCat's. Set it once for every profile with `config set --defaults microsoft_client_id` and the app's id; how to get an
 id is in [register a Microsoft app](oauth-microsoft.md). `google_client_id` does the same for Gmail over OAuth; its

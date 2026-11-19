@@ -23,7 +23,7 @@ import {
 } from "@wirecat/cli-core/mail"
 import { Command } from "commander"
 import * as v from "valibot"
-import { configuration } from "../config.js"
+import { configuration, DEFAULT_SYNC_SINCE, SYNC_WINDOW } from "../config.js"
 import { IDENTITY } from "../identity.js"
 import { knownAges, lookUpAges, rdapDeps } from "../mail/domain-age.js"
 import { rethreadStored } from "../mail/rethread.js"
@@ -32,7 +32,7 @@ import { openMailStore } from "../store.js"
 import { closing, contextOf, openMail, refuseOffline, repeatable } from "./context.js"
 
 const DAY_MS = 86_400_000
-const DEFAULT_DAYS = 30
+const WINDOW_DAYS: Record<string, number> = { d: 1, w: 7, y: 365 }
 
 interface SyncFlags {
   sinceTime?: string
@@ -53,11 +53,23 @@ const stoppedText = (stopped: string | undefined, budget: { limit: number | null
     ? `the run stopped at its cap of ${budget.limit} requests (--timeout sets it, --max-pages only lowers it); `
     : ""
 
-export const sinceOf = (value: string | undefined, zone: string, now: number): Date => {
-  if (value === undefined) return new Date(now - DEFAULT_DAYS * DAY_MS)
+/** Without `--since-time`, the profile's `sync_since`: a window back from now, or a date read as `--since-time` is. */
+export const sinceOf = (
+  value: string | undefined,
+  zone: string,
+  now: number,
+  setting: string = DEFAULT_SYNC_SINCE,
+): Date => {
+  if (value !== undefined) return momentOf(value, zone, now, "--since-time")
+  const window = SYNC_WINDOW.exec(setting)
+  if (!window) return momentOf(setting, zone, now, "sync_since")
+  return new Date(now - Number(window[1]) * (WINDOW_DAYS[window[2] as string] ?? 1) * DAY_MS)
+}
+
+const momentOf = (value: string, zone: string, now: number, name: "--since-time" | "sync_since"): Date => {
   const refuse = () =>
-    new CliError("validation_error", "--since-time takes an ISO date or timestamp in the past", {
-      param: "since-time",
+    new CliError("validation_error", `${name} takes an ISO date or timestamp in the past`, {
+      param: name === "--since-time" ? "since-time" : "sync_since",
     })
   let since: number
   try {
@@ -157,7 +169,7 @@ export const syncCommand = (): Command =>
     .description("read mail from the server into the shared store; mail already stored is skipped")
     .option(
       "--since-time <time>",
-      "only mail received since this date or time; a date alone starts at local midnight, a time without a zone is local (default: 30 days)",
+      "only mail received since this date or time; a date alone starts at local midnight, a time without a zone is local (default: the profile's sync_since, else 30d)",
     )
     .option(
       "--max-messages <n>",
@@ -192,7 +204,7 @@ export const syncCommand = (): Command =>
       const address = context.settings.mailbox.address
       if (!address) throw new CliError("configuration_error", `profile ${context.profile} has no address`)
       const zone = timezoneOf()
-      const since = sinceOf(args.sinceTime, zone, Date.now())
+      const since = sinceOf(args.sinceTime, zone, Date.now(), context.settings.mailbox.syncSince)
       const { signal } = environmentOf(this)
       const budget = runBudgetOf(this, args.maxPages)
       // A retry is a request of the budget; openMail keeps it from ending after the deadline.

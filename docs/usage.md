@@ -46,7 +46,8 @@ private file and says so once on stderr. `--credential-storage file` chooses the
 name). An existing Himalaya setup then needs no new password.
 
 `sync` reads INBOX and the Sent folder; on Gmail it reads All Mail, since archived mail leaves INBOX. `--folder` or the
-profile's `folders` setting names other folders. It reads the newest mail first. `--max-messages` caps the new mail of one
+profile's `folders` setting names other folders. It reads the last 30 days: the profile's `sync_since` setting changes
+that (`mail personal config set sync_since 1y`), and `--since-time` changes it for one run. It reads the newest mail first. `--max-messages` caps the new mail of one
 run. `--rescan` lists the whole window again. It saves text and headers, and the text of each attachment it can read, not the files. It reads attachments up to
 10 MB each: the profile's `read_attachments` (`false` reads none) and `max_attachment_mb` change that, and
 `--no-attachments`, `--attachments` and `--max-attachment-mb <n>` change it for one run. A file left unread keeps its
