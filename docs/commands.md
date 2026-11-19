@@ -72,7 +72,7 @@ mail session start [options]
 | `--host <host>` | skip discovery and use this IMAP host. |
 | `--port <port>` | IMAP port (default 993). |
 | `--security <mode>` | tls or starttls (default tls). |
-| `--login <login>` | the login name, when it is not the full address. |
+| `--login <name>` | the login name, when it is not the full address. |
 | `--folder <folder>` | sync only this folder; repeat it for more. Default: ``. |
 | `--no-browser` | OAuth: print the sign-in link instead of opening the browser. |
 | `--answer-stdin` | with --json and no terminal: print each question as a `needs` line on stderr and read its answer, one line, from stdin. |
@@ -936,7 +936,7 @@ mail inbox [options]
 | `--max-tokens <n>` | stop before a request that would make the run send more tokens than this (default: 60000). |
 | `--yes` | send the mail to a model outside this computer when `models chats` is ask. |
 
-**Returns:** mail inbox thread — ref, title, bucket, reason, last_email_at, sorted_at, by, untrusted; every field: mail commands info inbox
+**Returns:** mail inbox thread — ref, title, bucket, reason, last_email_at, sorted_at, by, sender, and 1 more; every field: mail commands info inbox
 
 **Example:** `mail personal inbox`, `mail personal inbox --max-messages 20`, `mail personal inbox --offline --json`
 

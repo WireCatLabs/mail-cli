@@ -18,6 +18,7 @@ Works with:
   notion                  Notion pages and databases as local text, searchable with your other WireCat data
   ydisk                   Yandex Disk folders as local text, searchable with your other WireCat data
   wordpress               WordPress posts and pages, searchable with your other WireCat data
+  linear                  Linear issues and projects, searchable with your other WireCat data
 
 Start here:   mail personal session start --address <email>  (any profile name works)
 Next:         mail commands                                  every command, by section

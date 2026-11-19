@@ -1,16 +1,17 @@
 [
   {
     "group": "mail-shared",
-    "rule": "same-error-reason",
-    "target": "reason meeting-project.stale: code",
-    "reason": "cli-core 0.651.0 made a stale meeting project fingerprint conflict, not configuration_error; the published CLIs are still on 0.650.0 or older, and the entry goes once they publish on 0.651.0+.",
-    "review_after": "2026-11-27"
-  },
-  {
-    "group": "mail-shared",
     "rule": "same-entity-schema",
     "target": "entity message",
     "reason": "cli-core 0.709.0 added email.inbox (how mail's inbox sorted a thread) to the shared message schema; the published max, memo, tg and wa are on older cli-core, and the entry goes once they publish on 0.709.0+.",
+    "review_after": "2026-12-03"
+  },
+  {
+    "group": "mail-shared",
+    "rule": "same-flag-meaning",
+    "target": "amo+mail --host",
+    "expected": "mail: <host>, amo: <address>",
+    "reason": "Not one meaning: mail's --host is an IMAP host name, amo's is the account's full address (https://example.amocrm.ru). Review whether amo should name it --address.",
     "review_after": "2026-12-03"
   }
 ]
