@@ -936,7 +936,7 @@ mail inbox [options]
 | `--max-tokens <n>` | stop before a request that would make the run send more tokens than this (default: 60000). |
 | `--yes` | send the mail to a model outside this computer when `models chats` is ask. |
 
-**Returns:** mail inbox thread — ref, title, bucket, reason, last_email_at, sorted_at, by, untrusted; every field: mail commands info inbox
+**Returns:** mail inbox thread — ref, title, bucket, reason, last_email_at, sorted_at, by, sender, and 1 more; every field: mail commands info inbox
 
 **Example:** `mail personal inbox`, `mail personal inbox --max-messages 20`, `mail personal inbox --offline --json`
 
