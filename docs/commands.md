@@ -72,7 +72,7 @@ mail session start [options]
 | `--host <host>` | skip discovery and use this IMAP host. |
 | `--port <port>` | IMAP port (default 993). |
 | `--security <mode>` | tls or starttls (default tls). |
-| `--login <login>` | the login name, when it is not the full address. |
+| `--login <name>` | the login name, when it is not the full address. |
 | `--folder <folder>` | sync only this folder; repeat it for more. Default: ``. |
 | `--no-browser` | OAuth: print the sign-in link instead of opening the browser. |
 | `--answer-stdin` | with --json and no terminal: print each question as a `needs` line on stderr and read its answer, one line, from stdin. |

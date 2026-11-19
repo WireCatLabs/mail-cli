@@ -248,7 +248,7 @@ export const sessionStartCommand = () =>
     .option("--host <host>", "skip discovery and use this IMAP host")
     .option("--port <port>", "IMAP port (default 993)")
     .option("--security <mode>", "tls or starttls (default tls)", securityOf)
-    .option("--login <login>", "the login name, when it is not the full address")
+    .option("--login <name>", "the login name, when it is not the full address")
     .addOption(repeatable("--folder <folder>", "sync only this folder; repeat it for more"))
     .option("--no-browser", "OAuth: print the sign-in link instead of opening the browser")
     .addOption(answerStdinOption())

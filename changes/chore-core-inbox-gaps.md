@@ -11,3 +11,5 @@
 
 - **`inbox` writes its one-line reason in your language.** It used each thread's language; it now uses the first of
   `owner_languages` (`mail config set owner_languages ru,en`).
+- **`session start --login` shows its value as `<name>`**, as every WireCat CLI with a sign-in user name does. Only
+  the help text changed.
