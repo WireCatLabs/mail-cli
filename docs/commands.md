@@ -920,6 +920,26 @@ mail conversations show <conversation>
 
 **Example:** `mail personal conversations show 'chat:email/me%40example.com/thread-1'`, `mail personal conversations show 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E'`
 
+## `mail inbox`
+
+send the threads that changed since the last run to the AI model the owner chose (`models ai`), which sorts each into needs an answer, to read or can wait with a one-line reason; then list every sorted thread, those that need an answer first. Mail sent to many is not sent. A model outside this computer follows `models chats` and local only. --offline lists what is sorted and sends nothing
+
+**Reads from an outside service.**
+
+```sh
+mail inbox [options]
+```
+
+| Option | What it does |
+|---|---|
+| `--max-messages <n>` | send at most this many emails in this run; the rest wait for the next (default: 40). |
+| `--max-tokens <n>` | stop before a request that would make the run send more tokens than this (default: 60000). |
+| `--yes` | send the mail to a model outside this computer when `models chats` is ask. |
+
+**Returns:** mail inbox thread — ref, title, bucket, reason, last_email_at, sorted_at, by, untrusted; every field: mail commands info inbox
+
+**Example:** `mail personal inbox`, `mail personal inbox --max-messages 20`, `mail personal inbox --offline --json`
+
 ## `mail attachments`
 
 ### `mail attachments list`

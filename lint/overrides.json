@@ -14,9 +14,9 @@
     "review_after": "2027-01-28"
   },
   {
-    "rule": "option-role",
-    "target": "session start --login",
-    "reason": "Names the login when it is not the full address, which some servers want; no vocabulary role names a mail server setting yet. Review when cli-base's vocabulary names one.",
+    "rule": "flag-two-meanings",
+    "target": "--login",
+    "reason": "session start --login names the login when it is not the full address, which some servers want; cli-base 0.124's vocabulary knows --login only as a name. Review when the vocabulary names a mail server login.",
     "owner": "@WireCatLabs",
     "review_after": "2027-01-28"
   },

@@ -524,6 +524,18 @@
     },
     {
       "path": [
+        "inbox"
+      ],
+      "summary": "new mail sorted by the AI model: needs an answer, to read, can wait",
+      "effects": {
+        "remote": "read",
+        "local": "write"
+      },
+      "permission": "inbox",
+      "entity": "mail_inbox_thread"
+    },
+    {
+      "path": [
         "attachments",
         "list"
       ],

@@ -763,6 +763,15 @@ describe("account check, folders and sync", () => {
     expect((await mail(["ya", "config", "migrate", "--json"])).code).toBe(0)
   })
 
+  it("runs inbox with no AI model chosen while nothing is new, and lists it offline", async () => {
+    const { mail } = await ready()
+    expect((await mail(["ya", "sync", "--json"])).code).toBe(0)
+    const run = await mail(["ya", "inbox", "--json"])
+    expect(run.code).toBe(0)
+    expect(JSON.parse(run.out).items).toEqual([])
+    expect(JSON.parse((await mail(["ya", "inbox", "--offline", "--json"])).out).items).toEqual([])
+  })
+
   it("lists the whole window again with --rescan and deletes nothing that is still on the server", async () => {
     const { mail } = await ready()
     await mail(["ya", "sync", "--since-time", "2026-10-01", "--json"])
