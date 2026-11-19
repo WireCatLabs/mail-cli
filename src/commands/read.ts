@@ -2,7 +2,7 @@ import { existsSync } from "node:fs"
 import { CliError } from "@wirecat/cli-base"
 import { baseContext } from "@wirecat/cli-core/cli"
 import { mailAccountKey, readEmailWhole } from "@wirecat/cli-core/mail"
-import { type MailReads, mailReadCommands } from "@wirecat/cli-core/mail/cli"
+import { type MailReads, mailInboxCommand, mailReadCommands } from "@wirecat/cli-core/mail/cli"
 import { storePath } from "@wirecat/cli-core/store"
 import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
@@ -63,8 +63,8 @@ const reads: MailReads = {
 }
 
 /**
- * `search messages`, `messages show`, `conversations list|show`: cli-core's, over this profile's mailbox; the search
- * also asks the mail server (`--backend`).
+ * `search messages`, `messages show`, `conversations list|show`, `inbox`: cli-core's, over this profile's mailbox;
+ * the search also asks the mail server (`--backend`).
  */
 export const readCommands = () => {
   const commands = mailReadCommands(reads)
@@ -72,5 +72,6 @@ export const readCommands = () => {
     .find((command) => command.name() === "messages")
     ?.addCommand(exportLeaf())
     .addCommand(importLeaf())
-  return commands
+  // mail has no `models` group: the AI model is chosen with memo or WireCat Desktop.
+  return [...commands, mailInboxCommand(reads, { modelsCommand: "memo" })]
 }

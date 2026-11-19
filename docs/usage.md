@@ -46,7 +46,8 @@ private file and says so once on stderr. `--credential-storage file` chooses the
 name). An existing Himalaya setup then needs no new password.
 
 `sync` reads INBOX and the Sent folder; on Gmail it reads All Mail, since archived mail leaves INBOX. `--folder` or the
-profile's `folders` setting names other folders. It reads the newest mail first. `--max-messages` caps the new mail of one
+profile's `folders` setting names other folders. It reads the last 30 days: the profile's `sync_since` setting changes
+that (`mail personal config set sync_since 1y`), and `--since-time` changes it for one run. It reads the newest mail first. `--max-messages` caps the new mail of one
 run. `--rescan` lists the whole window again. It saves text and headers, and the text of each attachment it can read, not the files. It reads attachments up to
 10 MB each: the profile's `read_attachments` (`false` reads none) and `max_attachment_mb` change that, and
 `--no-attachments`, `--attachments` and `--max-attachment-mb <n>` change it for one run. A file left unread keeps its
@@ -133,6 +134,27 @@ mail personal status                                    # how far each holder go
 
 The mark only moves forward. Mail sent to many, envelopes and drafts are skipped and counted; an email still being
 read whole (partial) is held until it is, up to 7 days. A new holder starts from the mail stored now.
+
+## Inbox: new mail sorted by an AI model
+
+`inbox` sends the threads that changed since its last run to the AI model you chose, and puts each one under
+needs an answer, to read or can wait, with a one-line reason. It runs the model through its API with no agent, so
+a local Ollama works too. Choose the model once, for every WireCat tool, in WireCat Desktop or with
+`memo models ai set`.
+
+```sh
+mail personal inbox                       # sort what is new, then list every sorted thread, answer first
+mail personal inbox --max-messages 20     # send at most 20 emails in this run; the rest wait for the next
+mail personal inbox --offline --json      # list what is sorted and send nothing
+mail personal schedule command mail-inbox --every 1h -- inbox --yes   # sort new mail every hour
+```
+
+It sends each thread's subject, senders and its 3 newest emails without quoted mail or the signature, at most
+1500 characters each. Mail sent to many is not sent. A run sends at most 40 emails and about 60000 tokens
+(`--max-messages`, `--max-tokens`). A model outside this computer follows local only and `memo models chats`:
+when that asks first, a run in a terminal asks you, and a schedule needs `--yes`. An agent is refused: it reads
+`review --new` and sorts the mail itself. A thread you answered leaves the list on the next run. `review` shows the
+verdict too, as `email.inbox`.
 
 ## Search your mail
 
