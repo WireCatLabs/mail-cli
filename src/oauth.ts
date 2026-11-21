@@ -262,13 +262,14 @@ const lockRecords = async (env: NodeJS.ProcessEnv): Promise<FileLock> => {
 
 export const recordSignIn = async (env: NodeJS.ProcessEnv, profile: string, record: SignInRecord | undefined) => {
   if (!record && !(profile in signInRecords(env))) return
+  // The lock sits beside the records, so their folder must exist before the first sign-in on this computer takes it.
+  mkdirSync(paths(env).state, { recursive: true, mode: 0o700 })
   const lock = await lockRecords(env)
   try {
     const records = signInRecords(env)
     if (record) records[profile] = record
     else if (profile in records) delete records[profile]
     else return
-    mkdirSync(paths(env).state, { recursive: true, mode: 0o700 })
     await writeFileAtomic(recordsPath(env), `${JSON.stringify(records, null, 2)}\n`, { mode: 0o600 })
   } finally {
     await lock.release()
