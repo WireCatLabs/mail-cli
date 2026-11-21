@@ -19,6 +19,8 @@ Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
   `owner_languages` (`mail config set owner_languages ru,en`).
 - **`session start --login` shows its value as `<name>`**, as every WireCat CLI with a sign-in user name does. Only
   the help text changed.
+- **Two first sign-ins at the same moment both keep their record.** The second could fail with `ENOENT` on
+  `sign-ins.json.lock`, because the state folder was made only after the lock was taken.
 
 ## 0.35.0 — 19.11.2026
 
