@@ -32,7 +32,7 @@ follow the steps below.
 ## 1. A Google Cloud project just for mail
 
 Open [Google Cloud Console](https://console.cloud.google.com/) and choose **New Project** in the project selector.
-Name it, for example, `mail for me`, and keep it selected for every step below.
+Name it, for example, "mail for me", and keep it selected for every step below.
 
 Use a new project even if you already have one for `drive` or `gcal`. When a sign-in is revoked, Google removes every
 permission given to that project, for every app in it
@@ -42,7 +42,7 @@ permission given to that project, for every app in it
 ## 2. Consent screen
 
 Open **☰ → Google Auth platform → Branding** ([direct link](https://console.cloud.google.com/auth/branding)) and
-choose **Get Started**. Give an app name (`mail for me`), your address as the support and contact email, and the
+choose **Get Started**. Give an app name ("mail for me"), your address as the support and contact email, and the
 **External** audience (or **Internal** for a Workspace account that only you use). Create it.
 
 ## 3. Permission
