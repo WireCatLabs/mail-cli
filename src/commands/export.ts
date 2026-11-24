@@ -15,7 +15,7 @@ import {
 } from "@wirecat/cli-core/cli"
 import { type Quick, searchMail } from "@wirecat/cli-core/mail"
 import { refusedPlace } from "@wirecat/cli-core/sends"
-import type { FolderEmail } from "@wirecat/cli-core/store"
+import type { FolderEmail } from "@wirecat/cli-core/store/areas"
 import { Command, Option } from "commander"
 import * as v from "valibot"
 import { configuration } from "../config.js"

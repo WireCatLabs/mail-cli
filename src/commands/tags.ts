@@ -14,7 +14,8 @@ import {
   termField,
   withQuery,
 } from "@wirecat/cli-core/cli"
-import type { AccountKey, MessageStore, TagTarget } from "@wirecat/cli-core/store"
+import type { AccountKey, MessageStore } from "@wirecat/cli-core/store"
+import type { TagTarget } from "@wirecat/cli-core/store/areas"
 import { Command } from "commander"
 import * as v from "valibot"
 import { IDENTITY } from "../identity.js"

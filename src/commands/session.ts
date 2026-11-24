@@ -8,6 +8,7 @@ import {
   LOCAL_WRITE,
   listOf,
   logsInOrOut,
+  notLocalPaths,
   outputFor,
   profileFree,
   profilesHere,
@@ -227,7 +228,7 @@ const listCommand = () =>
 export const sessionCommand = (): Command =>
   annotate(new Command("session"), { effects: LOCAL_READ })
     .description("keep this profile's app password in the OS keyring")
-    .addCommand(sessionStartCommand())
+    .addCommand(notLocalPaths(sessionStartCommand(), "folder"))
     .addCommand(statusCommand())
     .addCommand(endCommand())
     .addCommand(listCommand())

@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs"
 import { CliError } from "@wirecat/cli-base"
-import { baseContext } from "@wirecat/cli-core/cli"
+import { baseContext, notLocalPaths } from "@wirecat/cli-core/cli"
 import { mailAccountKey, readEmailWhole } from "@wirecat/cli-core/mail"
 import { type MailReads, mailInboxCommand, mailReadCommands } from "@wirecat/cli-core/mail/cli"
 import { storePath } from "@wirecat/cli-core/store"
@@ -70,7 +70,7 @@ export const readCommands = () => {
   const commands = mailReadCommands(reads)
   commands
     .find((command) => command.name() === "messages")
-    ?.addCommand(exportLeaf())
+    ?.addCommand(notLocalPaths(exportLeaf(), "folder"))
     .addCommand(importLeaf())
   // mail has no `models` group: the AI model is chosen with memo or WireCat Desktop.
   return [...commands, mailInboxCommand(reads, { modelsCommand: "memo" })]
