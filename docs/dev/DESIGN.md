@@ -122,6 +122,10 @@ Claims about our code cite the file. The imapflow notes were read in imapflow 2.
 - **`inbox` sorts new mail with the shared AI model, no agent** (owner, 2026-11-19, NEED-2763 A). cli-core's
   `mailInboxCommand`; the fixes it names for the model and `models chats` are memo's commands, since mail has no
   `models` group.
+- **The owner's aliases are the profile's `aliases`, set by the owner alone** (agent decision, 2026-11-25,
+  [cli-core #3321](https://github.com/WireCatLabs/cli-core/issues/3321)). They go to cli-core as
+  `MailAccount.addresses`: mail from one is outgoing, mail to one is owed. An alias joins its people to the owner, so
+  it is in `OWNER_ONLY` like the mailbox settings. Gmail's `sendAs` list is not read: mail has no Gmail REST client, and an app-password account could not call it.
 
 ## Open questions for the owner
 

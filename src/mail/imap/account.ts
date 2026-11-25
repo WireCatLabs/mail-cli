@@ -26,7 +26,8 @@ export const imapAccount = (
     folders: async () => {
       const entries = await folderList()
       const role = (...names: string[]) => entries.find((entry) => entry.role && names.includes(entry.role))?.path
-      return { all: role("all", "archive") ?? "INBOX", trash: role("trash") ?? "Trash" }
+      const sent = role("sent")
+      return { all: role("all", "archive") ?? "INBOX", trash: role("trash") ?? "Trash", ...(sent ? { sent } : {}) }
     },
 
     check: () =>

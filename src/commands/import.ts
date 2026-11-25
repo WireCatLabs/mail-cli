@@ -75,7 +75,7 @@ export const importLeaf = (): Command =>
     )
     .action(async function (this: Command, file: string, args: { sinceTime?: string; maxMessages?: number }) {
       const context = contextOf(this)
-      const { address, host } = context.settings.mailbox
+      const { address, host, aliases } = context.settings.mailbox
       if (!address) throw new CliError("configuration_error", `profile ${context.profile} has no address`)
       // Takeout's ids are Gmail's; under another provider's ids every email would be stored twice.
       if (providerFor(address, host)?.sync?.mode !== "gmail")
@@ -94,7 +94,7 @@ export const importLeaf = (): Command =>
         try {
           const { rules } = await storedMailRuleSet(store, { address })
           return await syncMail(mboxSource(path), store, {
-            account: { address, mode: "mbox", rules },
+            account: { address, mode: "mbox", rules, addresses: aliases ?? [] },
             since,
             ages: knownAges(context.env),
             ...(args.maxMessages === undefined ? {} : { max: args.maxMessages }),

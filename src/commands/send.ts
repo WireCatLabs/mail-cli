@@ -106,6 +106,7 @@ const sendingOf = (opened: Opened, command: Command): Sending => {
     profile: opened.profile,
     env: opened.env,
     owner: ownerOf(opened, command),
+    aliases: settings.mailbox.aliases ?? [],
     savesSent: provider?.smtp.savesSent === true,
     syncFolders: async () => {
       const defaults = provider?.sync ?? DEFAULT_SYNC

@@ -220,7 +220,7 @@ export const syncCommand = (): Command =>
             // The stored rules, as memo passes them: the saved position holds their fingerprint, so both must agree.
             const { rules, unreadable } = await storedMailRuleSet(store, { address })
             const report = await syncMail(backend, store, {
-              account: { address, mode: defaults.mode ?? "imap", folders, rules },
+              account: { address, mode: defaults.mode ?? "imap", folders, rules, addresses: mailbox.aliases ?? [] },
               since,
               ages: knownAges(context.env),
               budget,

@@ -26,9 +26,12 @@ export const OWNER_ONLY = {
     "auth",
     "google_client_id",
     "microsoft_client_id",
+    "aliases",
   ],
   permissions: [SEND_OTHERS_KEY],
 }
+
+const ALIAS = v.pipe(v.string(), v.trim(), v.email())
 
 const PROFILE_ENTRIES = {
   address: v.optional(v.string()),
@@ -43,6 +46,8 @@ const PROFILE_ENTRIES = {
   google_client_id: v.optional(v.pipe(v.string(), v.trim(), v.minLength(1))),
   microsoft_client_id: v.optional(v.pipe(v.string(), v.trim(), v.minLength(1))),
   folders: v.optional(v.array(v.string())),
+  // `config set aliases one@example.com` stores one address as a string: only `a,b` becomes a list.
+  aliases: v.optional(v.union([ALIAS, v.array(ALIAS)])),
   read_attachments: v.optional(v.boolean()),
   max_attachment_mb: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
   sync_since: v.optional(
@@ -81,6 +86,8 @@ export interface Mailbox {
   /** The owner's own Microsoft app, in place of WireCat's, for every OAuth sign-in after it is set. */
   microsoftClientId?: string
   folders?: string[]
+  /** The owner's other addresses on this mailbox: mail from one is the owner's, mail to one is addressed to them. */
+  aliases?: string[]
   /** Whether sync reads attachments into the search index, and the largest file it reads; no file is kept. */
   attachments: { read: boolean; maxMb: number }
   /** `sync_since`: a window such as `30d`, or a date, read when a sync gives no `--since-time`. */
@@ -128,6 +135,7 @@ export const configuration = settingsFor<{ mailbox: Mailbox; schedule: ScheduleL
     const port = pick<number>("imap_port")
     const security = pick<"tls" | "starttls">("imap_security")
     const folders = pick<string[]>("folders")
+    const aliases = pick<string | string[]>("aliases")
     const smtpHost = pick<string>("smtp_host")
     const smtpPort = pick<number>("smtp_port")
     const smtpSecurity = pick<"tls" | "starttls">("smtp_security")
@@ -148,6 +156,7 @@ export const configuration = settingsFor<{ mailbox: Mailbox; schedule: ScheduleL
           ...defined("port", port.value),
           ...defined("security", security.value),
           ...defined("folders", folders.value),
+          ...defined("aliases", aliases.value === undefined ? undefined : [aliases.value].flat()),
           ...(smtpHost.value === undefined && smtpPort.value === undefined && smtpSecurity.value === undefined
             ? {}
             : {
@@ -175,6 +184,7 @@ export const configuration = settingsFor<{ mailbox: Mailbox; schedule: ScheduleL
         imap_port: port.from,
         imap_security: security.from,
         folders: folders.from,
+        aliases: aliases.from,
         smtp_host: smtpHost.from,
         smtp_port: smtpPort.from,
         smtp_security: smtpSecurity.from,

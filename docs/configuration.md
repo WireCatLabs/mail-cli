@@ -16,6 +16,14 @@ server `messages send` submits to; set them only for a provider the [built-in li
 a setting: it lives in the keyring, or in `MAIL_PASSWORD` for a run that has no keyring. Nor is an OAuth sign-in: its
 tokens live in the keyring too.
 
+`aliases` lists your other addresses on this mailbox, the ones you also send from (`config set aliases
+me@work.example.com,me.alias@example.com`). Mail from one of them is yours, as mail from `address` is, and mail to one
+is addressed to you: `review --unanswered` and `tasks agenda` count it as owed. A shared address, such as a team's, is
+not an alias: mail your colleagues send from it would count as yours. Mail in the Sent folder is yours whatever address
+it came from, and its senders join your addresses in the store on their own; set `aliases` for an address that has no
+mail in Sent yet. Mail stored before is marked at the next `sync`. The store keeps an address once it is yours:
+`config unset aliases` does not take it back.
+
 `read_attachments` (default `true`) and `max_attachment_mb` (default 10) decide whether `sync` reads the text of
 attachments into the search index and the largest file it reads. No file is kept. `sync --no-attachments`,
 `--attachments` and `--max-attachment-mb` override them for one run; `messages show` reads one email's attachments
@@ -34,7 +42,7 @@ win over both settings for one run, and `--client-file` wins over everything for
 keeps refreshing with the app it signed in with. `mail doctor` shows each profile's app under `oauth_client`.
 
 An agent over MCP that holds `mcp.authority` may change settings with `config set`, but never these: the mailbox
-settings above, which decide where the app password goes, `microsoft_client_id` and `google_client_id`, which decide
+settings above, which decide where the app password goes, `aliases`, which decides which addresses are yours, `microsoft_client_id` and `google_client_id`, which decide
 which app you sign in to, and `permissions.messages.send.others`, which lets an agent mail other people. Only you change them, at a terminal.
 
 `config show` lists each setting and where it came from: the file, a variable or the default.
