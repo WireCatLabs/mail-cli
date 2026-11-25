@@ -39,7 +39,6 @@ const ENTRIES: [reason: string, code: string, message: string][] = [
   ["mail.original-gone", "not_found", "the message is not where the store last saw it on the server"],
   ["mail.others-for-agent", "permission_error", "over MCP the profile mails only its owner"],
   ["mail.no-submission", "configuration_error", "the profile names no submission server"],
-  ["mail.config-unreadable", "configuration_error", "the config file cannot be read"],
   ["mail.profile-exists", "validation_error", "a profile of this name already exists"],
   ["mail.server-unknown", "not_found", "no mail server was found for the address's domain"],
   ["mail.export-other", "validation_error", "the export folder holds an export of another format or mailbox"],
