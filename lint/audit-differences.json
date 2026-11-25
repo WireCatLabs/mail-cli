@@ -13,5 +13,19 @@
     "expected": "mail: <host>, amo: <address>",
     "reason": "Not one meaning: mail's --host is an IMAP host name, amo's is the account's full address (https://example.amocrm.ru). Review whether amo should name it --address.",
     "review_after": "2026-12-03"
+  },
+  {
+    "group": "all",
+    "rule": "same-error-reason",
+    "target": "reason account-remove.unknown-profile=account-rename.unknown-profile",
+    "reason": "cli-core 0.717.0 makes account rename of an unknown profile fail with profile.unknown; mail is on cli-core 0.753.0, the other published CLIs on older cli-core, and the entry goes once they publish on 0.717.0+.",
+    "review_after": "2026-12-05"
+  },
+  {
+    "group": "all",
+    "rule": "same-error-reason",
+    "target": "reason account-rename.config=mail.config-unreadable",
+    "reason": "An unreadable config file is account-rename.config in the published CLIs on older cli-core and mail.config-unreadable in mail on cli-core 0.753.0; the entry goes once they publish on the same cli-core.",
+    "review_after": "2026-12-05"
   }
 ]

@@ -27,6 +27,8 @@ export interface Sending {
   profile: string
   env: NodeJS.ProcessEnv
   owner: ReadonlySet<string>
+  /** The profile's `aliases`, which the sync of the sent copy passes on as cli-core's `MailAccount.addresses`. */
+  aliases: string[]
   /** The provider files what SMTP carried into Sent itself (Gmail). */
   savesSent: boolean
   /** The folders a plain `sync` reads, so the sent message is stored as the next sync would store it. */
@@ -134,7 +136,7 @@ const storeSent = async (sending: Sending, messageId: string): Promise<boolean> 
     const address = sending.mailbox.key.account
     const rules = await storedMailRules(sending.mailbox.store, { address })
     await syncMail(sending.backend, sending.mailbox.store, {
-      account: { address, mode, folders, rules },
+      account: { address, mode, folders, rules, addresses: sending.aliases },
       since: new Date(Date.now() - SYNC_WINDOW_MS),
       saveCoverage: false,
       completePartial: false,
