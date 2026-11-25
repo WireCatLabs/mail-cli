@@ -56,7 +56,7 @@ jobs:
       contents: read
       actions: read
       security-events: write
-    uses: WireCatLabs/cli-base/.github/workflows/release-checks.yml@183e25196cb9c9b777946b8783d0f7f222bd66f9 # v0.103.0
+    uses: WireCatLabs/cli-base/.github/workflows/release-checks.yml@c148ab183cdd676405087e53cfd92a453e596e76 # v0.126.1
 
   build:
     needs: [checks, validation]
@@ -199,7 +199,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: openclaw/clawhub/.github/workflows/skill-publish.yml@a1567fb752e07d2b5951e4fd48e2e7351da89874 # main, 2026-10-25
+    uses: openclaw/clawhub/.github/workflows/skill-publish.yml@dfb087d90079c84f74ed0c5de27c302696d42178 # main, 2026-10-25
     with:
       skill_path: skills/mail-cli
       owner: wirecat
