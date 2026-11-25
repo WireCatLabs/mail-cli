@@ -1,7 +1,7 @@
 import { CliError } from "@wirecat/cli-base"
 import { annotate } from "@wirecat/cli-base/commands"
 import { timezoneOf, zonedMoment } from "@wirecat/cli-base/query"
-import { answerEntity, envName, REMOTE_WRITE } from "@wirecat/cli-core/cli"
+import { answerEntity, envName, notLocalPaths, REMOTE_WRITE } from "@wirecat/cli-core/cli"
 import { decide, factsOf, listedOf, type MailRule, storedMailRules } from "@wirecat/cli-core/mail"
 import { Command } from "commander"
 import { IDENTITY } from "../identity.js"
@@ -332,8 +332,8 @@ export const messageWrites = (): Command[] => [
   flagCommand("star", "star messages (the \\Flagged flag)", { add: ["\\Flagged"], remove: [] }, REF),
   flagCommand("unstar", "take the star away", { add: [], remove: ["\\Flagged"] }, REF),
   updateCommand(),
-  moveCommand("move"),
-  moveCommand("copy"),
+  notLocalPaths(moveCommand("move"), "folder"),
+  notLocalPaths(moveCommand("copy"), "folder"),
   deleteCommand(),
   restoreCommand(),
 ]

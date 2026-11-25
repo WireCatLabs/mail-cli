@@ -848,7 +848,8 @@ describe("sending over MCP", { timeout: 20_000 }, () => {
         )
       const refused = await send({ file: key })
       expect(refused.isError).toBe(true)
-      expect(JSON.stringify(refused.content)).toContain("--allow-any-file")
+      expect(JSON.stringify(refused.content)).toContain("permission_error")
+      expect(JSON.stringify(refused.content)).toContain("access.denied")
       expect((await send({ file: key, allow_any_file: true })).isError).toBe(true)
     } finally {
       expect(await close()).toBe(0)

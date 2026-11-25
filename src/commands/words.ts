@@ -17,7 +17,7 @@ const WORDS: Record<string, (message: string, profile: string, error: CliError) 
   "mail.others-for-agent": (message, profile) =>
     `${message}; to let an agent mail others: ${IDENTITY.command} ${profile} config set permissions.${SEND_OTHERS_KEY} allow`,
   "mail.no-submission": (message, profile) => `${message} with ${run(profile, "config set")}`,
-  "mail.config-unreadable": (message) => `${message}; run \`${IDENTITY.command} doctor\``,
+  "config.unreadable": (message) => `${message}; run \`${IDENTITY.command} doctor\``,
   "mail.profile-exists": (message) => `${message}; pass --replace to overwrite it`,
   "download.exists": (message) => `${message}; pass --replace to overwrite it`,
   "mail.server-unknown": (message) =>

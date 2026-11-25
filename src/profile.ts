@@ -34,7 +34,7 @@ export const writeProfile = (
   const path = configPath(env)
   const read = readConfigFile(path)
   if ("issue" in read)
-    throw new CliError("configuration_error", `${path} cannot be read`, { reason: "mail.config-unreadable" })
+    throw new CliError("configuration_error", `${path} cannot be read`, { reason: "config.unreadable" })
   const config = isRecord(read.raw) ? read.raw : {}
   const profiles = isRecord(config.profiles) ? config.profiles : {}
   const existed = name in profiles
