@@ -72,7 +72,7 @@ it("pins mail's own commands an agent can find, and whether each reads or writes
   const offered = new Map(toolsFromCommands(describeProgram(program), options).map((tool) => [tool.command, tool]))
   expect(offered.has("session start")).toBe(false)
   expect(offered.has("store reset")).toBe(false)
-  // cli-core's family rule: a schedule's run and exec are MCP writes behind schedule.run and schedule.exec (ask).
+  // cli-core's family rule: a schedule's run is an MCP write behind schedule.run (ask); exec is the timer's alone.
   expect(offered.get("schedule run")?.writes).toBe(true)
-  expect(offered.get("schedule exec")?.writes).toBe(true)
+  expect(offered.has("schedule exec")).toBe(false)
 })
