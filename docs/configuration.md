@@ -24,6 +24,13 @@ it came from, and its senders join your addresses in the store on their own; set
 mail in Sent yet. Mail stored before is marked at the next `sync`. The store keeps an address once it is yours:
 `config unset aliases` does not take it back.
 
+A Gmail profile signed in with Google also reads Gmail's "send as" list at each `sync`
+([Gmail API](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.settings.sendAs/list)), and
+every address Gmail accepted there is yours, as an alias is. The sign-in's `https://mail.google.com/` scope allows it;
+your own Google app needs the Gmail API turned on (see [Gmail with OAuth](oauth-google.md)). When Gmail does not
+answer, `sync` uses the list it read last and says why under `send_as.unread`. A profile with an app password cannot
+read the list: name those addresses in `aliases`.
+
 `read_attachments` (default `true`) and `max_attachment_mb` (default 10) decide whether `sync` reads the text of
 attachments into the search index and the largest file it reads. No file is kept. `sync --no-attachments`,
 `--attachments` and `--max-attachment-mb` override them for one run; `messages show` reads one email's attachments

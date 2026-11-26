@@ -41,7 +41,9 @@ describe("the owner's aliases", () => {
 
     const set = await mail(["ya", "config", "set", "aliases", ALIAS, "--json"])
     expect(set.code, set.err).toBe(0)
-    expect((await mail(["ya", "sync", "--since-time", "2026-01-01", "--json"])).code).toBe(0)
+    const synced = await mail(["ya", "sync", "--since-time", "2026-01-01", "--json"])
+    expect(synced.code).toBe(0)
+    expect(JSON.parse(synced.out).item.send_as).toBeUndefined()
 
     expect(await facts()).toMatchObject({
       outgoing: { Ping: false, Note: true, Hello: true },

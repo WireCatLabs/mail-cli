@@ -21,15 +21,17 @@ import {
   storedMailRuleSet,
   syncMail,
 } from "@wirecat/cli-core/mail"
+import type { MessageStore } from "@wirecat/cli-core/store"
 import { Command } from "commander"
 import * as v from "valibot"
 import { configuration, DEFAULT_SYNC_SINCE, SYNC_WINDOW } from "../config.js"
 import { IDENTITY } from "../identity.js"
 import { knownAges, lookUpAges, rdapDeps } from "../mail/domain-age.js"
 import { rethreadStored } from "../mail/rethread.js"
+import { gmailAliases, readSendAs } from "../mail/send-as.js"
 import { DEFAULT_SYNC, providerFor, type SyncFolders } from "../providers.js"
 import { openMailStore } from "../store.js"
-import { closing, contextOf, openMail, refuseOffline, repeatable } from "./context.js"
+import { closing, contextOf, credentialOf, oauthKindOf, openMail, refuseOffline, repeatable } from "./context.js"
 
 const DAY_MS = 86_400_000
 const WINDOW_DAYS: Record<string, number> = { d: 1, w: 7, y: 365 }
@@ -100,6 +102,18 @@ const issuesOf = (report: MailSyncResult) => [
     : []),
 ]
 
+/** Gmail's "send as" aliases, for a profile signed in to Google; an app password cannot call the Gmail API. */
+const sendAsOf = async (context: ReturnType<typeof contextOf>, store: MessageStore, address: string) => {
+  const { mailbox } = context.settings
+  if (mailbox.auth !== "oauth" || oauthKindOf(mailbox) !== "google") return undefined
+  const { credential } = await credentialOf(context)
+  return gmailAliases(store, mailAccountKey(address), async () => {
+    const login = await credential.login()
+    if (!("accessToken" in login)) return []
+    return readSendAs(login.accessToken, context.environment.fetch, context.environment.signal)
+  })
+}
+
 /** The provider's folders by role (INBOX and Sent, All Mail on Gmail), unless the profile or `--folder` names some. */
 export const foldersFor = async (
   explicit: string[] | undefined,
@@ -147,6 +161,11 @@ const mailSync = v.strictObject({
   senders: v.optional(
     v.strictObject({ scored: v.number(), demoted: v.number(), domains_looked_up: v.number(), failed: v.number() }),
   ),
+  /**
+   * A Gmail OAuth profile: the "send as" aliases counted as the owner's beside `aliases`, and why Gmail's list could not
+   * be read this run, when it could not; the list read last is used then.
+   */
+  send_as: v.optional(v.strictObject({ aliases: v.number(), unread: v.optional(v.string()) })),
   hint: v.optional(v.string()),
 })
 
@@ -209,7 +228,7 @@ export const syncCommand = (): Command =>
       const budget = runBudgetOf(this, args.maxPages)
       // A retry is a request of the budget; openMail keeps it from ending after the deadline.
       const { backend } = await openMail(context, { canRetry: () => budget.take() === null })
-      const { report, rethreaded, unreadable, senders } = await closing(backend, () =>
+      const { report, rethreaded, unreadable, senders, sendAs } = await closing(backend, () =>
         baseContext(this, configuration.resolveSettings).run(async () => {
           const { mailbox } = context.settings
           const defaults = providerFor(address, mailbox.host)?.sync ?? DEFAULT_SYNC
@@ -219,8 +238,10 @@ export const syncCommand = (): Command =>
           try {
             // The stored rules, as memo passes them: the saved position holds their fingerprint, so both must agree.
             const { rules, unreadable } = await storedMailRuleSet(store, { address })
+            const sendAs = await sendAsOf(context, store, address)
+            const addresses = [...new Set([...(mailbox.aliases ?? []), ...(sendAs?.aliases ?? [])])]
             const report = await syncMail(backend, store, {
-              account: { address, mode: defaults.mode ?? "imap", folders, rules, addresses: mailbox.aliases ?? [] },
+              account: { address, mode: defaults.mode ?? "imap", folders, rules, addresses },
               since,
               ages: knownAges(context.env),
               budget,
@@ -255,7 +276,7 @@ export const syncCommand = (): Command =>
                   Date.now(),
                   rules,
                 )
-            return { report, rethreaded, unreadable, senders }
+            return { report, rethreaded, unreadable, senders, sendAs }
           } finally {
             await store.close()
           }
@@ -344,6 +365,9 @@ export const syncCommand = (): Command =>
             ...(report.deletionsSkipped ? { deletions_skipped: report.deletionsSkipped } : {}),
             ...(refused.length ? { refused_folders: refused } : {}),
             ...(report.partial ? { partial_emails: report.partial } : {}),
+            ...(sendAs
+              ? { send_as: { aliases: sendAs.aliases.length, ...(sendAs.unread ? { unread: sendAs.unread } : {}) } }
+              : {}),
             ...(senders
               ? {
                   senders: {
