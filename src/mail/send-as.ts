@@ -53,6 +53,10 @@ const savedOf = (value: string | undefined): string[] => {
   }
 }
 
+/** The send-as list the last sync read, so a run that does not ask Gmail counts the same addresses. */
+export const savedSendAs = async (store: MessageStore, key: AccountKey): Promise<string[]> =>
+  savedOf((await store.sync.syncState(key, SEND_AS_KEY))?.value)
+
 /**
  * The Gmail aliases to count as the owner's this run. A read that fails keeps the last list read: the owner's mail
  * from an alias must not turn incoming because Gmail did not answer once.
@@ -62,7 +66,7 @@ export const gmailAliases = async (
   key: AccountKey,
   read: () => Promise<string[]>,
 ): Promise<{ aliases: string[]; unread?: string }> => {
-  const saved = savedOf((await store.sync.syncState(key, SEND_AS_KEY))?.value)
+  const saved = await savedSendAs(store, key)
   let aliases: string[]
   try {
     aliases = await read()
