@@ -16,6 +16,7 @@ import type { MailBackend, Submitted } from "./backend.js"
 import { build, type Draft, type Person } from "./compose.js"
 import { locate, selectIds } from "./locate.js"
 import type { Mailbox } from "./organise.js"
+import { savedSendAs } from "./send-as.js"
 
 type Attempt = Parameters<typeof guardedWrite>[1]
 
@@ -135,8 +136,9 @@ const storeSent = async (sending: Sending, messageId: string): Promise<boolean> 
     const { folders, mode } = await sending.syncFolders()
     const address = sending.mailbox.key.account
     const rules = await storedMailRules(sending.mailbox.store, { address })
+    const sendAs = await savedSendAs(sending.mailbox.store, sending.mailbox.key)
     await syncMail(sending.backend, sending.mailbox.store, {
-      account: { address, mode, folders, rules, addresses: sending.aliases },
+      account: { address, mode, folders, rules, addresses: [...new Set([...sending.aliases, ...sendAs])] },
       since: new Date(Date.now() - SYNC_WINDOW_MS),
       saveCoverage: false,
       completePartial: false,

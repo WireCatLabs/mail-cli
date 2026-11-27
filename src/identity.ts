@@ -30,6 +30,7 @@ export const DESKTOP: ManifestIdentity = {
     "accounts.google.com",
     "oauth2.googleapis.com",
     "openidconnect.googleapis.com",
+    "gmail.googleapis.com",
     "autoconfig.thunderbird.net",
     "data.iana.org",
     "imap.yandex.com",

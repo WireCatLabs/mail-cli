@@ -54,7 +54,9 @@ scope Gmail gives IMAP and SMTP ([XOAUTH2](https://developers.google.com/workspa
 
 Google's page does not say whether the Gmail API must be enabled for IMAP alone. If the sign-in works and
 `session status --check` then fails, enable the
-[Gmail API](https://console.cloud.google.com/apis/library/gmail.googleapis.com) in this project and try again.
+[Gmail API](https://console.cloud.google.com/apis/library/gmail.googleapis.com) in this project and try again. `sync`
+also reads your "send as" addresses through the Gmail API. With the API off, `sync` reports `send_as.unread`, and
+only `aliases` and the senders of your Sent mail count as yours.
 
 ## 4. Publish the app (Production), without verification
 

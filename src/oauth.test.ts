@@ -4,6 +4,7 @@ import { join } from "node:path"
 import { PassThrough, Readable } from "node:stream"
 import { memoryKeyring } from "@wirecat/cli-base"
 import { constants } from "@wirecat/cli-core/constants"
+import { openStore } from "@wirecat/cli-core/store"
 import { afterEach, describe, expect, it } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
 import type { MailCredential, MailEndpoint, RunBounds } from "./mail/backend.js"
@@ -67,6 +68,8 @@ const harness = async (
     account: address,
     revoked: 0,
     lookup: "ok" as "ok" | "refused" | "down" | "unverified",
+    sendAs: [] as { sendAsEmail: string; isPrimary?: boolean; verificationStatus?: string }[] | "refused",
+    sendAsTokens: [] as string[],
   }
   const tokenCalls: URLSearchParams[] = []
   const fetch = (async (url: string | URL | Request, init?: RequestInit) => {
@@ -74,6 +77,11 @@ const harness = async (
       if (server.lookup === "down") throw new TypeError("fetch failed")
       if (server.lookup === "refused") return new Response("", { status: 401 })
       return Response.json({ email: server.account, email_verified: server.lookup !== "unverified" })
+    }
+    if (String(url).includes("/settings/sendAs")) {
+      server.sendAsTokens.push(new Headers(init?.headers).get("authorization") ?? "")
+      if (server.sendAs === "refused") return new Response("", { status: 403 })
+      return Response.json({ sendAs: server.sendAs })
     }
     if (String(url).includes("/revoke")) {
       server.revoked += 1
@@ -350,6 +358,36 @@ describe("Gmail with your own Google app", { timeout: 20_000 }, () => {
     return file
   }
   const start = ["work", "session", "start", "--address", "me@gmail.com", "--json"]
+
+  it("counts the aliases Gmail accepted as the owner's, and keeps the last list when Gmail refuses", async () => {
+    const { mail, env, server, leaked } = await gmail()
+    server.sendAs = [
+      { sendAsEmail: "me@gmail.com", isPrimary: true },
+      { sendAsEmail: "Me.Alias@Example.com", verificationStatus: "accepted" },
+      { sendAsEmail: "pending@example.com", verificationStatus: "pending" },
+    ]
+    expect((await mail([...start, "--client-file", clientFile()])).code).toBe(0)
+    const sync = async () => {
+      const synced = await mail(["work", "sync", "--since-time", "2026-01-01", "--folder", "INBOX", "--json"])
+      expect(synced.code, synced.err).toBe(0)
+      const store = await openStore({ env })
+      try {
+        const own = await store.sync.syncState({ provider: "email", account: "me@gmail.com" }, "mail_own_addresses")
+        return { sendAs: item(synced.out).send_as, own: JSON.parse(own?.value ?? "[]") }
+      } finally {
+        await store.close()
+      }
+    }
+
+    expect(await sync()).toEqual({ sendAs: { aliases: 1 }, own: ["me.alias@example.com"] })
+    expect(server.sendAsTokens.at(-1)).toMatch(/^Bearer synthetic-access-/)
+    server.sendAs = "refused"
+    expect(await sync()).toEqual({
+      sendAs: { aliases: 1, unread: "Gmail answered HTTP 403" },
+      own: ["me.alias@example.com"],
+    })
+    expect(leaked()).toBeNull()
+  })
 
   it("signs in with the client file, keeps its secret to refresh, and checks the account", async () => {
     const { mail, entry, accepted, tokenCalls, config, leaked } = await gmail()

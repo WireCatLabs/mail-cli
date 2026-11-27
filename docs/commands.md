@@ -279,7 +279,7 @@ mail sync [options]
 | `--max-attachment-mb <mb>` | the largest attachment to read this run, in MB (default: the profile's max_attachment_mb, else 10). |
 | `--rescan` | list the whole window again; also moves stored replies into their thread where the server has no thread ids. |
 
-**Returns:** mail sync — address, since, timezone, folders, state, requests, listed, saved, and 14 more; every field: mail commands info sync
+**Returns:** mail sync — address, since, timezone, folders, state, requests, listed, saved, and 15 more; every field: mail commands info sync
 
 **Example:** `mail personal sync`, `mail personal sync --since-time 2026-10-01 --max-messages 200`, `mail personal sync --folder INBOX`
 
