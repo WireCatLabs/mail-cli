@@ -22,6 +22,7 @@ Works with:
   linear                  Linear issues and projects, searchable with your other WireCat data
 
 Start here:   mail personal session start --address <email>  (any profile name works)
+              mail session list                              your profiles and their logged-in accounts
 Next:         mail commands                                  every command, by section
               mail help options                              output, offline, timeouts, dry run
 For agents:   mail skill show                                rules and the discovery loop
