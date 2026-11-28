@@ -36,6 +36,7 @@ export const harness = async (given: Partial<FakeOptions> & { provider?: string;
     MAIL_CONFIG_DIR: mkdtempSync(join(tmpdir(), "config-")),
     MAIL_STATE_DIR: mkdtempSync(join(tmpdir(), "state-")),
     MEMO_STATE_DIR: mkdtempSync(join(tmpdir(), "memo-state-")),
+    WCAT_STATE_DIR: mkdtempSync(join(tmpdir(), "wcat-state-")),
     MESSAGING_STORE: join(mkdtempSync(join(tmpdir(), "store-")), "wirecat.db"),
   }
   delete env.CI

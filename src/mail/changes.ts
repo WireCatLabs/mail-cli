@@ -1,6 +1,7 @@
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { CliError, resolvePaths } from "@wirecat/cli-base"
+import { memoTrashFolder } from "./memo-trash.js"
 
 /** What one step did to the mailbox; its inverse is what `messages restore` does. */
 export type ChangeOp = "flag" | "label" | "move" | "copy" | "trash"
@@ -181,7 +182,7 @@ const memoRestored = (lines: Record<string, unknown>[]) =>
  * with every email's labels. It reads as one Gmail step from All Mail to Trash.
  */
 const memoRun = (env: NodeJS.ProcessEnv, account: string, id: string): { path: string; run: ChangeRun } | undefined => {
-  const root = join(resolvePaths({ appName: "cli-memo", prefix: "MEMO", env }).state, "mail-trash")
+  const root = memoTrashFolder(env)
   if (!existsSync(root)) return undefined
   for (const name of readdirSync(root)) {
     const path = join(root, name, `${id}.jsonl`)
@@ -293,7 +294,7 @@ const summaryOf = (lines: Line[]): RunSummary | undefined => {
 
 /** memo's cleanup runs, from before the cleanup moved here: `email` lines are what it moved, `restore` what came back. */
 const memoSummaries = (env: NodeJS.ProcessEnv): RunSummary[] => {
-  const root = join(resolvePaths({ appName: "cli-memo", prefix: "MEMO", env }).state, "mail-trash")
+  const root = memoTrashFolder(env)
   if (!existsSync(root)) return []
   return readdirSync(root).flatMap((name) =>
     readdirSync(join(root, name))

@@ -15,6 +15,7 @@ const folders = () => {
     ...process.env,
     MAIL_STATE_DIR: mkdtempSync(join(tmpdir(), "state-")),
     MEMO_STATE_DIR: mkdtempSync(join(tmpdir(), "memo-state-")),
+    WCAT_STATE_DIR: mkdtempSync(join(tmpdir(), "wcat-state-")),
     MAIL_CONFIG_DIR: mkdtempSync(join(tmpdir(), "config-")),
   }
   const mine = join(env.MAIL_STATE_DIR, "changes", "me@example.com")
