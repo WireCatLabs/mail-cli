@@ -2,6 +2,33 @@
 
 Notable changes to `@wirecat/mail-cli`. One section per version, newest first.
 
+## 0.39.0 — 28.11.2026
+
+### Added
+
+- **WireCat Desktop can run this tool's MCP server.** The manifest names the server's port, 8753, so Desktop starts
+  and stops the server from the tool page, like the other WireCat tools. Before, Desktop had no port for it and offered
+  no server. It needs a Desktop that reads the port from the manifest.
+- **The manifest says how Desktop signs in and how often it syncs.** Three sign-in methods, as Desktop's own list has
+  them: Microsoft, Gmail and another mail server, each `{profile} session start --json --answer-stdin` with
+  `--address`. Gmail also takes `--client-file` and `--method oauth`, and Microsoft names the `microsoft_client_id`
+  setting. The sync timer starts at every 5 minutes, with choices from 5 minutes to 24 hours. Desktop keeps its own
+  list only as a fallback.
+- **Built on cli-base 1.2.0** (was 1.0.0), which writes the port, the sign-in methods and the timer into the manifest.
+
+### Fixed
+
+- **The mailbox steps `session start` prints are plainer.** They no longer say what a provider's help page leaves
+  out, and the Microsoft 365 step names its IMAP server outright.
+- **The guides say plainly what an agent over MCP may do.** A change set to `ask` runs without a question once the
+  agent passes `--yes`; `deny` or `readonly` stops it. The main guide, the settings, the security page and the
+  troubleshooting page say so, and the troubleshooting page is now grouped by what went wrong.
+- **memo's old cleanup runs are read from the wcat folder.** memo is now `wcat`, and its state folder moves from
+  `cli-memo` to `wcat`. mail-cli reads `mail-trash` there. When only the old `cli-memo/mail-trash` exists, mail-cli
+  moves it first. When both exist, nothing is merged: it warns once and reads the new one.
+- mail no longer carries its own copy of cli-core: built on @wirecat/cli-core 3.0.0 and @wirecat/cli-base 2.1.0,
+  needed for WireCat store version 79.
+
 ## 0.38.0 — 27.11.2026
 
 ### Added
