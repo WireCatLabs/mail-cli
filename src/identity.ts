@@ -49,6 +49,8 @@ export const DESKTOP: ManifestIdentity = {
   ],
   userHosts:
     "the mail server you sign in to, your domain's autoconfig file, and each sender domain's registry from IANA's list",
+  // One port per WireCat tool, so two servers never collide (wirecat-desktop docs/dev/cli-registry.md).
+  mcpPort: 8753,
   tagline: "Your mailbox over IMAP, searchable on your computer",
   syncs: "mail",
   signIn: {
