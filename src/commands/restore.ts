@@ -1,6 +1,6 @@
 import { annotate } from "@wirecat/cli-base/commands"
 import type { NextStep } from "@wirecat/cli-base/standards"
-import { answerEntity, answerLocally, itemOf, outputFor, REMOTE_WRITE } from "@wirecat/cli-core/cli"
+import { answerEntity, answerLocally, itemOf, outputFor, REMOTE_WRITE } from "@wirecat/cli-core"
 import { Command } from "commander"
 import * as v from "valibot"
 import { IDENTITY } from "../identity.js"

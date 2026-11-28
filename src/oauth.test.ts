@@ -3,8 +3,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { PassThrough, Readable } from "node:stream"
 import { memoryKeyring } from "@wirecat/cli-base"
-import { constants } from "@wirecat/cli-core/constants"
-import { openStore } from "@wirecat/cli-core/store"
+import { constants, openStore } from "@wirecat/cli-core"
 import { afterEach, describe, expect, it } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
 import type { MailCredential, MailEndpoint, RunBounds } from "./mail/backend.js"
@@ -58,6 +57,7 @@ const harness = async (
     MAIL_CONFIG_DIR: mkdtempSync(join(tmpdir(), "config-")),
     MAIL_STATE_DIR: mkdtempSync(join(tmpdir(), "state-")),
     MEMO_STATE_DIR: mkdtempSync(join(tmpdir(), "memo-state-")),
+    WCAT_STATE_DIR: mkdtempSync(join(tmpdir(), "wcat-state-")),
     MESSAGING_STORE: join(mkdtempSync(join(tmpdir(), "store-")), "wirecat.db"),
   }
   delete env.CI

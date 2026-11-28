@@ -1,5 +1,5 @@
 import { describeProgram } from "@wirecat/cli-base/commands"
-import { changesAuthorityAt, readsOverMcpAt } from "@wirecat/cli-core/cli"
+import { changesAuthorityAt, readsOverMcpAt } from "@wirecat/cli-core"
 import { toolsFromCommands } from "@wirecat/cli-core/mcp"
 import { ownCatalogue } from "@wirecat/cli-core/testing"
 import { expect, it } from "vitest"

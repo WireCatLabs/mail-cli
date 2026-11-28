@@ -1,6 +1,5 @@
 import { resolvePaths } from "@wirecat/cli-base"
-import { type AccountRemoval, accountRemoveCommand } from "@wirecat/cli-core/cli"
-import { oauthAccount } from "@wirecat/cli-core/oauth"
+import { type AccountRemoval, accountRemoveCommand, oauthAccount } from "@wirecat/cli-core"
 import type { Command } from "commander"
 import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"

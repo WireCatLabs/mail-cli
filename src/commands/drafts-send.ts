@@ -1,6 +1,5 @@
 import { annotate } from "@wirecat/cli-base/commands"
-import { answerEntity, outputFor, REMOTE_WRITE } from "@wirecat/cli-core/cli"
-import { guardedWrite, newOperationId } from "@wirecat/cli-core/sends"
+import { answerEntity, guardedWrite, newOperationId, outputFor, REMOTE_WRITE } from "@wirecat/cli-core"
 import { Command } from "commander"
 import { IDENTITY } from "../identity.js"
 import { type Draft, messageIdFor, peopleOf } from "../mail/compose.js"

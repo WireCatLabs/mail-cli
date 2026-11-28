@@ -10,7 +10,7 @@ import {
   positiveCount,
   REMOTE_READ,
   renderAnswer,
-} from "@wirecat/cli-core/cli"
+} from "@wirecat/cli-core"
 import {
   domainsToAge,
   FREE_MAIL,

@@ -1,6 +1,6 @@
 import { PassThrough } from "node:stream"
 import { Client, ReadBuffer, serializeMessage, type Transport } from "@modelcontextprotocol/client"
-import type { RunOptions } from "@wirecat/cli-core/cli"
+import type { RunOptions } from "@wirecat/cli-core"
 import { run } from "../program.js"
 
 const overStreams = (input: PassThrough, output: PassThrough): Transport => {

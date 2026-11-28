@@ -1,9 +1,17 @@
 import { resolve } from "node:path"
 import { CliError } from "@wirecat/cli-base"
 import { annotate } from "@wirecat/cli-base/commands"
-import { answerEntity, FETCH, itemOf, listOf, outputFor, REMOTE_READ, renderAnswer } from "@wirecat/cli-core/cli"
+import {
+  answerEntity,
+  FETCH,
+  itemOf,
+  listOf,
+  outputFor,
+  REMOTE_READ,
+  refusedPlace,
+  renderAnswer,
+} from "@wirecat/cli-core"
 import { parseMail } from "@wirecat/cli-core/mail"
-import { refusedPlace } from "@wirecat/cli-core/sends"
 import { Command } from "commander"
 import * as v from "valibot"
 import { IDENTITY } from "../identity.js"

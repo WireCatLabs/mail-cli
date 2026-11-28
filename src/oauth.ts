@@ -2,20 +2,24 @@ import { mkdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { CliError, isCliError, isMovedRun, type KeyringStore, resolvePaths, systemKeyring } from "@wirecat/cli-base"
 import { hostFetch } from "@wirecat/cli-base/http"
-import { type AppSource, googleApp, microsoftApp } from "@wirecat/cli-core/constants"
-import { acquireLock, type FileLock, writeFileAtomic } from "@wirecat/cli-core/files"
 import {
+  type AppSource,
+  acquireLock,
   credentialStorage,
+  type FileLock,
+  googleApp,
   googleProvider,
+  microsoftApp,
   type OAuthClient,
   type OAuthProvider,
   oauthAccount,
   standardCodec,
   type TokenCodec,
   type TokenKeeper,
-  type TokenStorage,
+  type OAuthTokenStorage as TokenStorage,
   tokenKeeper,
-} from "@wirecat/cli-core/oauth"
+  writeFileAtomic,
+} from "@wirecat/cli-core"
 import * as v from "valibot"
 import type { Mailbox } from "./config.js"
 import { DESKTOP, IDENTITY } from "./identity.js"

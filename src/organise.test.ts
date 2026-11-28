@@ -3,8 +3,8 @@ import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { memoryKeyring, resolvePaths } from "@wirecat/cli-base"
 import { describeProgram } from "@wirecat/cli-base/commands"
+import { openStore, storePath } from "@wirecat/cli-core"
 import { toolsFromCommands } from "@wirecat/cli-core/mcp"
-import { openStore, storePath } from "@wirecat/cli-core/store"
 import { afterEach, describe, expect, it } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
 import { configuration } from "./config.js"
@@ -85,6 +85,7 @@ const harness = async (given: Partial<FakeOptions> & { provider?: string } = {})
     MAIL_CONFIG_DIR: mkdtempSync(join(tmpdir(), "config-")),
     MAIL_STATE_DIR: mkdtempSync(join(tmpdir(), "state-")),
     MEMO_STATE_DIR: mkdtempSync(join(tmpdir(), "memo-state-")),
+    WCAT_STATE_DIR: mkdtempSync(join(tmpdir(), "wcat-state-")),
     MESSAGING_STORE: join(mkdtempSync(join(tmpdir(), "store-")), "wirecat.db"),
   }
   delete env.CI

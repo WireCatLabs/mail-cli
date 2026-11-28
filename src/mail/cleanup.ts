@@ -1,8 +1,9 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { resolvePaths } from "@wirecat/cli-base"
+import { storePath } from "@wirecat/cli-core"
 import { decide, describeMatch, ENVELOPE, factsOf, type Listed, listedOf, type MailRule } from "@wirecat/cli-core/mail"
-import { storePath } from "@wirecat/cli-core/store"
+import { memoTrashFolder } from "./memo-trash.js"
 import type { Mailbox } from "./organise.js"
 
 const DAY = 86_400_000
@@ -82,7 +83,7 @@ export const backupOf = (env: NodeJS.ProcessEnv, now: number): Cleanup["backup"]
 /** No cleanup has moved mail of this mailbox before, here or in memo. */
 export const firstCleanup = (env: NodeJS.ProcessEnv, account: string): boolean => {
   const own = join(resolvePaths({ appName: "mail-cli", prefix: "MAIL", env }).state, "changes", account.toLowerCase())
-  const memo = join(resolvePaths({ appName: "cli-memo", prefix: "MEMO", env }).state, "mail-trash")
+  const memo = memoTrashFolder(env)
   const moved = (path: string, test: (text: string) => boolean) => {
     try {
       return test(readFileSync(path, "utf8"))

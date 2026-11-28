@@ -1,5 +1,5 @@
 import { CliError } from "@wirecat/cli-base"
-import type { AccountKey, MessageStore } from "@wirecat/cli-core/store"
+import type { AccountKey, MessageStore } from "@wirecat/cli-core"
 import type { MailBackend } from "./backend.js"
 
 export interface Rethreaded {

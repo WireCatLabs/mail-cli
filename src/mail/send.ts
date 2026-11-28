@@ -1,5 +1,4 @@
 import { CliError, realSleep } from "@wirecat/cli-base"
-import { mailIds, storedMailRules, syncMail } from "@wirecat/cli-core/mail"
 import {
   DEFAULT_PACE,
   type GuardRequest,
@@ -9,7 +8,8 @@ import {
   pacePathFor,
   type SendGuard,
   type SendKind,
-} from "@wirecat/cli-core/sends"
+} from "@wirecat/cli-core"
+import { mailIds, storedMailRules, syncMail } from "@wirecat/cli-core/mail"
 import { SEND_OTHERS_KEY } from "../config.js"
 import { IDENTITY } from "../identity.js"
 import type { MailBackend, Submitted } from "./backend.js"

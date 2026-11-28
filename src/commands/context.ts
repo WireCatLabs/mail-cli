@@ -1,7 +1,6 @@
 import type { KeyringStore } from "@wirecat/cli-base"
 import { CliError } from "@wirecat/cli-base"
-import { type BaseEnvironment, environmentOf, type GlobalFlags } from "@wirecat/cli-core/cli"
-import type { OAuthClient } from "@wirecat/cli-core/oauth"
+import { type BaseEnvironment, environmentOf, type GlobalFlags, type OAuthClient } from "@wirecat/cli-core"
 import { type Command, Option } from "commander"
 import { configuration } from "../config.js"
 import type { DiscoveryDeps } from "../discovery.js"

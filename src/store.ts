@@ -1,5 +1,4 @@
-import { openAppStore } from "@wirecat/cli-core/cli"
-import type { MessageStore } from "@wirecat/cli-core/store"
+import { type MessageStore, openAppStore } from "@wirecat/cli-core"
 import { IDENTITY } from "./identity.js"
 
 export const PROVIDER = { name: "email", kind: "mail", aliases: [], command: IDENTITY.command } as const

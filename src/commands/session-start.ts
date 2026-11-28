@@ -16,7 +16,7 @@ import {
   type SignInSteps,
   secretInputOf,
   signInSteps,
-} from "@wirecat/cli-core/cli"
+} from "@wirecat/cli-core"
 import { Command } from "commander"
 import { configuration } from "../config.js"
 import { type Discovery, domainOf, PROVIDER_NAMES } from "../discovery.js"

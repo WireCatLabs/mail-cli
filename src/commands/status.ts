@@ -1,10 +1,8 @@
 import { existsSync } from "node:fs"
 import { CliError } from "@wirecat/cli-base"
 import { annotate } from "@wirecat/cli-base/commands"
-import { progressOf } from "@wirecat/cli-core/background"
-import { answerEntity, answerLocally, baseContext, itemOf, LOCAL_READ, outputFor } from "@wirecat/cli-core/cli"
-import { mailAccountKey, mailProgress, marksOf } from "@wirecat/cli-core/mail"
-import { mailMark, markItem } from "@wirecat/cli-core/mail/cli"
+import { answerEntity, answerLocally, baseContext, itemOf, LOCAL_READ, outputFor, progressOf } from "@wirecat/cli-core"
+import { mailAccountKey, mailMark, mailProgress, markItem, marksOf } from "@wirecat/cli-core/mail"
 import { Command } from "commander"
 import * as v from "valibot"
 import { configuration } from "../config.js"
@@ -57,7 +55,7 @@ export const statusCommand = (): Command =>
       if (!address) throw new CliError("configuration_error", `profile ${context.profile} has no address`)
       const key = mailAccountKey(address)
       const { folders: report, holders } = await baseContext(this, configuration.resolveSettings).run(async () => {
-        const { storePath } = await import("@wirecat/cli-core/store")
+        const { storePath } = await import("@wirecat/cli-core")
         if (!existsSync(storePath(context.env))) return { folders: [], holders: [] }
         // Read-only, so it answers while a sync holds the write lock.
         const store = await openMailStore(context.env, { readOnly: true })
