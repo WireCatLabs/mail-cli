@@ -5,10 +5,9 @@ import { join } from "node:path"
 import { Readable } from "node:stream"
 import { memoryKeyring } from "@wirecat/cli-base"
 import { describeProgram } from "@wirecat/cli-base/commands"
+import { DEFAULT_PACE, openStore, Pacer, pacePathFor, sendsPathFor } from "@wirecat/cli-core"
 import { mailAccountKey } from "@wirecat/cli-core/mail"
 import { toolsFromCommands } from "@wirecat/cli-core/mcp"
-import { DEFAULT_PACE, Pacer, pacePathFor, sendsPathFor } from "@wirecat/cli-core/sends"
-import { openStore } from "@wirecat/cli-core/store"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 // Each case signs in, syncs and sends over two local servers: seconds on a loaded machine.

@@ -1,21 +1,24 @@
 import { CliError } from "@wirecat/cli-base"
 import { annotate } from "@wirecat/cli-base/commands"
 import type { QueryRegistry } from "@wirecat/cli-base/query"
-import { formatReference, normalizeTag, parseReference } from "@wirecat/cli-core"
 import {
+  type AccountKey,
   answerEntity,
+  formatReference,
   itemOf,
   LOCAL_READ,
   LOCAL_WRITE,
   listOf,
+  type MessageStore,
+  normalizeTag,
   outputFor,
+  parseReference,
   queryTerms,
   renderAnswer,
+  type TagTarget,
   termField,
   withQuery,
-} from "@wirecat/cli-core/cli"
-import type { AccountKey, MessageStore } from "@wirecat/cli-core/store"
-import type { TagTarget } from "@wirecat/cli-core/store/areas"
+} from "@wirecat/cli-core"
 import { Command } from "commander"
 import * as v from "valibot"
 import { IDENTITY } from "../identity.js"

@@ -3,6 +3,7 @@ import { resolvePaths } from "@wirecat/cli-base"
 import {
   appDoctorCommand,
   appMcpCommand,
+  appUpdate,
   baseContext,
   commandsCommand,
   configCommand,
@@ -19,8 +20,7 @@ import {
   scheduleCommandFor,
   skillCommand,
   upgradeCommand,
-} from "@wirecat/cli-core/cli"
-import { appUpdate } from "@wirecat/cli-core/update"
+} from "@wirecat/cli-core"
 import type { Command } from "commander"
 import { accountCommand } from "./commands/account.js"
 import { attachmentsCommand } from "./commands/attachments.js"

@@ -9,7 +9,7 @@ import {
   outputFor,
   positiveCount,
   renderAnswer,
-} from "@wirecat/cli-core/cli"
+} from "@wirecat/cli-core"
 import { MAIL_STATS_BY, type MailStatsBy, mailStats, mailStatsItem } from "@wirecat/cli-core/mail"
 import { Command, Option } from "commander"
 import * as v from "valibot"

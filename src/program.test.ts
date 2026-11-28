@@ -1,7 +1,7 @@
 import { chmodSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { delimiter, isAbsolute, join } from "node:path"
 import { resolvePaths } from "@wirecat/cli-base"
-import { appDoctorReport } from "@wirecat/cli-core/cli"
+import { appDoctorReport } from "@wirecat/cli-core"
 import { afterEach, expect, it, vi } from "vitest"
 import { configuration } from "./config.js"
 import { IDENTITY } from "./identity.js"

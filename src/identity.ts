@@ -1,5 +1,5 @@
 import type { ManifestIdentity } from "@wirecat/cli-base/wcat/manifest"
-import type { AppIdentity } from "@wirecat/cli-core/cli"
+import type { AppIdentity } from "@wirecat/cli-core"
 import { REASONS } from "./reasons.js"
 import { VERSION } from "./version.js"
 

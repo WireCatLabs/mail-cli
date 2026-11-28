@@ -1,8 +1,8 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { resolvePaths } from "@wirecat/cli-base"
+import { storePath } from "@wirecat/cli-core"
 import { decide, describeMatch, ENVELOPE, factsOf, type Listed, listedOf, type MailRule } from "@wirecat/cli-core/mail"
-import { storePath } from "@wirecat/cli-core/store"
 import { memoTrashFolder } from "./memo-trash.js"
 import type { Mailbox } from "./organise.js"
 

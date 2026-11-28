@@ -1,7 +1,7 @@
 import { lstatSync, mkdirSync } from "node:fs"
 import { dirname, extname } from "node:path"
 import { CliError } from "@wirecat/cli-base"
-import { safeName as plainName, writeFileAtomic } from "@wirecat/cli-core/files"
+import { safeName as plainName, writeFileAtomic } from "@wirecat/cli-core"
 
 const exists = (path: string) =>
   new CliError("validation_error", `${path} already exists`, {

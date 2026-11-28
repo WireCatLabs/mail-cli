@@ -1,7 +1,7 @@
 import { CliError } from "@wirecat/cli-base"
 import { annotate } from "@wirecat/cli-base/commands"
 import { timezoneOf, zonedMoment } from "@wirecat/cli-base/query"
-import { answerEntity, envName, notLocalPaths, REMOTE_WRITE } from "@wirecat/cli-core/cli"
+import { answerEntity, envName, notLocalPaths, REMOTE_WRITE } from "@wirecat/cli-core"
 import { decide, factsOf, listedOf, type MailRule, storedMailRules } from "@wirecat/cli-core/mail"
 import { Command } from "commander"
 import { IDENTITY } from "../identity.js"

@@ -23,7 +23,7 @@ go to the further questions.
 6. **What must never reach the store, a log or the output?** tokens and passwords · one-time codes and passcodes ·
    links that carry a secret · the full content, keep only metadata · other; several allowed. A run record keeps
    the words typed on the command line: an argument or option that carries such a value is marked with
-   `secretInput()` from `@wirecat/cli-core/cli`.
+   `secretInput()` from `@wirecat/cli-core`.
 7. **What untrusted input arrives?** messages from other people · files and attachments · links · names and titles set
    by others · none · other; several allowed.
 

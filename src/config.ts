@@ -5,7 +5,7 @@ import {
   type Settings,
   scheduleLimitsOf,
   settingsFor,
-} from "@wirecat/cli-core/cli"
+} from "@wirecat/cli-core"
 import * as v from "valibot"
 import { IDENTITY } from "./identity.js"
 

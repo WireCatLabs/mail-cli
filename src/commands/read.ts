@@ -1,9 +1,13 @@
 import { existsSync } from "node:fs"
 import { CliError } from "@wirecat/cli-base"
-import { baseContext, notLocalPaths } from "@wirecat/cli-core/cli"
-import { mailAccountKey, readEmailWhole } from "@wirecat/cli-core/mail"
-import { type MailReads, mailInboxCommand, mailReadCommands } from "@wirecat/cli-core/mail/cli"
-import { storePath } from "@wirecat/cli-core/store"
+import { baseContext, notLocalPaths, storePath } from "@wirecat/cli-core"
+import {
+  type MailReads,
+  mailAccountKey,
+  mailInboxCommand,
+  mailReadCommands,
+  readEmailWhole,
+} from "@wirecat/cli-core/mail"
 import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
 import { DEFAULT_SYNC, providerFor } from "../providers.js"

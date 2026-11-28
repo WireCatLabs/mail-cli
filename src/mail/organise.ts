@@ -1,8 +1,14 @@
 import { CliError } from "@wirecat/cli-base"
-import type { AppIdentity } from "@wirecat/cli-core/cli"
+import {
+  type AccountKey,
+  type AppIdentity,
+  type GuardRequest,
+  guardedWrite,
+  type MessageStore,
+  newOperationId,
+  type SendGuard,
+} from "@wirecat/cli-core"
 import { decodedLabelName } from "@wirecat/cli-core/mail"
-import { type GuardRequest, guardedWrite, newOperationId, type SendGuard } from "@wirecat/cli-core/sends"
-import type { AccountKey, MessageStore } from "@wirecat/cli-core/store"
 import type { Organise } from "../providers.js"
 import type { FolderInfo, MailWrites, ServerState } from "./backend.js"
 import type { ChangeLog, StepLine } from "./changes.js"

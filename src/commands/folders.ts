@@ -3,17 +3,19 @@ import { annotate } from "@wirecat/cli-base/commands"
 import {
   answerEntity,
   baseContext,
+  guardedWrite,
+  guardFor,
   itemOf,
   LOCAL_READ,
   listOf,
+  newOperationId,
   outputFor,
   ownerOnlyOption,
   REMOTE_READ,
   REMOTE_WRITE,
   renderAnswer,
   terminalAsker,
-} from "@wirecat/cli-core/cli"
-import { guardedWrite, guardFor, newOperationId } from "@wirecat/cli-core/sends"
+} from "@wirecat/cli-core"
 import { Command } from "commander"
 import * as v from "valibot"
 import { configuration } from "../config.js"

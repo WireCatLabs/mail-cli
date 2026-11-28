@@ -3,7 +3,6 @@ import { CliError } from "@wirecat/cli-base"
 import { annotate } from "@wirecat/cli-base/commands"
 import { type QueryRegistry, queryFieldsOf } from "@wirecat/cli-base/query"
 import type { NextStep } from "@wirecat/cli-base/standards"
-import { runBudget } from "@wirecat/cli-core/background"
 import {
   answerEntity,
   baseContext,
@@ -15,15 +14,17 @@ import {
   LOCAL_WRITE,
   listOf,
   listQuery,
+  type MessageStore,
   narrowsUnderLock,
   outputFor,
   readOnlyLockOf,
   readOnlyRefusal,
   renderAnswer,
+  runBudget,
   snakeKeys,
   typedQuery,
   withQuery,
-} from "@wirecat/cli-core/cli"
+} from "@wirecat/cli-core"
 import {
   conditionKeys,
   describeMatch,
@@ -38,7 +39,6 @@ import {
   saveMeetingNotes,
   storedMailRules,
 } from "@wirecat/cli-core/mail"
-import type { MessageStore } from "@wirecat/cli-core/store"
 import { Command, Option } from "commander"
 import * as v from "valibot"
 import { configuration } from "../config.js"

@@ -5,16 +5,17 @@ import {
   answerEntity,
   bufferedInput,
   environmentOf,
+  guardedWrite,
   itemOf,
   LOCAL_READ,
   listOf,
+  newOperationId,
   outputFor,
   ownerOnlyOption,
   REMOTE_READ,
   REMOTE_WRITE,
   renderAnswer,
-} from "@wirecat/cli-core/cli"
-import { guardedWrite, newOperationId } from "@wirecat/cli-core/sends"
+} from "@wirecat/cli-core"
 import { Command } from "commander"
 import * as v from "valibot"
 import { IDENTITY } from "../identity.js"

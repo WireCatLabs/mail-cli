@@ -15,7 +15,7 @@ import {
   REMOTE_READ,
   refuseUnderReadOnly,
   renderAnswer,
-} from "@wirecat/cli-core/cli"
+} from "@wirecat/cli-core"
 import { Command } from "commander"
 import * as v from "valibot"
 import { configuration } from "../config.js"

@@ -1,5 +1,5 @@
 import { CliError, configFilePath, resolvePaths, saveConfigFile } from "@wirecat/cli-base"
-import { readConfigFile, usableProfileName } from "@wirecat/cli-core/cli"
+import { readConfigFile, usableProfileName } from "@wirecat/cli-core"
 import { configuration } from "./config.js"
 import type { Discovery } from "./discovery.js"
 import { IDENTITY } from "./identity.js"

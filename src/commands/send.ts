@@ -6,13 +6,15 @@ import {
   bufferedInput,
   environmentOf,
   itemOf,
+  levelFor,
+  newOperationId,
   outputFor,
   ownerOnlyOption,
   REMOTE_WRITE,
+  readUpload,
   renderAnswer,
-} from "@wirecat/cli-core/cli"
+} from "@wirecat/cli-core"
 import { htmlToText } from "@wirecat/cli-core/mail"
-import { levelFor, newOperationId, readUpload } from "@wirecat/cli-core/sends"
 import { Command } from "commander"
 import * as v from "valibot"
 import { configuration, SEND_OTHERS_KEY } from "../config.js"

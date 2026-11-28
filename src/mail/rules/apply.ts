@@ -1,22 +1,22 @@
 import { CliError } from "@wirecat/cli-base"
-import type { BudgetStop } from "@wirecat/cli-core/background"
-import type { Listed, MailSource } from "@wirecat/cli-core/mail"
+import type { AccountKey, BudgetStop, MessageStore } from "@wirecat/cli-core"
 import {
   decide,
   ENVELOPE,
   envelopeBox,
   factsOf,
+  type Listed,
   listedOf,
   type MailAccount,
   type MailFacts,
   type MailRule,
+  type MailSource,
   ruleTagger,
   sameMatch,
   settleRuleTags,
   type TagOutcome,
   tagsOf,
 } from "@wirecat/cli-core/mail"
-import type { AccountKey, MessageStore } from "@wirecat/cli-core/store"
 
 export interface RuleEffect {
   rule: MailRule

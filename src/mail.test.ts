@@ -12,8 +12,8 @@ import {
   resolvePaths,
   systemKeyring,
 } from "@wirecat/cli-base"
+import { openStore, storePath } from "@wirecat/cli-core"
 import { mailIds } from "@wirecat/cli-core/mail"
-import { openStore, storePath } from "@wirecat/cli-core/store"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { MailEnvironment } from "./commands/context.js"
 import { discover } from "./discovery.js"

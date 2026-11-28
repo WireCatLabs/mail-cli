@@ -12,7 +12,7 @@ import {
   outputFor,
   positiveCount,
   renderAnswer,
-} from "@wirecat/cli-core/cli"
+} from "@wirecat/cli-core"
 import { storedMailRuleSet, syncMail } from "@wirecat/cli-core/mail"
 import { Command } from "commander"
 import * as v from "valibot"

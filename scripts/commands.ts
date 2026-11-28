@@ -1,7 +1,7 @@
 import { resolve } from "node:path"
 import { writeArtifacts } from "@wirecat/cli-base/codegen"
 import { COMMANDS_PAGE_LABELS, commandsPage, describeOptions, describeProgram } from "@wirecat/cli-base/commands"
-import { commandHelpMarkdown } from "@wirecat/cli-core/cli"
+import { commandHelpMarkdown } from "@wirecat/cli-core"
 import { IDENTITY } from "../dist/identity.js"
 import { createProgram } from "../dist/program.js"
 import { providersPage } from "./providers-page.ts"

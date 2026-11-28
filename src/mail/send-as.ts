@@ -1,4 +1,4 @@
-import type { AccountKey, MessageStore } from "@wirecat/cli-core/store"
+import type { AccountKey, MessageStore } from "@wirecat/cli-core"
 import * as v from "valibot"
 import { signInFetch } from "../oauth.js"
 

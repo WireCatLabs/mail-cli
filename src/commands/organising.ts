@@ -1,7 +1,16 @@
 import { CliError } from "@wirecat/cli-base"
 import type { NextStep } from "@wirecat/cli-base/standards"
-import { baseContext, currentRun, itemOf, outputFor, renderAnswer, terminalAsker } from "@wirecat/cli-core/cli"
-import { type Asker, guardFor, type SendGuard } from "@wirecat/cli-core/sends"
+import {
+  type Asker,
+  baseContext,
+  currentRun,
+  guardFor,
+  itemOf,
+  outputFor,
+  renderAnswer,
+  type SendGuard,
+  terminalAsker,
+} from "@wirecat/cli-core"
 import type { Command } from "commander"
 import * as v from "valibot"
 import { configuration } from "../config.js"

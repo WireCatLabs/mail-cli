@@ -1,4 +1,4 @@
-import { type OAuthClientReport, oauthClientReport } from "@wirecat/cli-core/constants"
+import { type OAuthClientReport, oauthClientReport } from "@wirecat/cli-core"
 import { configuration } from "../config.js"
 import { IDENTITY } from "../identity.js"
 import { runSummaries } from "../mail/changes.js"

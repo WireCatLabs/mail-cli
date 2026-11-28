@@ -1,5 +1,5 @@
+import type { AccountKey, MessageStore } from "@wirecat/cli-core"
 import { type MailRule, type MailRuleMatch, ruleInput, storedMailRule } from "@wirecat/cli-core/mail"
-import type { AccountKey, MessageStore } from "@wirecat/cli-core/store"
 
 const accountKey = (address: string): AccountKey => ({ provider: "email", account: address.toLowerCase() })
 

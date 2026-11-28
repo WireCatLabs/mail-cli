@@ -9,10 +9,11 @@ import {
   environmentOf,
   FETCH,
   itemOf,
+  type MessageStore,
   outputFor,
   positiveCount,
   runBudgetOf,
-} from "@wirecat/cli-core/cli"
+} from "@wirecat/cli-core"
 import {
   type MailSyncResult,
   mailAccountKey,
@@ -21,7 +22,6 @@ import {
   storedMailRuleSet,
   syncMail,
 } from "@wirecat/cli-core/mail"
-import type { MessageStore } from "@wirecat/cli-core/store"
 import { Command } from "commander"
 import * as v from "valibot"
 import { configuration, DEFAULT_SYNC_SINCE, SYNC_WINDOW } from "../config.js"
