@@ -49,12 +49,38 @@ export const DESKTOP: ManifestIdentity = {
   ],
   userHosts:
     "the mail server you sign in to, your domain's autoconfig file, and each sender domain's registry from IANA's list",
+  // One port per WireCat tool, so two servers never collide (wirecat-desktop docs/dev/cli-registry.md).
+  mcpPort: 8753,
   tagline: "Your mailbox over IMAP, searchable on your computer",
   syncs: "mail",
+  syncSchedule: { every: "5m", choices: ["5m", "15m", "30m", "1h", "2h", "4h", "8h", "24h"], args: ["sync"] },
   signIn: {
     gives:
       "Lets your agent read and search your mail, and sort and send it as far as your settings allow. A Microsoft sign-in may not grant sending.",
     asks: "Your mail address and an app password, or a Microsoft or Google sign-in in the browser.",
+    methods: [
+      {
+        id: "microsoft",
+        label: "Microsoft",
+        words: ["{profile}", "session", "start", "--json", "--answer-stdin"],
+        address: "--address",
+        clientId: "microsoft_client_id",
+      },
+      {
+        id: "gmail",
+        label: "Gmail",
+        words: ["{profile}", "session", "start", "--json", "--answer-stdin"],
+        address: "--address",
+        clientFile: "--client-file",
+        oauth: ["--method", "oauth"],
+      },
+      {
+        id: "imap",
+        label: "Another mail server",
+        words: ["{profile}", "session", "start", "--json", "--answer-stdin"],
+        address: "--address",
+      },
+    ],
   },
 }
 
