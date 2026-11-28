@@ -1,8 +1,8 @@
 # Roadmap
 
-This page lists what is planned for `mail` and is not in it yet. Read it before you build a workaround for a
-missing feature: it may already be on the way. The order is approximate and can change. To suggest something, open
-an [issue on GitHub](https://github.com/WireCatLabs/mail-cli/issues).
+Check here before you build a workaround for a missing feature: it may already work, or be on the way. You see what
+`mail` does today, what comes next and what is not planned. To suggest something, open an
+[issue on GitHub](https://github.com/WireCatLabs/mail-cli/issues).
 
 ## What works today
 
@@ -39,7 +39,7 @@ MCP server gives AI agents the same commands, and an agent can mail only the own
 
 ## Next
 
-- **A live test of Gmail over OAuth.** The sign-in is built, and has not yet been tried on a real Google account.
+Nothing else is planned yet.
 
 ## Not planned
 

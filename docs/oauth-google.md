@@ -1,7 +1,7 @@
 # Gmail with Google sign-in
 
-Signing in with Google (OAuth) is the recommended way into Gmail. A new profile signs in with WireCat's Google app,
-with nothing to make first:
+You can sign in to Gmail with Google (OAuth) instead of an app password. A new profile signs in with WireCat's Google
+app, with nothing to make first:
 
 ```sh
 mail gm session start --address me@gmail.com --method oauth
@@ -27,12 +27,22 @@ A Gmail OAuth sign-in uses WireCat's Google app unless you name your own. The fi
 `--client-file <Desktop client JSON>`, then `MAIL_GOOGLE_CLIENT_ID` (with `MAIL_GOOGLE_CLIENT_SECRET`), then the
 profile's `google_client_id` setting (its secret still comes from `MAIL_GOOGLE_CLIENT_SECRET`), then WireCat's app.
 `mail doctor` shows which one a profile uses under `oauth_client`. To make your own app (about 20 minutes, no cost),
-follow the steps below.
+follow these steps.
+
+**On this page:**
+
+1. [A Google Cloud project just for mail](#1-a-google-cloud-project-just-for-mail)
+2. [Consent screen](#2-consent-screen)
+3. [Permission](#3-permission)
+4. [Publish the app (Production), without verification](#4-publish-the-app-production-without-verification)
+5. [Desktop client](#5-desktop-client)
+6. [Sign in](#6-sign-in)
+7. [Signing out](#signing-out)
 
 ## 1. A Google Cloud project just for mail
 
 Open [Google Cloud Console](https://console.cloud.google.com/) and choose **New Project** in the project selector.
-Name it, for example, `mail for me`, and keep it selected for every step below.
+Name it, for example, "mail for me", and keep it selected for every step below.
 
 Use a new project even if you already have one for `drive` or `gcal`. When a sign-in is revoked, Google removes every
 permission given to that project, for every app in it
@@ -42,7 +52,7 @@ permission given to that project, for every app in it
 ## 2. Consent screen
 
 Open **☰ → Google Auth platform → Branding** ([direct link](https://console.cloud.google.com/auth/branding)) and
-choose **Get Started**. Give an app name (`mail for me`), your address as the support and contact email, and the
+choose **Get Started**. Give an app name ("mail for me"), your address as the support and contact email, and the
 **External** audience (or **Internal** for a Workspace account that only you use). Create it.
 
 ## 3. Permission

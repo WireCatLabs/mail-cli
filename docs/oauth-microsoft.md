@@ -1,11 +1,11 @@
 # Register a Microsoft app
 
-Outlook.com and Microsoft 365 take only OAuth for IMAP and SMTP, so `mail` signs in through a Microsoft app. This page
-is for whoever registers that app: WireCat once for everyone, or you for yourself. It takes about half an hour, and it
-costs nothing.
+Register your own Microsoft app when your organisation does not allow WireCat's. Outlook.com and Microsoft 365 take
+only OAuth for IMAP and SMTP, so `mail` signs in through a Microsoft app, and WireCat's app is built in. Your own app
+takes about half an hour and costs nothing.
 
-When the app exists, its **Application (client) ID** goes either into `mail` itself (WireCat's app), or into your
-config once, with your app's id in place of the example id:
+When the app exists, put its **Application (client) ID** into your settings once, with your app's id in place of the
+example id:
 
 ```sh
 mail config set --defaults microsoft_client_id 11111111-2222-3333-4444-555555555555
@@ -13,6 +13,13 @@ mail config set --defaults microsoft_client_id 11111111-2222-3333-4444-555555555
 
 Only you can set it, in a terminal: an agent over MCP is refused, as for the mail server settings. The id is public; a
 desktop app has no secret.
+
+**On this page:**
+
+1. [What you need](#what-you-need)
+2. [Steps](#steps)
+3. [Later, and not needed to start](#later-and-not-needed-to-start)
+4. [What the sign-in asks for](#what-the-sign-in-asks-for)
 
 ## What you need
 
@@ -64,14 +71,11 @@ desktop app has no secret.
 
    Both must end with `signed_in: true`. If Microsoft's page shows an error with `AADSTS50011` (the redirect URI does
    not match), check that the address under **Mobile and desktop applications** is exactly `http://localhost/callback`.
-9. For WireCat's own app: send the Application (client) ID to the maintainers. A later release of `mail` then signs
-   in with it without any config.
 
 ## Later, and not needed to start
 
-- **A shared app for a whole organisation.** Making a shared Microsoft app public is complex, so an admin who
-  restricts consent may refuse WireCat's app. The admin approves it, or registers the organisation's own app with these
-  steps and gives you its id.
+- **A shared app for a whole organisation.** An admin who restricts consent may refuse WireCat's app. The admin
+  approves it, or registers the organisation's own app with these steps and gives you its id.
 - **Sending from Microsoft 365** needs "Authenticated SMTP" on for the mailbox. Security defaults, and organisations
   created after January 2020, turn it off; an admin turns it on per mailbox
   ([SMTP AUTH](https://learn.microsoft.com/en-us/exchange/clients-and-mobile-in-exchange-online/authenticated-client-smtp-submission)).

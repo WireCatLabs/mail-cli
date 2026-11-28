@@ -13,13 +13,14 @@ const section = (key: ProviderKey): string => {
     "",
     ...notes.map((note) => `- ${note}`),
     ...(notes.length ? [""] : []),
-    `Read from: ${sources.map((url) => `<${url}>`).join(", ")}`,
+    ...(key === "gmail"
+      ? ["Or skip the app password: sign in with Google ([Gmail with Google sign-in](oauth-google.md)).", ""]
+      : []),
+    `Help: ${sources.map((url) => `<${url}>`).join(", ")}`,
     "",
     `Sending: \`${smtp.host}\` port ${smtp.port}, ${smtp.security === "tls" ? "TLS" : "STARTTLS"}, ${auth === "oauth" ? "with the same OAuth sign-in" : "with the same app password"}. ` +
-      (smtp.savesSent
-        ? "The provider files sent mail in Sent itself."
-        : "Its help does not say it files SMTP mail in Sent, so `mail` appends the copy unless Sent has it already.") +
-      ` Read from: ${smtp.sources.map((url) => `<${url}>`).join(", ")}`,
+      (smtp.savesSent ? "The provider files sent mail in Sent itself." : "`mail` puts a copy in Sent.") +
+      ` Help: ${smtp.sources.map((url) => `<${url}>`).join(", ")}`,
     "",
   ].join("\n")
 }
@@ -30,13 +31,18 @@ export const providersPage = (): string =>
     "",
     "<!-- Generated from src/providers.ts by pnpm generate. Do not edit. -->",
     "",
-    "Use this page before `mail <profile> session start`, which asks for the app password, or for Outlook.com and Microsoft 365 opens Microsoft's sign-in in the browser. Each provider needs IMAP on and, for most, an app password:",
+    "Get your mailbox ready for `mail personal session start`, which asks for the app password, or for Outlook.com and Microsoft 365 opens Microsoft's sign-in in the browser. Each provider needs IMAP on and, for most, an app password:",
     "a password made only for this program. At the end you have an app password ready to type at the prompt.",
     "",
-    "`mail <profile> session start` prints these same steps and repeats the",
-    "likely cause when the server refuses the login. The steps below were read from each provider's official help page,",
-    "named under every provider. Labels are quoted in the language of the provider's interface. A provider can change",
-    "its screens; the help page is the source of truth.",
+    "`mail personal session start` prints these same steps and repeats the likely cause when the server refuses the",
+    "login. Labels are quoted as the provider's own screens show them. If a screen differs, the provider's help page",
+    "under each section has the current steps.",
+    "",
+    "**On this page:**",
+    "",
+    ...[...PAGE_ORDER.map((key) => PROVIDERS[key].name), "Any other provider"].map(
+      (name, index) => `${index + 1}. [${name}](#${name.toLowerCase().replaceAll(" ", "-")})`,
+    ),
     "",
     ...PAGE_ORDER.map(section),
     "## Any other provider",
@@ -44,7 +50,7 @@ export const providersPage = (): string =>
     GENERIC_PREPARE.notes.join(" "),
     "",
     "`session start` finds the server of a new profile through the MX record, Thunderbird's ISPDB and the domain's autoconfig file. If it finds",
-    "none, pass `--host`, `--port` and `--security` yourself, and for sending set `smtp_host`, `smtp_port` and `smtp_security` with `config set`. See [use it](usage.md). Those lookups send the domain of the address, never the",
+    "none, pass `--host`, `--port` and `--security` yourself, and for sending set `smtp_host`, `smtp_port` and `smtp_security` with `config set`. See [everyday use](usage.md). Those lookups send the domain of the address, never the",
     "address itself, to your DNS resolver, to `autoconfig.thunderbird.net` and to `autoconfig.<domain>`; `--provider` or `--host` skips them.",
     "",
   ].join("\n")

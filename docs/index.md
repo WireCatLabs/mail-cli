@@ -1,4 +1,4 @@
-# mail
+# Mail
 
 `mail` is a WireCat command-line tool that reads a mailbox over IMAP into the shared store, for the terminal, for
 scripts and for AI agents. It signs in with an app password kept in the OS keyring. It organises the mailbox on the

@@ -21,6 +21,7 @@ Then connect a mailbox. You choose the profile name, the first word of every com
 ```sh
 mail personal session start --address me@example.com
 mail personal account check
+mail personal sync              # the last 30 days
 ```
 
 ## Search your mail
@@ -31,7 +32,7 @@ After `sync`, the mail is in the shared store, and `mail` searches it:
 mail personal search messages invoice
 ```
 
-The query words are in [use it](usage.md#search-your-mail). [memo](https://github.com/WireCatLabs/cli-memo) searches
-every mailbox together with your messages and notes.
+The query words are in [Search your mail](usage.md#search-your-mail). [Memo](https://wirecat.dev/en/docs/memo/mail)
+searches every mailbox together with your messages and notes.
 
-Next: [use it](usage.md).
+Next: [everyday use](usage.md).

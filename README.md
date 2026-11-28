@@ -35,7 +35,7 @@ mail personal search messages invoice                  # search the stored mail
 mail skill install                               # optional: instructions for your AI agent
 ```
 
-Now the mail is in the store. `messages show` with the `ref` a search hit gives reads that email whole. [memo](https://github.com/WireCatLabs/cli-memo)
+Now the mail is in the store. `messages show` with the `ref` a search hit gives reads that email whole. [memo](https://wirecat.dev/en/docs/memo/mail)
 searches it together with your messages and notes: `memo search all "invoice"`.
 
 You need Node.js 22.16 or a later 22.x, or 24 or later. To try it with no install, run
@@ -49,7 +49,7 @@ You need Node.js 22.16 or a later 22.x, or 24 or later. To try it with no instal
   query language of every WireCat CLI, with `list:` for mailing lists; `messages show` gives an email whole with its
   attachments' text, `conversations list|show` its threads. It searches the profile's mailbox only; it also asks the mail server
   for mail `sync` has not read yet, and `--backend archive` keeps to the store.
-  [memo](https://github.com/WireCatLabs/cli-memo) searches every mailbox together with your messages and notes.
+  [memo](https://wirecat.dev/en/docs/memo/mail) searches every mailbox together with your messages and notes.
 - **Export to mbox or Maildir.** `messages export 'from:ann@example.com' --output-dir ~/mail-backup` reads the original
   messages from the server into a private folder, one mbox file per folder or a Maildir++ tree for mu and notmuch;
   it can be resumed and bounded. `stats messages top --by list` ranks senders, lists and domains.
@@ -90,7 +90,8 @@ mail personal mcp config                         # the entry for Claude Desktop,
 `mcp add` stops until you pass `--allow-writes`, because the server's `write` tool runs commands that change the
 mailbox (`messages move`, `messages delete`, `folders create`) and local settings (`config set`, `skill install`).
 `sync` runs through `read`: it writes only into the store. Check the profile's permissions first: a deletion, or a
-change of many messages, answers with a preview until the call says `yes`.
+change of many messages, answers with a preview until the call says `yes`, and then it runs without asking you. Set
+`mail personal config set permissions.messages.delete deny` to keep an agent from deleting mail.
 
 Every command except `mcp serve` takes `--json` and answers one JSON value on stdout; errors are JSON on stderr with a code to branch
 on. Over MCP an agent finds the commands with a search tool and runs them through a `read` and a `write` tool; the
@@ -105,9 +106,10 @@ as data, never as instructions.
   search in memo finds a person's mail and messages together.
 - **Changes you can undo.** `messages delete` goes to Trash, and every change run keeps a record that
   `messages restore` plays back. What is lost for good is named so and previewed first: `drafts delete`, and
-  `folders delete` of a folder that holds mail, which only the owner can run (`--allow-dangerous`). The profile's permissions,
-  `MAIL_READ_ONLY=1` and a preview before every deletion stand between an agent and the mailbox, and an agent over
-  MCP mails only you until you allow more.
+  `folders delete` of a folder that holds mail, which only the owner can run (`--allow-dangerous`). The profile's permissions
+  and `MAIL_READ_ONLY=1` stand between an agent and the mailbox: over MCP a change set to `ask` runs once the agent
+  confirms it, so set `deny` or `readonly` for what an agent must not do. An agent over MCP mails only you until you
+  allow more.
 - **It works with the mailbox you have.** The [providers](https://github.com/WireCatLabs/mail-cli/blob/main/docs/providers.md)
   it knows, and other servers with IMAP and app passwords; the server of a domain it does not know is found for you.
 
@@ -185,7 +187,7 @@ See [when something goes wrong](https://github.com/WireCatLabs/mail-cli/blob/mai
 | Section | Pages |
 |---|---|
 | Start | [overview](https://github.com/WireCatLabs/mail-cli/blob/main/docs/index.md) · [install](https://github.com/WireCatLabs/mail-cli/blob/main/docs/installation.md) |
-| Guides | [use it](https://github.com/WireCatLabs/mail-cli/blob/main/docs/usage.md) · [prepare the mailbox](https://github.com/WireCatLabs/mail-cli/blob/main/docs/providers.md) · [connect Outlook](https://github.com/WireCatLabs/mail-cli/blob/main/docs/outlook.md) |
+| Guides | [everyday use](https://github.com/WireCatLabs/mail-cli/blob/main/docs/usage.md) · [prepare the mailbox](https://github.com/WireCatLabs/mail-cli/blob/main/docs/providers.md) · [connect Outlook](https://github.com/WireCatLabs/mail-cli/blob/main/docs/outlook.md) |
 | Reference | [all commands](https://github.com/WireCatLabs/mail-cli/blob/main/docs/commands.md) · [settings](https://github.com/WireCatLabs/mail-cli/blob/main/docs/configuration.md) |
 | When something goes wrong | [troubleshooting](https://github.com/WireCatLabs/mail-cli/blob/main/docs/troubleshooting.md) · [security](https://github.com/WireCatLabs/mail-cli/blob/main/docs/security.md) |
 | Project | [roadmap](https://github.com/WireCatLabs/mail-cli/blob/main/docs/roadmap.md) · [changelog](https://github.com/WireCatLabs/mail-cli/blob/main/CHANGELOG.md) |
