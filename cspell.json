@@ -24,6 +24,7 @@
     "XOAUTH",
     "PKCE",
     "JMAP",
-    "RDAP"
+    "RDAP",
+    "wcat"
   ]
 }
