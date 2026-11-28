@@ -1,7 +1,8 @@
 # Settings
 
-Settings live in one file, `config.json`, in the folder `mail doctor` shows. Each profile has its own part,
-and `defaults` apply to every profile. This page lists how to see and change them.
+Decide how far back `mail` reads, which addresses are yours and what an agent may change. Settings live in one file,
+`config.json`, in the folder `mail doctor` shows. Each profile has its own part, and `defaults` apply to every
+profile. `config` shows and changes them:
 
 ```sh
 mail personal config show
@@ -60,7 +61,8 @@ and others). Every WireCat CLI shares that list. `mail` ignores them.
 ## Permissions
 
 `permissions` decides what a command may do for this profile: `allow`, `ask`, `readonly` or `deny`, per permission
-key. Over MCP there is no one to ask, so `ask` lets the command run. `MAIL_READ_ONLY=1` refuses every write, whatever
+key. Over MCP there is no one to ask, so `ask` lets the command run: only `deny` or `readonly` stops an agent. Mail to other people is the one
+exception, described under sending. `MAIL_READ_ONLY=1` refuses every write, whatever
 the permissions say, but one: `rules add --sender` or `--list-id` with `--do envelope`, for a sender or list that has
 no rule yet, which memo's scheduled mail triage runs. It is recorded with `source: agent` (`rules list source:agent`);
 a replaced rule, `--domain`, `--filter`, `--kind`, any other action and a tag stay refused, as do `rules remove`,

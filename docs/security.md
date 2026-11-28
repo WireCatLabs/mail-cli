@@ -14,7 +14,9 @@ send or forward because a message asked it to. Over MCP an agent may attach a fi
 credential or WireCat folder: `--allow-any-file` is left out of what an agent can pass.
 
 It changes the mailbox only through the `messages`, `folders` and `drafts` writes: each passes the profile's
-permissions and the read-only lock first, and a deletion and a change of many are a preview until `--yes`.
+permissions and the read-only lock first, and a deletion and a change of many are a preview until `--yes`. Over MCP
+nobody can answer a question, so a change set to `ask` runs as soon as the agent passes `--yes`: set
+`permissions.messages.delete deny`, or `permissions.messages readonly`, before you connect an agent.
 `messages delete` goes to Trash, and `drafts update` puts the old version there. Some changes are for good, with no
 restore: `drafts delete` and `drafts send` expunge the draft, undoing `messages copy` outside Gmail expunges the copy
 (only the UID the server gave it, never a message found again by its Message-ID), and `folders delete
@@ -22,7 +24,8 @@ restore: `drafts delete` and `drafts send` expunge the draft, undoing `messages 
 never gets it, so it deletes only an empty folder and only previews `drafts delete`. `messages delete --rules` refuses to run from a schedule.
 
 An agent that holds `mcp.authority` may change settings, but not the mailbox's server settings (`imap_host`,
-`smtp_host` and the rest), which decide where the app password or token goes, nor `microsoft_client_id`, nor
+`smtp_host` and the rest), which decide where the app password or token goes, nor `aliases`, which decides which
+addresses are yours, nor `microsoft_client_id` or `google_client_id`, which decide which app you sign in to, nor
 `permissions.messages.send.others`.
 
 An Outlook.com or Microsoft 365 profile signs in with OAuth: the browser goes to Microsoft, which sends the answer back

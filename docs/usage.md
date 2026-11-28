@@ -1,8 +1,28 @@
-# Use it
+# Everyday use
 
-This page explains how a command is built, and how an agent uses the tool. Read it before your first command.
-The references, ids and cursors in its examples are made up (`me%40example.com`, `5b0e1c2a@example.com`): use the
-ones your own search, run or list gives.
+Keep your mailbox on your computer and let your agent read, sort and answer it. You connect a mailbox, keep it
+current on a timer, and see what your agent can do with it: find an email, list what you owe an answer, tidy the
+mailbox with an undo, and draft replies you send yourself.
+
+Every command starts with a profile, a name you choose for one mailbox (`personal` in the examples). The references,
+ids and cursors in the examples are made up (`me%40example.com`, `5b0e1c2a@example.com`): use the ones your own
+search, run or list gives.
+
+**On this page:**
+
+1. [The profile comes first](#the-profile-comes-first)
+2. [Connect a mailbox](#connect-a-mailbox)
+3. [Review: what is new, what you owe, what waits](#review-what-is-new-what-you-owe-what-waits)
+4. [Inbox: new mail sorted by an AI model](#inbox-new-mail-sorted-by-an-ai-model)
+5. [Search your mail](#search-your-mail)
+6. [Export mail](#export-mail)
+7. [Look before you sync, and bring in an archive](#look-before-you-sync-and-bring-in-an-archive)
+8. [Organise the mailbox](#organise-the-mailbox)
+9. [Drafts](#drafts)
+10. [Your own tags](#your-own-tags)
+11. [Send, reply and forward](#send-reply-and-forward)
+12. [Agents](#agents)
+13. [Output for scripts](#output-for-scripts)
 
 ## The profile comes first
 
@@ -80,31 +100,6 @@ runs do not retry together. It then reconnects. It checks that the server still 
 way, and goes on from the failed request while the budget and the deadline allow. If it still fails, the answer
 keeps the network error's own code as `cause_code`, and `mail runs show` has it.
 
-## Output for scripts
-
-Every command except `mcp serve` on stdin and stdout takes `--json`, and prints one JSON value on stdout. Errors are JSON on stderr, with a code to branch
-on. The [command reference](commands.md) lists the codes.
-
-## Agents
-
-`mail skill install` puts the tool's skill where Claude Code, Codex, Gemini CLI and OpenClaw look for it.
-`mail skill install --for hermes` also adds that folder to Hermes Agent's own settings, so a bare `skill install`
-leaves Hermes out. `mail personal mcp serve` serves the profile's commands over MCP, on stdin and stdout:
-
-```sh
-claude mcp add mail -- mail personal mcp serve
-```
-
-The server offers every command. `sync` writes only to the local store; the `messages` and `folders` writes change
-the mailbox. The profile's permissions decide what runs; see [settings](configuration.md#permissions).
-
-For ChatGPT and Claude in the browser,
-`mail personal mcp serve --http --public-url https://laptop.example.ts.net` serves on `127.0.0.1` (port 8765, or
-`--port`) behind your own tunnel. A browser app logs in with a one-time code that the command prints;
-`mail personal mcp revoke` ends every login. `mail personal mcp server start` runs the same
-server in the background, `mcp server status` shows its port, the login code and the apps logged in, and
-`mcp server stop` ends it.
-
 ## Review: what is new, what you owe, what waits
 
 `review` reads the mail sync stored and asks the server nothing. It speaks tg's words:
@@ -138,8 +133,8 @@ read whole (partial) is held until it is, up to 7 days. A new holder starts from
 ## Inbox: new mail sorted by an AI model
 
 `inbox` sends the threads that changed since its last run to the AI model you chose, and puts each one under
-needs an answer, to read or can wait, with a one-line reason. It runs the model through its API with no agent, so
-a local Ollama works too. Choose the model once, for every WireCat tool, in WireCat Desktop or with
+needs an answer, to read or can wait, with a one-line reason. The mail goes straight to that model, with no agent
+in between, so a local Ollama works too. Choose the model once, for every WireCat tool, in WireCat Desktop or with
 `memo models ai set`.
 
 ```sh
@@ -151,8 +146,9 @@ mail personal schedule command mail-inbox --every 1h -- inbox --yes   # sort new
 
 It sends each thread's subject, senders and its 3 newest emails without quoted mail or the signature, at most
 1500 characters each. Mail sent to many is not sent. A run sends at most 40 emails and about 60000 tokens
-(`--max-messages`, `--max-tokens`). A model outside this computer follows local only and `memo models chats`:
-when that asks first, a run in a terminal asks you, and a schedule needs `--yes`. An agent is refused: it reads
+(`--max-messages`, `--max-tokens`). If the model runs outside this computer, the `local only` and `memo models
+chats` settings decide whether mail may go to it. When they say to ask first, a run in a terminal asks you, and a
+schedule needs `--yes`. An agent is refused: it reads
 `review --new` and sorts the mail itself. A thread you answered leaves the list on the next run. `review` shows the
 verdict too, as `email.inbox`.
 
@@ -170,10 +166,10 @@ mail personal conversations list emails_count>1                        # threads
 mail personal conversations show 'chat:email/me%40example.com/thread-1' # one thread, oldest first
 ```
 
-The query language is the one every WireCat CLI uses ([search guide](https://github.com/WireCatLabs/cli-core/blob/main/docs/search/query-language.md)):
+The query language is the one every WireCat CLI uses ([search guide](https://wirecat.dev/en/docs/search)):
 `from:`, `to:`, `cc:`, `subject:`, `mailbox:` or `label:`, `list:` (a List-Id or its domain), `is:unread`,
 `has:attachment`, `filename:`, `content:` (the text of attachments), `size>` and `date:`. Each command reads its
-profile's mailbox only; [memo](https://github.com/WireCatLabs/cli-memo) searches every mailbox together with your
+profile's mailbox only; [memo](https://wirecat.dev/en/docs/memo/mail) searches every mailbox together with your
 messages and notes (`memo search mail`, `memo search all`). The store keeps text, not the original message, so there
 is no raw source to show.
 
@@ -270,11 +266,12 @@ mail personal folders create Receipts                                  # also fo
 
 - **A preview first.** A deletion, a change chosen by `--filter`, and a change of more than 20 messages answer with
   what would change and the same command with `--yes` in `next`; nothing changes until then. `--dry-run` always only
-  previews. One message's flag or move goes ahead at once.
+  previews. One message's flag or move goes ahead at once. Over MCP an agent's `--yes` is enough, and nobody is asked
+  ([Agents](#agents)).
 - **Undo.** Each change answers with a `run_id`. Before it asks the server, the run records each message's place,
   flags and Gmail labels; `messages restore --run <id>` puts back what is still where the run left it: Trash back to
   its folder, a move moved back, a copy removed, flags as they were. Each write of a run is listed under `writes`
-  with its `operation_id`; `--write <id>` undoes that write alone. The runs of `memo mail delete` restore here
+  with its `operation_id`; `--write <id>` undoes that write alone. The runs of memo's old cleanup command restore here
   too. Mail with text comes back to search with the next `sync`; an envelope at once.
 - **Gmail.** All mail is in All Mail and a folder is a label: `move --folder Work` adds the label `Work` and takes
   `Inbox` away, `copy` only adds it, `--folder archive` only takes `Inbox` away, and `delete` moves the mail from All
@@ -367,3 +364,34 @@ mail personal drafts send 5b0e1c2a@example.com                                  
   --output-dir ./folder` saves them, readable only by you, under their plain names; `attachments download 'msg:email/me%40example.com/thread-1/%3Cid%40example.com%3E' 2
   --output-dir ./folder` saves only the second. The bytes come from the
   server and never go into the store. An existing file stays unless `--replace`.
+
+## Agents
+
+`mail skill install` puts the tool's skill where Claude Code, Codex, Gemini CLI and OpenClaw look for it.
+`mail skill install --for hermes` also adds that folder to Hermes Agent's own settings, so a bare `skill install`
+leaves Hermes out. `mail personal mcp serve` serves the profile's commands over MCP, on stdin and stdout:
+
+```sh
+claude mcp add mail -- mail personal mcp serve
+```
+
+The server offers every command. `sync` writes only to the local store; the `messages` and `folders` writes change
+the mailbox. The profile's permissions decide what runs; see [settings](configuration.md#permissions).
+
+Over MCP nobody can answer a question, so a change set to `ask` runs without asking you. A deletion or a change of
+many emails is still a preview first, and it runs as soon as the agent repeats it with `--yes`. To keep an agent from
+deleting mail, set `mail personal config set permissions.messages.delete deny` before you connect it, or
+`permissions.messages readonly` to stop every change. Mail to anyone but you stays refused until you open
+`messages.send.others` yourself.
+
+For ChatGPT and Claude in the browser,
+`mail personal mcp serve --http --public-url https://laptop.example.ts.net` serves on `127.0.0.1` (port 8765, or
+`--port`) behind your own tunnel. A browser app logs in with a one-time code that the command prints;
+`mail personal mcp revoke` ends every login. `mail personal mcp server start` runs the same
+server in the background, `mcp server status` shows its port, the login code and the apps logged in, and
+`mcp server stop` ends it.
+
+## Output for scripts
+
+Every command except `mcp serve` on stdin and stdout takes `--json`, and prints one JSON value on stdout. Errors are JSON on stderr, with a code to branch
+on. The [command reference](commands.md) lists the codes.

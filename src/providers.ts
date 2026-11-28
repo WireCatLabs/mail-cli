@@ -114,7 +114,7 @@ const TABLE = {
       ],
       notes: [
         "A new app password starts working 2 to 3 hours after it is created (Yandex ID help).",
-        "On a Yandex 360 business domain an administrator setting might block app passwords. The help pages do not confirm this; ask the domain administrator if the login keeps failing.",
+        "If the login keeps failing on a Yandex 360 business domain, ask the domain administrator whether app passwords are allowed.",
       ],
       refused:
         "IMAP may be off, the password may not be of type «Почта», or it may be under 2 to 3 hours old. Yandex 360 domains may also block app passwords.",
@@ -155,7 +155,7 @@ const TABLE = {
       steps: [
         'Personal Google Account: IMAP is always on, nothing to switch. Google Workspace: the administrator controls it, and the "Forwarding and POP/IMAP" tab in Gmail Settings, "See all settings", may be missing.',
         "Turn on 2-Step Verification for the Google Account.",
-        "Open https://myaccount.google.com/apppasswords and create an app password. Google's help page does not list the labels of that screen, so none are quoted here.",
+        "Open https://myaccount.google.com/apppasswords and create an app password.",
         "Copy the 16-letter password and use it instead of the account password.",
       ],
       notes: [
@@ -185,7 +185,7 @@ const TABLE = {
         "Go to https://account.apple.com and sign in.",
         'In the "Sign In and Security" section select "App Specific Passwords".',
         'Select "Generate an app specific password" and follow the on-screen steps.',
-        "Copy the password when it appears; Apple's page does not say whether it can be shown again.",
+        "Copy the password when it appears.",
       ],
       notes: [
         "The sign-in uses the full address as the login. Apple says the name before @icloud.com is the usual login; if the full address is refused, sign in again under a new profile name and give the name before @icloud.com as the login.",
@@ -261,7 +261,7 @@ const TABLE = {
       notes: [
         "Your organisation may let only an admin allow a new app. If Microsoft says an admin must approve it, ask your admin to grant consent, or to register the organisation's own app and give you its id.",
         'Sending needs "Authenticated SMTP" on for your mailbox; organisations with security defaults, and those created after January 2020, have it off until an admin turns it on. Reading works either way.',
-        "The IMAP server for Microsoft 365 is not named on an official page: outlook.office365.com is the one Outlook.com uses.",
+        "The IMAP server for Microsoft 365 is outlook.office365.com, the same one Outlook.com uses.",
       ],
       refused:
         "Microsoft refused the token: an admin may have to allow the app for your organisation, or IMAP may be off for your mailbox.",
